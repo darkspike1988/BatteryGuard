@@ -1,0 +1,28 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Build & Distribution Artifacts
+dist/
+*.app
+*.zip
+*.dmg
+
+# Xcode & Project metadata
+xcuserdata/
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Logs & Temporary Files
+*.log
+/var/log/batteryguard.log
