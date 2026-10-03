@@ -98,7 +98,7 @@ struct PopoverContentView: View {
         } message: {
             Text("Der Dienst benötigt Root-Rechte, um den Ladevorgang steuern zu dürfen. Dies erfordert dein Administratorpasswort.")
         }
-        .frame(width: 340, height: 620)
+        .frame(width: 340, height: 640)
     }
     
     // MARK: - Toggles in Glas-Zeilen

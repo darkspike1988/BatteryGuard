@@ -22,10 +22,10 @@ extension BGMode {
     
     var description: String {
         switch self {
-        case .auto: return "Automatisch: App entscheidet (Standard)"
-        case .native: return "Nativ: Überlässt macOS die Ladesteuerung"
-        case .pendulum: return "Pendel: Erzwingt Limit durch virtuelles Trennen des Netzteils"
-        case .direct: return "Direkt: Nutzt SMC-Hardwaresperre (nur ältere Macs)"
+        case .auto: return "Automatisch (Empfohlen): Wählt eigenständig die beste Methode für dein MacBook-Modell aus."
+        case .native: return "Nativ (macOS): Nutzt Apples interne Steuerung. Wird vom System verwaltet und ist oft nicht sofort wirksam."
+        case .pendulum: return "Pendel-Modus: Simuliert das Abstecken des Netzteils (Sägezahn), um das Limit zu 100% genau zu erzwingen."
+        case .direct: return "Direkt (SMC): Schreibt das Limit hart in die Firmware (nur für ältere Intel-Macs relevant)."
         }
     }
 }
@@ -104,6 +104,22 @@ struct ModePickerView: View {
             }
             .padding(3)
             .adaptiveGlassCard(cornerRadius: 12)
+            
+            // Dynamische Erklärung des aktuell gewählten Modus
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 1)
+                
+                Text(mode.description)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(2)
+            }
+            .padding(.horizontal, 4)
+            .padding(.top, 2)
         }
     }
 }
