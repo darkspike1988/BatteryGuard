@@ -135,22 +135,6 @@ struct BatteryHeaderCardView: View {
                         .contentTransition(.numericText())
                     
                     Spacer()
-                    
-                    // Pille mit dem aktiven Mechanismus
-                    if let mech = mechanismText {
-                        HStack(spacing: 3) {
-                            Image(systemName: "cpu")
-                                .font(.system(size: 8.5, weight: .bold))
-                            Text(mech)
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(accentColor)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3.5)
-                        .adaptiveGlassCapsule(tint: accentColor.opacity(0.12))
-                        .help(mechanismTooltip)
-                    }
                 }
                 
                 // Ausführliche Statusbeschreibung
