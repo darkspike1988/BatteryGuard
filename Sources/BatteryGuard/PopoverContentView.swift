@@ -21,6 +21,8 @@ struct PopoverContentView: View {
             config: configStore.config
         )
     }
+    @State private var showInstallConfirm = false
+    @State private var showUninstallConfirm = false
     
     public var body: some View {
         ZStack {
@@ -71,6 +73,30 @@ struct PopoverContentView: View {
                 }
                 .padding(14)
             }
+        }
+        .confirmationDialog(
+            "Hintergrunddienst deinstallieren?",
+            isPresented: $showUninstallConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Deinstallieren (Passwort erforderlich)", role: .destructive) {
+                uninstallDaemon()
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Der Dienst wird von deinem System entfernt. Dies erfordert dein Administratorpasswort.")
+        }
+        .confirmationDialog(
+            "Hintergrunddienst installieren?",
+            isPresented: $showInstallConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Installieren (Passwort erforderlich)") {
+                installDaemon()
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Der Dienst benötigt Root-Rechte, um den Ladevorgang steuern zu dürfen. Dies erfordert dein Administratorpasswort.")
         }
         .frame(width: 340, height: 620)
     }
@@ -279,6 +305,36 @@ struct PopoverContentView: View {
                 }
                 .toggleStyle(.switch)
                 .controlSize(.mini)
+                
+                Divider().opacity(0.5).padding(.vertical, 4)
+                
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Hintergrunddienst (Root)")
+                            .font(.caption.weight(.medium))
+                        Text(statusStore.isDaemonActive ? "Aktiv (v\(statusStore.status.daemonVersion))" : "Nicht installiert")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if !statusStore.isDaemonActive {
+                        Button("Installieren…") {
+                            showInstallConfirm = true
+                        }
+                        .controlSize(.small)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                    } else {
+                        Button("Deinstallieren…") {
+                            showUninstallConfirm = true
+                        }
+                        .font(.caption2)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.red.opacity(0.8))
+                    }
+                }
             }
             .padding(.top, 4)
         } label: {
@@ -324,31 +380,11 @@ struct PopoverContentView: View {
                     .frame(width: 8, height: 8)
                     .shadow(color: (statusStore.isDaemonActive ? Color.green : Color.red).opacity(0.4), radius: 2)
                 
-                Text(statusStore.isDaemonActive ? "Dienst aktiv (v\(statusStore.status.daemonVersion))" : "Dienst gestoppt")
+                Text(statusStore.isDaemonActive ? "Dienst aktiv (v\(statusStore.status.daemonVersion))" : "Hintergrunddienst nicht installiert")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 
                 Spacer()
-                
-                if !statusStore.isDaemonActive {
-                    Button("Start") {
-                        installDaemon()
-                    }
-                    .font(.caption.weight(.medium))
-                    .adaptiveGlassProminentButton()
-                    .controlSize(.small)
-                } else {
-                    Button("Stop") {
-                        uninstallDaemon()
-                    }
-                    .font(.caption.weight(.medium))
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.15))
-                    .clipShape(Capsule())
-                }
             }
             
             HStack {
