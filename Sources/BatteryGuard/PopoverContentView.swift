@@ -324,7 +324,7 @@ struct PopoverContentView: View {
                     .frame(width: 8, height: 8)
                     .shadow(color: (statusStore.isDaemonActive ? Color.green : Color.red).opacity(0.4), radius: 2)
                 
-                Text(statusStore.isDaemonActive ? "Dienst aktiv (v\(statusStore.status.daemonVersion))" : "Hintergrunddienst nicht aktiv")
+                Text(statusStore.isDaemonActive ? "Dienst aktiv (v\(statusStore.status.daemonVersion))" : "Hintergrunddienst inaktiv")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 
@@ -337,24 +337,31 @@ struct PopoverContentView: View {
                     .font(.caption.weight(.medium))
                     .adaptiveGlassProminentButton()
                     .controlSize(.small)
+                } else {
+                    Button("Dienst entfernen…") {
+                        uninstallDaemon()
+                    }
+                    .font(.caption.weight(.medium))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
                 }
             }
             
             HStack {
-                if let url = URL(string: "https://github.com/<user>/BatteryGuard") {
-                    Link("Open Source", destination: url)
+                if let url = URL(string: "https://github.com/darkspike1988/BatteryGuard") {
+                    Link("Open Source (GitHub)", destination: url)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 
                 Spacer()
                 
-                Button("Beenden") {
+                Button("App beenden") {
                     NSApp.terminate(nil)
                 }
                 .font(.caption)
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.red.opacity(0.8))
             }
         }
         .padding(.horizontal, 12)
@@ -418,6 +425,65 @@ struct PopoverContentView: View {
                         let alert = NSAlert()
                         alert.messageText = "Installation erfolgreich"
                         alert.informativeText = "Der Hintergrunddienst wurde erfolgreich installiert."
+                        alert.alertStyle = .informational
+                        alert.runModal()
+                    }
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func uninstallDaemon() {
+        var candidates: [String] = []
+        
+        if let bundleResource = Bundle.main.path(forResource: "uninstall-daemon", ofType: "sh") {
+            candidates.append(bundleResource)
+        }
+        let bundleResourcePath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/uninstall-daemon.sh").path
+        candidates.append(bundleResourcePath)
+        
+        if let execURL = Bundle.main.executableURL {
+            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../scripts/uninstall-daemon.sh").standardized.path)
+            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../../scripts/uninstall-daemon.sh").standardized.path)
+            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../../../scripts/uninstall-daemon.sh").standardized.path)
+        }
+        
+        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        candidates.append(cwd.appendingPathComponent("scripts/uninstall-daemon.sh").standardized.path)
+        candidates.append(cwd.appendingPathComponent("../scripts/uninstall-daemon.sh").standardized.path)
+        candidates.append("/Users/michaelkatschko/BatteryGuard/scripts/uninstall-daemon.sh")
+        
+        guard let scriptPath = candidates.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
+            let alert = NSAlert()
+            alert.messageText = "Deinstallationsskript nicht gefunden"
+            alert.informativeText = "Das Skript 'uninstall-daemon.sh' konnte nicht gefunden werden."
+            alert.alertStyle = .warning
+            alert.runModal()
+            return
+        }
+        
+        Task.detached {
+            let escaped = scriptPath.replacingOccurrences(of: "\"", with: "\\\"")
+            let scriptSource = "do shell script \"/bin/bash \\\"\(escaped)\\\"\" with administrator privileges"
+            
+            var errorDict: NSDictionary?
+            if let appleScript = NSAppleScript(source: scriptSource) {
+                _ = appleScript.executeAndReturnError(&errorDict)
+                if let errorDict {
+                    let errorMsg = errorDict[NSAppleScript.errorMessage] as? String ?? "Unbekannter Fehler bei der Ausführung."
+                    await MainActor.run {
+                        let alert = NSAlert()
+                        alert.messageText = "Deinstallation fehlgeschlagen"
+                        alert.informativeText = errorMsg
+                        alert.alertStyle = .critical
+                        alert.runModal()
+                    }
+                } else {
+                    await MainActor.run {
+                        let alert = NSAlert()
+                        alert.messageText = "Deinstallation erfolgreich"
+                        alert.informativeText = "Der Hintergrunddienst wurde vollständig entfernt. (Um ihn neu zu installieren, klicke auf 'Dienst installieren…')"
                         alert.alertStyle = .informational
                         alert.runModal()
                     }
