@@ -19,6 +19,15 @@ extension BGMode {
         case .direct: return "cpu"
         }
     }
+    
+    var description: String {
+        switch self {
+        case .auto: return "Automatisch: App entscheidet (Standard)"
+        case .native: return "Nativ: Überlässt macOS die Ladesteuerung"
+        case .pendulum: return "Pendel: Erzwingt Limit durch virtuelles Trennen des Netzteils"
+        case .direct: return "Direkt: Nutzt SMC-Hardwaresperre (nur ältere Macs)"
+        }
+    }
 }
 
 struct ModePickerView: View {
@@ -30,6 +39,7 @@ struct ModePickerView: View {
                 Text("Modus")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .help("Legt fest, wie BatteryGuard das Ladelimit erzwingt.")
                 
                 Spacer()
                 
@@ -89,6 +99,7 @@ struct ModePickerView: View {
                         .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
                     }
                     .buttonStyle(.plain)
+                    .help(m.description)
                 }
             }
             .padding(3)

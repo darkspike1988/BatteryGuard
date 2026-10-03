@@ -132,6 +132,7 @@ struct BatteryRangeSlider: View {
                         reduceMotion: reduceMotion
                     )
                     .offset(x: lowerX - thumbRadius)
+                    .help("Ladebeginn: Der Akku wird erst wieder geladen, wenn er unter diesen Wert fällt.")
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
@@ -160,6 +161,7 @@ struct BatteryRangeSlider: View {
                         reduceMotion: reduceMotion
                     )
                     .offset(x: upperX - thumbRadius)
+                    .help("Ladestopp: Der Ladevorgang wird bei diesem Wert gestoppt.")
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in

@@ -103,6 +103,7 @@ struct PopoverContentView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .adaptiveGlassCard(cornerRadius: 12)
+            .help("Aktiviert oder deaktiviert den BatteryGuard-Ladeschutz komplett. Im deaktivierten Zustand verhält sich dein Mac so, als wäre BatteryGuard nicht installiert, und lädt den Akku immer bis 100%.")
             
             // Zeile 2: Am Netzteil aktiv entladen
             HStack(spacing: 10) {
@@ -130,6 +131,7 @@ struct PopoverContentView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .adaptiveGlassCard(cornerRadius: 12)
+            .help("Wenn der Akku voller ist als das erlaubte Maximum (z.B. nach dem Abstecken und wieder Anstecken), wird das Netzteil virtuell deaktiviert, um den Akku auf das Zielniveau zu entladen.")
             
             // Zeile 3: Hitzeschutz (35–45 °C)
             VStack(spacing: 8) {
@@ -193,6 +195,7 @@ struct PopoverContentView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .adaptiveGlassCard(cornerRadius: 12)
+            .help("Pausiert den Ladevorgang (und trennt bei Bedarf virtuell das Netzteil), wenn der Akku heißer als die eingestellte Temperatur wird, um Zellverschleiß zu verhindern.")
             
             // Zeile 4: Einmal voll laden
             Button(action: {
@@ -235,6 +238,7 @@ struct PopoverContentView: View {
             .buttonStyle(.plain)
             .adaptiveGlassCard(cornerRadius: 12)
             .disabled(!configStore.config.enabled)
+            .help("Deaktiviert temporär das Ladelimit und lädt den Akku einmalig auf 100% auf. Praktisch, wenn du z. B. vor einer längeren Reise die volle Laufzeit benötigst. Sobald 100% erreicht sind, wird der normale Ladeschutz wieder aktiviert.")
         }
     }
     

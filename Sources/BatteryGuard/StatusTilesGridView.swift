@@ -14,37 +14,43 @@ struct StatusTilesGridView: View {
                 icon: "thermometer.medium",
                 iconColor: .orange,
                 title: "Temperatur",
-                value: status.temperatureCelsius != nil ? String(format: "%.1f °C", status.temperatureCelsius!) : "–"
+                value: status.temperatureCelsius != nil ? String(format: "%.1f °C", status.temperatureCelsius!) : "–",
+                helpText: "Aktuelle Temperatur des Akkus. (Hitze über 35°C lässt den Akku schneller altern)"
             )
             StatusGlassTile(
                 icon: "arrow.triangle.2.circlepath",
                 iconColor: .purple,
                 title: "Zyklen",
-                value: status.cycleCount != nil ? "\(status.cycleCount!)" : "–"
+                value: status.cycleCount != nil ? "\(status.cycleCount!)" : "–",
+                helpText: "Anzahl der vollständigen Lade-/Entladezyklen. (Apple garantiert 1000 Zyklen)"
             )
             StatusGlassTile(
                 icon: "heart.fill",
                 iconColor: .red,
                 title: "Gesundheit",
-                value: status.healthPercent != nil ? "\(status.healthPercent!) %" : "–"
+                value: status.healthPercent != nil ? "\(status.healthPercent!) %" : "–",
+                helpText: "Maximale Kapazität im Vergleich zum Neuzustand."
             )
             StatusGlassTile(
                 icon: "bolt.fill",
                 iconColor: .yellow,
                 title: "Leistung",
-                value: status.watts != nil ? String(format: "%.1f W", status.watts!) : "–"
+                value: status.watts != nil ? String(format: "%.1f W", status.watts!) : "–",
+                helpText: "Aktuelle Lade-/Entladeleistung in Watt. (Positiv = Laden, Negativ = Entladen)"
             )
             StatusGlassTile(
                 icon: "bolt.horizontal.fill",
                 iconColor: .mint,
                 title: "Spannung",
-                value: status.voltage != nil ? String(format: "%.2f V", status.voltage! / 1000.0) : "–"
+                value: status.voltage != nil ? String(format: "%.2f V", status.voltage! / 1000.0) : "–",
+                helpText: "Aktuelle Batteriespannung in Volt."
             )
             StatusGlassTile(
                 icon: "arrow.up.and.down.and.sparkles",
                 iconColor: .cyan,
                 title: "Strom",
-                value: status.amperage != nil ? String(format: "%.0f mA", status.amperage!) : "–"
+                value: status.amperage != nil ? String(format: "%.0f mA", status.amperage!) : "–",
+                helpText: "Aktueller Stromfluss in Milliampere (mA)."
             )
         }
     }
@@ -55,6 +61,7 @@ private struct StatusGlassTile: View {
     let iconColor: Color
     let title: String
     let value: String
+    let helpText: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -76,5 +83,6 @@ private struct StatusGlassTile: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .adaptiveGlassCard(cornerRadius: 12)
+        .help(helpText)
     }
 }
