@@ -64,8 +64,15 @@ public enum BatteryReader {
                 }
 
                 // Leistung in Watt: Voltage (mV) * Amperage (mA, vorzeichenbehaftet) / 1_000_000
-                if let v = (dict["Voltage"] as? NSNumber)?.doubleValue,
-                   let a = (dict["Amperage"] as? NSNumber)?.int64Value {
+                let rawVolts = (dict["AppleRawBatteryVoltage"] as? NSNumber)?.doubleValue ?? (dict["Voltage"] as? NSNumber)?.doubleValue
+                let rawAmpsNum = (dict["Amperage"] as? NSNumber) ?? (dict["InstantAmperage"] as? NSNumber)
+                
+                if let v = rawVolts, let aNum = rawAmpsNum {
+                    var a = aNum.int64Value
+                    // UInt64 wrap-around für negative Werte (Entladen) korrigieren, falls NSNumber es als positiv liest
+                    if a > 4000000000 {
+                        a = Int64(bitPattern: aNum.uint64Value)
+                    }
                     info.voltage = v
                     info.amperage = Double(a)
                     info.watts = round((v * Double(a) / 1_000_000.0) * 100.0) / 100.0

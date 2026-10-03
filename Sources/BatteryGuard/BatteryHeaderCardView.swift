@@ -63,13 +63,29 @@ struct BatteryHeaderCardView: View {
     
     private var mechanismText: String? {
         guard isDaemonActive else { return nil }
-        if !status.smcKeysDetected.isEmpty {
-            return status.smcKeysDetected.joined(separator: ", ")
+        
+        let keys = status.smcKeysDetected
+        if keys.contains("CHTE") || keys.contains("CH0B") {
+            return "Native SMC-Sperre"
+        } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
+            return "Pendel-Modus"
         }
+        
         if let msg = status.message, !msg.isEmpty {
             return msg
         }
-        return "SMC"
+        return "SMC aktiv"
+    }
+    
+    private var mechanismTooltip: String {
+        guard isDaemonActive else { return "" }
+        let keys = status.smcKeysDetected
+        if keys.contains("CHTE") || keys.contains("CH0B") {
+            return "Hardware-Ladesperre aktiv (\(keys.joined(separator: ", "))). Die Batterie wird präzise auf dem Zielwert gehalten."
+        } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
+            return "Neueres MacBook erkannt! Nutzt den Pendel-Modus (\(keys.joined(separator: ", "))): Das Netzteil wird virtuell vom Akku getrennt, bis der Akku unter das Limit fällt."
+        }
+        return "Steuert die Ladelektronik."
     }
     
     public var body: some View {
@@ -133,6 +149,7 @@ struct BatteryHeaderCardView: View {
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3.5)
                         .adaptiveGlassCapsule(tint: accentColor.opacity(0.12))
+                        .help(mechanismTooltip)
                     }
                 }
                 

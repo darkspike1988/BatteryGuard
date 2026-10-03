@@ -10,12 +10,16 @@ struct StatusTilesGridView: View {
     
     public var body: some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+            let temp = status.temperatureCelsius ?? 0.0
+            let tempColor: Color = temp > 38.0 ? .red : (temp > 33.0 ? .orange : .green)
+            let tempHelp = temp > 35.0 ? "Achtung: Akku ist warm (\(temp)°C). Hitze lässt den Akku schneller altern." : "Akku-Temperatur ist im optimalen Bereich (\(temp)°C)."
+            
             StatusGlassTile(
                 icon: "thermometer.medium",
-                iconColor: .orange,
+                iconColor: tempColor,
                 title: "Temperatur",
-                value: status.temperatureCelsius != nil ? String(format: "%.1f °C", status.temperatureCelsius!) : "–",
-                helpText: "Aktuelle Temperatur des Akkus. (Hitze über 35°C lässt den Akku schneller altern)"
+                value: status.temperatureCelsius != nil ? String(format: "%.1f °C", temp) : "–",
+                helpText: "Aktuelle Temperatur des Akkus. (\(tempHelp))"
             )
             StatusGlassTile(
                 icon: "arrow.triangle.2.circlepath",
