@@ -56,7 +56,39 @@ struct StatusTilesGridView: View {
                 value: status.amperage != nil ? String(format: "%.0f mA", status.amperage!) : "–",
                 helpText: "Aktueller Stromfluss in Milliampere (mA)."
             )
+            
+            StatusGlassTile(
+                icon: "clock.fill",
+                iconColor: .blue,
+                title: "Restzeit",
+                value: timeString,
+                helpText: "Verbleibende Zeit bis voll geladen oder leer."
+            )
+            
+            StatusGlassTile(
+                icon: "battery.100",
+                iconColor: .green,
+                title: "Kapazität (mAh)",
+                value: capacityString,
+                helpText: "Aktuelle maximale Ladung vs. Werks-Designkapazität."
+            )
         }
+    }
+    
+    private var timeString: String {
+        if let mins = status.timeRemainingMinutes {
+            let h = mins / 60
+            let m = mins % 60
+            return "\(h)h \(String(format: "%02d", m))m"
+        }
+        return "–"
+    }
+    
+    private var capacityString: String {
+        if let mx = status.maxCapacityMah, let ds = status.designCapacityMah {
+            return "\(mx) / \(ds)"
+        }
+        return "–"
     }
 }
 

@@ -12,6 +12,9 @@ public struct BatteryInfo: Sendable, Equatable {
     public var watts: Double? = nil
     public var voltage: Double? = nil
     public var amperage: Double? = nil
+    public var timeRemainingMinutes: Int? = nil
+    public var maxCapacityMah: Int? = nil
+    public var designCapacityMah: Int? = nil
 
     public init() {}
 }
@@ -61,6 +64,16 @@ public enum BatteryReader {
 
                 if let rm = rawMax, let ds = design, ds > 0 {
                     info.healthPercent = Swift.min(100, Swift.max(0, Int(round(Double(rm) / Double(ds) * 100.0))))
+                    info.maxCapacityMah = rm
+                    info.designCapacityMah = ds
+                }
+                
+                if let timeEmpty = dict["AvgTimeToEmpty"] as? NSNumber, timeEmpty.intValue > 0, timeEmpty.intValue < 65535 {
+                    info.timeRemainingMinutes = timeEmpty.intValue
+                } else if let timeFull = dict["AvgTimeToFull"] as? NSNumber, timeFull.intValue > 0, timeFull.intValue < 65535 {
+                    info.timeRemainingMinutes = timeFull.intValue
+                } else if let trc = dict["TimeRemaining"] as? NSNumber, trc.intValue > 0, trc.intValue < 65535 {
+                    info.timeRemainingMinutes = trc.intValue
                 }
 
                 // Leistung in Watt: Voltage (mV) * Amperage (mA, vorzeichenbehaftet) / 1_000_000

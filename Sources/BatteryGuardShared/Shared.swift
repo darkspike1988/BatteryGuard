@@ -92,6 +92,9 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var watts: Double? = nil
     public var voltage: Double? = nil
     public var amperage: Double? = nil
+    public var timeRemainingMinutes: Int? = nil
+    public var maxCapacityMah: Int? = nil
+    public var designCapacityMah: Int? = nil
     public var smcKeysDetected: [String] = []
     public var daemonVersion: String = "0.1.0"
     public var updatedAt: Date = Date()
