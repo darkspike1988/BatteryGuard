@@ -123,6 +123,8 @@ final class DaemonRunner: @unchecked Sendable {
         status.cycleCount = battery.cycleCount
         status.healthPercent = battery.healthPercent
         status.watts = battery.watts
+        status.voltage = battery.voltage
+        status.amperage = battery.amperage
         status.smcKeysDetected = detectedSMCKeys
         status.daemonVersion = "0.1.0"
         status.updatedAt = Date()
