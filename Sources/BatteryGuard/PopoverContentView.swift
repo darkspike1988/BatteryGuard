@@ -324,26 +324,30 @@ struct PopoverContentView: View {
                     .frame(width: 8, height: 8)
                     .shadow(color: (statusStore.isDaemonActive ? Color.green : Color.red).opacity(0.4), radius: 2)
                 
-                Text(statusStore.isDaemonActive ? "Dienst aktiv (v\(statusStore.status.daemonVersion))" : "Hintergrunddienst inaktiv")
+                Text(statusStore.isDaemonActive ? "Dienst aktiv (v\(statusStore.status.daemonVersion))" : "Dienst gestoppt")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 
                 Spacer()
                 
                 if !statusStore.isDaemonActive {
-                    Button("Dienst installieren…") {
+                    Button("Start") {
                         installDaemon()
                     }
                     .font(.caption.weight(.medium))
                     .adaptiveGlassProminentButton()
                     .controlSize(.small)
                 } else {
-                    Button("Dienst entfernen…") {
+                    Button("Stop") {
                         uninstallDaemon()
                     }
                     .font(.caption.weight(.medium))
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.secondary.opacity(0.15))
+                    .clipShape(Capsule())
                 }
             }
             
@@ -356,7 +360,7 @@ struct PopoverContentView: View {
                 
                 Spacer()
                 
-                Button("App beenden") {
+                Button("Beenden") {
                     NSApp.terminate(nil)
                 }
                 .font(.caption)
