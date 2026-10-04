@@ -29,7 +29,7 @@ struct LocalAPITests {
         let configURL = directory.appendingPathComponent("config.json")
         try BGJSON.encoder().encode(BGConfig()).write(to: configURL)
         let config = ConfigStore(configURL: configURL)
-        let status = StatusStore(startImmediately: false)
+        let status = StatusStore(startImmediately: false, reader: { nil })
         var current = BGStatus(); current.daemonVersion = AppVersion.requiredDaemon; current.updatedAt = Date()
         status.status = current; status.isDaemonActive = true
         let preferences = UserDefaults(suiteName: "LocalAPITests.\(UUID().uuidString)")!

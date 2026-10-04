@@ -33,6 +33,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        if ProcessInfo.processInfo.arguments.contains("--read-power-flow") {
+            if let sample = PowerFlowReader.read(), sample.isFresh(),
+               sample.inputWatts != nil || sample.batteryWatts != nil {
+                struct PowerFlowOutput: Encodable {
+                    let available: Bool
+                    let sampledAt: Date
+                    let source: String
+                    let inputWatts: Double?
+                    let batteryWatts: Double?
+                    let systemWatts: Double?
+                    let adapterRatedWatts: Double?
+                    let hardwarePercent: Double?
+                }
+                let output = PowerFlowOutput(
+                    available: true,
+                    sampledAt: sample.sampledAt,
+                    source: sample.source,
+                    inputWatts: sample.inputWatts,
+                    batteryWatts: sample.batteryWatts,
+                    systemWatts: sample.systemWatts,
+                    adapterRatedWatts: sample.adapterRatedWatts,
+                    hardwarePercent: sample.hardwarePercent
+                )
+                if let data = try? BGJSON.encoder().encode(output),
+                   let string = String(data: data, encoding: .utf8) {
+                    print(string)
+                } else {
+                    FileHandle.standardError.write(Data("Power-Flow-JSON konnte nicht erstellt werden.\n".utf8))
+                    exit(1)
+                }
+            } else {
+                print("{\"available\":false}")
+            }
+            exit(0)
+        }
         AppPresence.shared.applyOnLaunch()
         Self.updateStore?.startAutomaticChecks()
         Self.apiStore?.startIfEnabled()
@@ -62,7 +97,7 @@ struct BatteryGuardApp: App {
     @State private var api: LocalAPIStore
     
     init() {
-        let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates")
+        let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates") || ProcessInfo.processInfo.arguments.contains("--read-power-flow")
         let config = preview ? ConfigStore.preview : ConfigStore()
         let status = preview ? StatusStore.preview : StatusStore()
         let history = HistoryStore(preview: preview)

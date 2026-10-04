@@ -16,6 +16,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Einmaliges Vollladen:** Mit weiterhin aktivem konfiguriertem Hitzeschutz und einer maximalen Dauer von acht Stunden.
 - **Lokaler Verlauf:** Ladung, Temperatur und Lade-/Entladeleistung. Ein Messpunkt pro Minute, bis zu sieben Tage. Aufzeichnung nur bei laufender App und aktuellen Messwerten; Schlaf- und Ausfallzeiten bleiben Lücken.
 - **Auswertung:** Beobachtete Zeit, Zeit ab 90 % und Zeit ab 40 °C sowie höchste gemessene Temperatur. Keine erfundenen Verschleiß- oder Lebensdauerprognosen.
+- **Energiefluss (ab 0.3.5):** Netzteileingang, Akku-Ladefluss und daraus geschätzte Mac-Leistung getrennt sehen. Netzteil-Nennleistung ist kein Verbrauch. Messwerte hängen von Hardware und macOS ab; fehlende Werte bleiben unbekannt. Rein lesend und ohne Dienstupdate.
 - **Lokale REST API:** Status, gespeicherte Einstellungen und Verlauf als JSON oder CSV auslesen. Optionale Steuerbefehle für Profile, Pausen und Reiseplanung. Standardmäßig aus, nur lokal und mit Bearer-Token. [Dokumentation](docs/api.md).
 - **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
 - **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren B-Guard-Zielen und verweist auf die Systemeinstellungen.
@@ -24,7 +25,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 
 ## Oberfläche
 
-Die Menüleistenanzeige lässt sich auf Symbol, Prozent, Temperatur oder Akku-Leistung einstellen. Als Symbol stehen Ladering, Batterie und Schild zur Auswahl; die Darstellung lässt sich separat zurücksetzen. Temperatur, Akku-Leistung und Gesundheit sind im Menüfenster optional zuschaltbar. Das Menüleistenfenster bietet Status, Profile und schnelle Aktionen. Das Hauptfenster gliedert sich in Übersicht, Verlauf und Einstellungen. Systemtypografie, Systemfarben, Standard-Bedienelemente und Hell-/Dunkelmodus bilden die Grundlage.
+Die Menüleistenanzeige lässt sich auf Symbol, Prozent, Temperatur oder Akku-Leistung einstellen. Als Symbol stehen Ladering, Batterie und Schild zur Auswahl; die Darstellung lässt sich separat zurücksetzen. Temperatur, Akku-Leistung, Gesundheit und ab 0.3.5 eine Energiefluss-Karte (standardmäßig aus) sind im Menüfenster optional zuschaltbar und vom Zurücksetzen der Darstellung umfasst. Das Menüleistenfenster bietet Status, Profile und schnelle Aktionen. Das Hauptfenster gliedert sich in Übersicht, Verlauf und Einstellungen. Systemtypografie, Systemfarben, Standard-Bedienelemente und Hell-/Dunkelmodus bilden die Grundlage.
 
 ![Übersicht, gerenderte Vorschau mit Beispieldaten](docs/previews/light/overview.png)
 
@@ -54,6 +55,8 @@ Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste biet
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
 
+**Update auf 0.3.5:** Für die Energieflussanzeige genügt das App-Update. Der vorhandene Hintergrunddienst 0.3.2 läuft unverändert weiter und erfordert keine Aktualisierung.
+
 **Update auf 0.3.3:** Ein vorhandener Hintergrunddienst 0.3.2 kann weiterlaufen. Die neuen Menü- und Warnoptionen benötigen keine Administratorfreigabe.
 
 **Umstieg auf 0.3.2:** Nach dem Ersetzen der App den Hintergrunddienst in den Einstellungen aktualisieren. Version 0.3.2 benötigt Dienst 0.3.2 für atomare Ladebefehle. Bis zur Aktualisierung werden Steueraktionen nicht freigegeben; der alte Dienst führt seine gespeicherten Einstellungen weiter aus. Das Update bewahrt Konfiguration und Verlauf.
@@ -72,6 +75,9 @@ Erstellt App, ZIP, DMG und SHA-256-Prüfsumme unter `dist/`. Die DMG enthält di
 ```sh
 # Nur lesende Diagnose; keine Systemdateien oder SMC-Werte ändern
 .build/debug/batteryguardd --once
+
+# Einmaliger Energiefluss-Snapshot als JSON (ohne Einstellungs- oder Steuerungsänderungen)
+B-Guard.app/Contents/MacOS/BatteryGuard --read-power-flow
 
 # Gerenderte Entwickler-Vorschauen, isoliert von Benutzer-Konfiguration und Verlauf
 .build/debug/BatteryGuard --render-preview /tmp/B-GuardPreview
@@ -97,7 +103,7 @@ Vor dem Systemschlaf wird die Steuerung freigegeben, nach dem Aufwachen neu gepr
 
 ## Lokale Automatisierung
 
-Die optionale [REST API v1](docs/api.md) ist standardmäßig aus und nur unter `127.0.0.1:8767` erreichbar. Bearer-Token und eine separate Freigabe für Schreibaktionen schützen die Schnittstelle. Die App muss laufen.
+Die optionale [REST API v1](docs/api.md) ist standardmäßig aus und nur unter `127.0.0.1:8767` erreichbar. Bearer-Token und eine separate Freigabe für Schreibaktionen schützen die Schnittstelle. Ab Version 0.3.5 stellt `GET /api/v1/power-flow` einen authentifizierten Snapshot des Energieflusses bereit (`available`, `sampledAt`, `source` und optionale Leistungswerte; bei veralteten Daten ohne numerische Werte). Die App muss laufen.
 
 ## Entfernen
 
@@ -110,7 +116,7 @@ sudo ./scripts/uninstall-daemon.sh
 
 ## Lizenz und Inspiration
 
-MIT. Hardware-Erkenntnisse der Community: [actuallymentor/battery](https://github.com/actuallymentor/battery), [charlie0129/batt](https://github.com/charlie0129/batt) und [mhaeuser/Battery-Toolkit](https://github.com/mhaeuser/Battery-Toolkit). Der Anwendungscode ist eine eigenständige Swift-Implementierung.
+MIT. Hardware-Erkenntnisse der Community: [actuallymentor/battery](https://github.com/actuallymentor/battery), [charlie0129/batt](https://github.com/charlie0129/batt), [mhaeuser/Battery-Toolkit](https://github.com/mhaeuser/Battery-Toolkit), [robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [isliliming/power-flow-lite](https://github.com/isliliming/power-flow-lite) (dokumentieren praktische Einheiten, keinen offiziellen Apple-Vertrag). Der Anwendungscode ist eine eigenständige Swift-Implementierung.
 
 Designreferenz: [Apple Human Interface Guidelines für macOS](https://developer.apple.com/design/human-interface-guidelines/designing-for-macos/). Native macOS-Funktionen: [Apple Support zum Ladelimit](https://support.apple.com/en-au/102338).
 

@@ -27,6 +27,7 @@ struct PreferencesView: View {
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
     @AppStorage("bg.menuShowHealth") private var menuShowHealth = false
+    @AppStorage("bg.menuShowPowerFlow") private var menuShowPowerFlow = false
 
     private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct }
 
@@ -132,6 +133,7 @@ struct PreferencesView: View {
                 Toggle("Temperatur im Menüfenster", isOn: $menuShowTemperature)
                 Toggle("Akku-Leistung im Menüfenster", isOn: $menuShowPower)
                 Toggle("Akkugesundheit im Menüfenster", isOn: $menuShowHealth)
+                Toggle("Energiefluss im Menüfenster", isOn: $menuShowPowerFlow)
                 Button("Darstellung zurücksetzen") {
                     // AppStorage bindings respect an injected preview store.
                     menuBarIconStyle = .ring
@@ -139,6 +141,7 @@ struct PreferencesView: View {
                     menuShowTemperature = false
                     menuShowPower = false
                     menuShowHealth = false
+                    menuShowPowerFlow = false
                 }
             } header: { Text("Menüleiste") }
 

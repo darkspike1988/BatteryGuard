@@ -61,3 +61,23 @@ Gemini meldete zusätzlich 30.938 Thinking-Tokens. Diese Zahl nicht nochmals auf
 Das kleine P5-Paket wurde als App 0.3.4 umgesetzt: Ladering/Batterie/Schild, sichere Darstellungsvorgaben und Reset. Claude bestätigte den falschen Ladehinweis bei bloßem Netzteilanschluss und den globalen Reset-Zugriff in isolierten Vorschauen; Codex korrigierte beide. Claudes pauschaler Hinweis auf fehlende Preview-Isolation wurde nicht übernommen, weil `DesignPreview` bereits `.defaultAppStorage` verwendet. Nach visueller Prüfung bekam die Batterieanzeige einen kontrastreichen Status-Badge.
 
 115 Tests bestanden (106 Swift Testing, 9 XCTest). Release-Build, Bundle-Signatur, DMG-Prüfsumme und gerenderte Symbolansichten erfolgreich geprüft. Vorhandener Dienst 0.3.2 bleibt ausreichend; keine Hardwareaktion oder Benutzer-Ladeprofiländerung durch Agenten. Die größeren Pakete aus der Tabelle bleiben geplant.
+
+## Fortsetzung mit 36 % Codex laut Nutzer · Power Flow 0.3.5
+
+Mehr Remote-Delegation: neun begrenzte Aufträge über Antigravity, getrennte Dateien; Gemini für Recherche, Modell, Anzeige, Integration und Dokumentation, Claude für Reader, API-Tests und zwei Reviews (insgesamt neun Aufträge). Die 36 % sind eine neue Nutzerangabe; Gemini-/Claude-Restwerte wurden nicht erneut abgefragt.
+
+| Auftrag | Status laut CLI | Dauer | Input | Output | Cache Read | Total |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| research | SUCCESS | 55 s | 90998 | 5767 | 183541 | 96765 |
+| model | SUCCESS | 49 s | 85996 | 16938 | 89779 | 102934 |
+| ui | SUCCESS | 53 s | 60505 | 18051 | 98013 | 78556 |
+| reader | SUCCESS | 62 s | 57934 | 10042 | 91664 | 67976 |
+| integration | ERROR | 193 s | 242651 | 55330 | 1470611 | 297981 |
+| docs | ERROR | 111 s | 165147 | 25844 | 620488 | 190991 |
+| api-tests | ERROR | 54 s | 51485 | 4605 | 218210 | 56090 |
+| review | SUCCESS | 68 s | 47221 | 9029 | 115364 | 56250 |
+| integration-review | SUCCESS | 34 s | 45774 | 3980 | 59300 | 49754 |
+
+Drei Aufträge (Integration, Dokumentation, API-Tests) meldeten ERROR nach einem Netzwerk-Verbindungsabbruch, obwohl Dateien und Antworten vorhanden waren. Diese wurden einzeln geprüft statt als erfolgreiche Delegation verbucht. Codex korrigierte den falschen Test-Parameternamen, API-Zeitinjektion, unbekannte API-Werte, CLI-Verfügbarkeit/Fehlerausgabe und kleine Darstellungsfehler. Claudes vermuteter CFNumber-Kompilierfehler war durch erfolgreichen Swift-Build widerlegt; ein zusätzlicher Widget-Timer ist unnötig, weil die vorhandene 2-Sekunden-Abfrage jeden Snapshot ersetzt oder löscht. Pauschale Forschungsbehauptungen zu sämtlichen Apple-OSS-Repositories oder Modell-/OS-Grenzen wurden nicht übernommen.
+
+Abnahme: 143 Tests (134 Swift Testing, 9 XCTest), Release-Build und Bundle-Signatur. Live-Snapshot auf diesem Mac: Netzteil-Nennleistung 65 W, Eingang 13,144 W, Akku 0 W, abgeleitete Mac-Leistung 13,144 W; Hardware-Prozent mangels Rohkapazitätspaar unbekannt. Kein aktiver Ladeeingriff zur Abnahme. Die Werte sind Momentaufnahmen und keine Steckdosenmessung. P1 teilweise umgesetzt; nächste Pakete P2 lesende Kurzbefehle und P5 Kartenkonfiguration, Hardware-/Kalibrierungspakete bleiben separat abnahmepflichtig.

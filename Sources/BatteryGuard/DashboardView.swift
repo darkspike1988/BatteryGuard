@@ -114,6 +114,7 @@ struct OverviewView: View {
                 Text(batteryPowerExplanation)
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                PowerFlowView(sample: statusStore.powerFlow)
                 BGPanel {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {

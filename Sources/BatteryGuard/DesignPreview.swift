@@ -44,6 +44,7 @@ enum DesignPreview {
             updatePreferences.set(args.contains("--menu-metrics"), forKey: "bg.menuShowTemperature")
             updatePreferences.set(args.contains("--menu-metrics"), forKey: "bg.menuShowPower")
             updatePreferences.set(args.contains("--menu-metrics"), forKey: "bg.menuShowHealth")
+            updatePreferences.set(args.contains("--power-flow"), forKey: "bg.menuShowPowerFlow")
             let updater = UpdateStore(preferences: updatePreferences)
             let api = LocalAPIStore(config: config, status: status, history: history, preferences: updatePreferences)
             if args.contains("--update-available") {

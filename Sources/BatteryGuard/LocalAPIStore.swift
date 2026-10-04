@@ -157,7 +157,7 @@ final class LocalAPIStore {
             return Self.failure(400, "invalid_path", "Ungültiger API-Pfad.")
         }
         let path = components.path
-        let reads = ["/api/v1/status", "/api/v1/config", "/api/v1/history", "/api/v1/history.csv", "/api/v1/capabilities"]
+        let reads = ["/api/v1/status", "/api/v1/config", "/api/v1/history", "/api/v1/history.csv", "/api/v1/capabilities", "/api/v1/power-flow"]
         guard reads.contains(path) || path == "/api/v1/actions" else { return Self.failure(404, "not_found", "Endpunkt nicht vorhanden.") }
         guard request.method == (path == "/api/v1/actions" ? "POST" : "GET") else {
             return Self.failure(405, "method_not_allowed", "Methode für diesen Endpunkt nicht erlaubt.")
@@ -198,6 +198,52 @@ final class LocalAPIStore {
                     "smcKeysDetected": status.status.smcKeysDetected,
                     "usesNativeDesktopFallback": status.status.usesNativeDesktopFallback]
                 return LocalHTTPResponse(status: 200, jsonData: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]))
+            case "/api/v1/power-flow":
+                // Freshness represents collection freshness (when the sample was gathered by B-Guard),
+                // not sensor freshness (the underlying hardware sensor update interval).
+                let sample = status.powerFlow
+                let isFresh = sample?.isFresh(at: now) ?? false
+                let hasBatteryOrInput = (sample?.batteryWatts != nil) || (sample?.inputWatts != nil)
+                let available = isFresh && hasBatteryOrInput
+
+                struct PowerFlowResponse: Encodable {
+                    let available: Bool
+                    let fresh: Bool
+                    let sampledAt: Date?
+                    let source: String?
+                    let inputWatts: Double?
+                    let batteryWatts: Double?
+                    let systemWatts: Double?
+                    let adapterRatedWatts: Double?
+                    let hardwarePercent: Double?
+                }
+
+                if !available {
+                    // No usable current power: omit all values.
+                    return try json(PowerFlowResponse(
+                        available: false,
+                        fresh: isFresh,
+                        sampledAt: nil,
+                        source: nil,
+                        inputWatts: nil,
+                        batteryWatts: nil,
+                        systemWatts: nil,
+                        adapterRatedWatts: nil,
+                        hardwarePercent: nil
+                    ))
+                }
+
+                return try json(PowerFlowResponse(
+                    available: available,
+                    fresh: true,
+                    sampledAt: sample?.sampledAt,
+                    source: sample?.source,
+                    inputWatts: sample?.inputWatts,
+                    batteryWatts: sample?.batteryWatts,
+                    systemWatts: sample?.systemWatts,
+                    adapterRatedWatts: sample?.adapterRatedWatts,
+                    hardwarePercent: sample?.hardwarePercent
+                ))
             default:
                 guard allowsControl else { return Self.failure(403, "read_only", "API-Steuerung ist nicht freigegeben.") }
                 guard daemonActive, !status.daemonNeedsUpdate else {

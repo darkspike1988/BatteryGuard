@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.4
+Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.5
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 
@@ -12,7 +12,7 @@ Diese Roadmap beschreibt eigene B-Guard-Implementierungen anhand der [offizielle
 
 | Paket | Priorität | Ergebnis | Voraussetzung |
 | --- | --- | --- | --- |
-| P1 | Hoch · zuerst | Power Flow und zusätzlicher Hardware-Ladestand | Verifizierte lesende Messquellen |
+| P1 | Hoch · teilweise in 0.3.5 | Power Flow und zusätzlicher Hardware-Ladestand (teilweise umgesetzt) | Verifizierte lesende Messquellen |
 | P2 | Hoch | Native Kurzbefehle und gemeinsame Aktionsschnittstelle | Bestehendes atomisches Dienstprotokoll |
 | P3 | Hoch | Vollständiges Top Up, Einmalentladung und „Laden hier halten“ | Fähigkeitsprüfung für jede Steueraktion |
 | P4 | Hoch | Eigene Profile und wiederkehrende Zeitpläne | P2/P3 und definierte Konfliktregeln |
@@ -20,15 +20,20 @@ Diese Roadmap beschreibt eigene B-Guard-Implementierungen anhand der [offizielle
 | H1 | Parallel · zunächst lesend | Bestätigte Backends für Sailing, Deckel und Schlaf | Hardware-/Firmware-Abnahmematrix |
 | P6 | Später | Manueller Kalibrierungsassistent | H1 mit bestätigter Lade-/Entladesteuerung |
 
-### P1 — Energiefluss verständlich anzeigen
+### P1 — Energiefluss verständlich anzeigen (teilweise umgesetzt in 0.3.5)
 
-- Tatsächlich verfügbare Eingangsmesswerte lesend erfassen und Quelle, Einheit, Vorzeichen, Aktualität sowie Verhalten mit USB-C, MagSafe und Dock prüfen. Netzteil-Nennleistung bleibt ein separat benannter Wert; sie ersetzt keine gemessene Leistung.
-- Netzteilzufuhr, Batteriefluss und daraus gegebenenfalls abgeleitete Mac-Leistung getrennt anzeigen. Abgeleitete Werte ausdrücklich kennzeichnen; Verluste und widersprüchliche Messzeitpunkte nicht als exakte Systemmessung darstellen.
-- Eigenes Energieflussdiagramm in Übersicht und optional im Menüfenster; Textalternative für VoiceOver und Reduced Motion. Bei fehlenden Messwerten „nicht verfügbar“ anzeigen, nicht 0 W erfinden.
-- Zusätzlichen Hardware-Ladestand neben dem macOS-Wert anzeigen, sofern Quelle und Berechnung bestätigt sind. Beide sind Schätzwerte; bestehende Steuerung bleibt am macOS-Prozentwert orientiert.
-- Neue Messwerte mit Quelle und Zeitpunkt optional im REST-Status bereitstellen; alte Clients und alte Statusdateien bleiben lesbar.
+- **Power Flow & Snapshot:** Rein lesender Snapshot aus `AppleSmartBattery` alle 2 s, rein in der App umgesetzt. Bestehender Dienst 0.3.2 bleibt kompatibel.
+- **Berechnungen & Messwerte:**
+  - Netzteileingang: tatsächlicher gemeldeter Wert `SystemPowerIn / 1000` (in Watt). 0 W wird nur bei bestätigt getrenntem Netzteil angezeigt.
+  - Batteriefluss: vorzeichenbehaftet aus `Voltage * InstantAmperage / 1e6` (in Watt, Laden positiv / Entladen negativ).
+  - Mac-Leistung: geschätzter Systemverbrauch aus Differenz `Eingang - Batterie`.
+  - Nennleistung: `AdapterDetails.Watts` (z. B. 65 W) ist reine Typ-Nennleistung, niemals tatsächlicher Verbrauch.
+  - Hardware-%: nur bei vorhandenem Rohkapazitätspaar, andernfalls unbekannt (`—`).
+- **Quellen & Grenzen:** Basiert auf unabhängig verifizierten Community-Quellen ([robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [power-flow-lite](https://github.com/isliliming/power-flow-lite)). Dokumentiert praktische Einheiten, keinen offiziellen Apple-Vertrag. Undokumentierte IOKit-Schlüssel variieren nach Hardware/macOS. Eine Frische von 10 s (`collected-at`) garantiert keine Sensoraktualisierung durch die Firmware; keine Steckdosenmessgerät-Genauigkeit.
+- **Oberfläche & Schnittstellen:** Optionale Menüleistenkarte (standardmäßig aus), vom Darstellungs-Reset umfasst. Authentifizierter Endpunkt `GET /api/v1/power-flow` (bei veralteten Daten `available: false` ohne numerische Werte) und CLI-Befehl `B-Guard.app/Contents/MacOS/BatteryGuard --read-power-flow` (einmaliger JSON-Snapshot ohne Einstellungs- oder Steuerungsänderung).
+- **Status:** P1 ist teilweise umgesetzt. Native Kurzbefehle/Intents (P2) und Kalibrierung (P6) sind separate spätere Pakete.
 
-**Abnahme:** Netzteilbetrieb bei 0 W Akkustrom, Laden, Entladen, schwaches Netzteil mit Akku-Unterstützung, fehlende/veraltete Sensoren und Vorzeichen getestet. Konkrete Hardwarewerte lesend gegenprüfen. Ein Diagramm darf nur die tatsächlich verfügbaren Flüsse zeigen. Falls die Eingangsmessung fehlt, Batteriefluss allein veröffentlichen und die fehlende Systemmessung klar kennzeichnen.
+**Abnahme:** Netzteilbetrieb bei 0 W Akkustrom, Laden, Entladen, schwaches Netzteil mit Akku-Unterstützung, fehlende/veraltete Sensoren und Vorzeichen testen. Konkrete Hardwarewerte lesend gegenprüfen. Ein Diagramm darf nur tatsächlich verfügbare Flüsse zeigen. In 0.3.5 per Simulation und lokalem Netzteil-Snapshot teilweise erfüllt; physische Prüfung der weiteren Zustände und Modelle bleibt offen.
 
 ### P2 — Native Kurzbefehle
 
@@ -181,3 +186,16 @@ Validierung: 109 Tests (100 Swift Testing und 9 XCTest) erfolgreich; Release-Bui
 - Gemini programmierte, Claude prüfte unabhängig; Codex korrigierte Statuswahrheit und Reset-Isolation. Tatsächliches Laden wird nicht aus Netzteilanschluss allein abgeleitet.
 - P5 ist damit weiterhin teilweise umgesetzt: zusätzliche Karten, Reihenfolge und LED-Modi bleiben offen. Power Flow bleibt der nächste fachliche Schwerpunkt; keine neue Eingangsmessung mit dieser Version.
 - Vorhandener Hintergrunddienst 0.3.2 reicht aus.
+
+## Energiefluss und Power Flow · 0.3.5 (P1 teilweise)
+
+- **Rein lesender Snapshot:** Alle 2 Sekunden Erfassung aus `AppleSmartBattery` direkt in der App. Kein Daemon-Update nötig; Hintergrunddienst 0.3.2 bleibt kompatibel.
+- **Berechnungen & Heuristiken:**
+  - Netzteileingang: `SystemPowerIn / 1000` (in Watt). Bei bestätigtem Akkubetrieb wird Eingang 0 W angenommen; ein tatsächlich gemeldeter Nullwert bleibt auch am Netzteil erhalten.
+  - Batteriefluss: `Voltage * InstantAmperage / 1e6` (in Watt, vorzeichenbehaftet).
+  - Mac-Leistung: geschätzte Differenz `Eingang - Batterie`.
+  - Nennleistung: `AdapterDetails.Watts` (z. B. 65 W) ist reine Typ-Nennleistung, niemals tatsächlicher Verbrauch.
+  - Hardware-%: nur bei vorhandenem Rohkapazitätspaar, andernfalls `—`.
+- **Quellen & Grenzen:** Unabhängig verifizierte Community-Quellen ([robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [power-flow-lite](https://github.com/isliliming/power-flow-lite)), die praktische Einheiten dokumentieren (kein offizieller Apple-Vertrag). Undokumentierte IOKit-Schlüssel variieren nach Hardware und macOS. Frische von 10 s (`collected-at`) garantiert keine Sensoraktualisierung durch die Firmware; keine Steckdosenmessgerät-Genauigkeit.
+- **Oberfläche & Schnittstellen:** Optionale Menüleistenkarte (standardmäßig aus), integriert in das Zurücksetzen der Darstellung. Authentifizierter Endpunkt `GET /api/v1/power-flow` (bei veralteten Daten `available: false` ohne numerische Werte) und CLI-Befehl `B-Guard.app/Contents/MacOS/BatteryGuard --read-power-flow` (einmaliger JSON-Snapshot ohne Einstellungs- oder Steuerungsänderungen).
+- **Abgrenzung:** P1 ist damit teilweise abgeschlossen. Native Kurzbefehle/Intents (P2) und Kalibrierungsassistent (P6) sind nicht enthalten. 143 Tests bestanden; Release-Build und Bundle-Signatur geprüft. Physische Abnahme bisher auf dem lokalen Mac, keine vollständige Hardware-Matrix.

@@ -175,6 +175,7 @@ struct MenuBarAppearanceTests {
         defaults.set(true, forKey: "bg.menuShowTemperature")
         defaults.set(true, forKey: "bg.menuShowPower")
         defaults.set(true, forKey: "bg.menuShowHealth")
+        defaults.set(true, forKey: "bg.menuShowPowerFlow")
 
         // Mutierende Methode explizit außerhalb von #expect aufrufen
         MenuBarAppearance.resetDisplayPreferences(userDefaults: defaults)
@@ -194,6 +195,7 @@ struct MenuBarAppearanceTests {
 
         let showHealth = defaults.bool(forKey: "bg.menuShowHealth")
         #expect(showHealth == false)
+        #expect(defaults.bool(forKey: "bg.menuShowPowerFlow") == false)
 
         // 2. Erhalt aller fremden Werte verifizieren (niemals angetastet)
         let notifyLow = defaults.bool(forKey: "bg.notifyLow")

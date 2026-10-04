@@ -22,9 +22,12 @@ final class StatusStore: Sendable {
 
     var configProvider: (@MainActor () -> BGConfig)?
     
+    var powerFlow: BGPowerFlowSample?
+    private let reader: @MainActor () -> BGPowerFlowSample?
     private var pollingTask: Task<Void, Never>?
     
-    init(startImmediately: Bool = true) {
+    init(startImmediately: Bool = true, reader: @escaping @MainActor () -> BGPowerFlowSample? = { PowerFlowReader.read() }) {
+        self.reader = reader
         refreshStatus()
         if startImmediately {
             startPolling()
@@ -49,6 +52,7 @@ final class StatusStore: Sendable {
     
     func refreshStatus() {
         configRefresh?()
+        self.powerFlow = reader()
         let statusPath = BGPaths.status
         let fileManager = FileManager.default
         
@@ -76,7 +80,13 @@ final class StatusStore: Sendable {
     }
     
     static var preview: StatusStore {
-        let store = StatusStore(startImmediately: false)
+        let store = StatusStore(startImmediately: false, reader: { nil })
+        store.powerFlow = BGPowerFlowSample(
+            inputWatts: 12,
+            batteryWatts: 0,
+            adapterRatedWatts: 65,
+            hardwarePercent: 77.6
+        )
         var s = BGStatus()
         s.nativeChargeLimit = 100
         s.percent = 78

@@ -31,6 +31,7 @@ public enum MenuBarAppearanceKeys {
     public static let showTemperature = "bg.menuShowTemperature"
     public static let showPower = "bg.menuShowPower"
     public static let showHealth = "bg.menuShowHealth"
+    public static let showPowerFlow = "bg.menuShowPowerFlow"
 }
 
 /// Reine, statisch getypte Beschreibung des Menüleistensymbols.
@@ -131,6 +132,7 @@ public enum MenuBarAppearance {
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showTemperature)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPower)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showHealth)
+        userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPowerFlow)
     }
 }
 

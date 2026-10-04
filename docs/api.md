@@ -15,16 +15,45 @@ Jede Anfrage benötigt den Header `Authorization: Bearer <Token>`. Das Token bes
 | `GET /api/v1/history?hours=24` | Lokale Messpunkte als JSON. |
 | `GET /api/v1/history.csv?hours=24` | Dieselben Messpunkte als CSV. |
 | `GET /api/v1/capabilities` | API-Version, App-Version, benötigte Dienstversion, `controlAllowed` und verfügbare Fähigkeiten. |
+| `GET /api/v1/power-flow` | Authentifizierter Energiefluss-Snapshot aus `AppleSmartBattery`. |
 
 Der Verlauf verwendet ohne Parameter die letzten 24 Stunden. `hours` muss eine ganze Zahl von 1 bis 168 sein. Messlücken bleiben erhalten; die API erfindet keine Werte für Schlafzeiten oder eine geschlossene App. Eine erfolgreiche Statusabfrage bedeutet nicht automatisch, dass der Dienst erreichbar ist: Prüfe `daemonActive`, bevor du Messwerte als aktuell verwendest.
 
-Die Konfiguration ist ein gespeicherter Wunschzustand. Sie beweist nicht, dass das gewählte Ladelimit gerade physisch umgesetzt wird. Das hängt unter anderem von Dienstzustand, Hardware, Monitorbetrieb und Apples Akkumanagement ab. Prüfe den Status und die Fähigkeiten. Es gibt kein beliebiges `PUT` oder einen freien Schreibzugriff auf Konfigurationsfelder.
+### Energiefluss (`GET /api/v1/power-flow`)
+
+Liest alle 2 Sekunden rein lesend einen Snapshot aus `AppleSmartBattery` aus. Die App übernimmt dies eigenständig; ein Update des Hintergrunddienstes ist nicht erforderlich (Dienst 0.3.2 bleibt kompatibel).
+
+Schema der JSON-Antwort:
+- `available` (Boolean): `true`, wenn frische Daten mit mindestens einem vorhandenen Leistungswert vorliegen; `false`, wenn die Messung veraltet (stale) ist.
+- `sampledAt` (String, ISO-8601-Zeitstempel): Zeitpunkt der Messwerterfassung.
+- `source` (String): Datenquelle (z. B. `"AppleSmartBattery"`).
+- `inputWatts` (Zahl, optional): tatsächlich gemeldetes `SystemPowerIn / 1000` in Watt. 0 W wird nur bei bestätigt getrenntem Netzteil gemeldet.
+- `batteryWatts` (Zahl, optional): vorzeichenbehafteter Batteriefluss aus `Voltage * InstantAmperage / 1e6` in Watt.
+- `systemWatts` (Zahl, optional): geschätzter Systemverbrauch als Differenz `inputWatts - batteryWatts`.
+- `adapterRatedWatts` (Zahl, optional): Typ-Nennleistung aus `AdapterDetails.Watts` (z. B. 65 W; reine Nennleistung, niemals tatsächlicher Verbrauch).
+- `hardwarePercent` (Zahl, optional): Hardware-Ladestand, nur vorhanden, wenn ein Rohkapazitätspaar verfügbar ist; sonst entfällt der Wert (in der UI `—`).
+
+**Verhalten bei veralteten Daten:** Ist die Messung älter als die Frischefrist von 10 Sekunden (`available: false`), werden **keine** numerischen Leistungswerte geliefert. Die Frische von 10 s garantiert jedoch keine Sensoraktualisierung durch die Firmware. Die undokumentierten IOKit-Schlüssel variieren nach Hardware und macOS-Version; es wird keine Steckdosenmessgerät-Genauigkeit zugesagt. Die Umsetzung basiert auf unabhängig verifizierten Community-Quellen ([robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [power-flow-lite](https://github.com/isliliming/power-flow-lite)), die praktische Einheiten dokumentieren, keinen offiziellen Apple-Vertrag.
+
+### CLI-Direktausgabe
+
+Über die Kommandozeile kann ein einzelner Snapshot ohne HTTP-Server und ohne Änderung von App-Einstellungen oder Steuerung ausgegeben werden:
+
+```sh
+B-Guard.app/Contents/MacOS/BatteryGuard --read-power-flow
+```
+
+Gibt genau ein JSON-Objekt gemäß dem obigen Schema aus.
 
 ```sh
 # BGUARD_API_TOKEN vorher lokal setzen; Token nicht in die URL schreiben.
 curl --fail-with-body \
   -H "Authorization: Bearer ${BGUARD_API_TOKEN:?API-Token setzen}" \
   http://127.0.0.1:8767/api/v1/status
+
+curl --fail-with-body \
+  -H "Authorization: Bearer ${BGUARD_API_TOKEN:?API-Token setzen}" \
+  http://127.0.0.1:8767/api/v1/power-flow
 
 curl --fail-with-body \
   -H "Authorization: Bearer ${BGUARD_API_TOKEN:?API-Token setzen}" \

@@ -10,6 +10,7 @@ struct PopoverContentView: View {
     @AppStorage("bg.menuShowTemperature") private var showTemperature = false
     @AppStorage("bg.menuShowPower") private var showPower = false
     @AppStorage("bg.menuShowHealth") private var showHealth = false
+    @AppStorage("bg.menuShowPowerFlow") private var showPowerFlow = false
     @State private var editingLimits = false
     @Environment(\.openWindow) private var openWindow
 
@@ -54,6 +55,9 @@ struct PopoverContentView: View {
                         menuMetric("Gesundheit", value: statusStore.isDaemonActive ? statusStore.status.healthPercent.map { "\($0) %" } ?? "– %" : "– %")
                     }
                 }
+            }
+            if showPowerFlow {
+                PowerFlowView(sample: statusStore.powerFlow, compact: true)
             }
             Divider()
             VStack(alignment: .leading, spacing: 10) {

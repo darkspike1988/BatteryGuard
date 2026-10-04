@@ -7,6 +7,12 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.5", title: "Energiefluss verstehen", changes: [
+            "Netzteil-Eingang, geschätzte Mac-Leistung und Akku-Ladefluss getrennt anzeigen.",
+            "Energiefluss als optionale Karte im Menüfenster; fehlende Messwerte bleiben unbekannt.",
+            "Lesender REST-Endpunkt /api/v1/power-flow und JSON-Abfrage für eigene Automatisierung.",
+            "Netzteil-Nennleistung und Hardware-Ladestand nur bei verfügbaren Daten. Dienst 0.3.2 bleibt ausreichend."
+        ]),
         .init(version: "0.3.4", title: "Dein Symbolstil", changes: [
             "Monochrome Symbolstile: Ladering, Batterie oder Schild.",
             "Darstellung zurücksetzen, ohne Ladeprofil, Mitteilungen, API oder Autostart zu verändern.",
