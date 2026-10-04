@@ -17,7 +17,7 @@ if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
     exit 1
 fi
 
-echo "==> BatteryGuard Daemon-Installation gestartet..."
+echo "==> B-Guard Daemon-Installation gestartet..."
 
 # 2. Quell-Binary ermitteln
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,8 +35,8 @@ else
     # Automatische Suche: Neben dem Skript -> dist/… -> .build/release/ -> .build/debug/
     CANDIDATES=(
         "$SCRIPT_DIR/batteryguardd"
-        "$SCRIPT_DIR/../dist/BatteryGuard.app/Contents/Resources/batteryguardd"
-        "$PROJECT_ROOT/dist/BatteryGuard.app/Contents/Resources/batteryguardd"
+        "$SCRIPT_DIR/../dist/B-Guard.app/Contents/Resources/batteryguardd"
+        "$PROJECT_ROOT/dist/B-Guard.app/Contents/Resources/batteryguardd"
         "$SCRIPT_DIR/../.build/release/batteryguardd"
         "$PROJECT_ROOT/.build/release/batteryguardd"
         "$SCRIPT_DIR/../.build/debug/batteryguardd"

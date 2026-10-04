@@ -16,7 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               !FileManager.default.fileExists(atPath: BGPaths.daemonBinary) else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "BatteryGuard einrichten"
+        window.title = "B-Guard einrichten"
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: SetupView { [weak window] in window?.close() })
         window.center()
@@ -67,7 +67,7 @@ struct BatteryGuardApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("BatteryGuard", id: "dashboard") {
+        Window("B-Guard", id: "dashboard") {
             DashboardView(statusStore: statusStore, configStore: configStore,
                           historyStore: historyStore, services: services)
         }

@@ -2,17 +2,17 @@
 set -euo pipefail
 
 # scripts/build-app.sh
-# Baut BatteryGuard und batteryguardd (Release), erzeugt dist/BatteryGuard.app und signiert ad-hoc.
+# Baut B-Guard und batteryguardd (Release), erzeugt dist/B-Guard.app und signiert ad-hoc.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-echo "==> Baue BatteryGuard und batteryguardd im Release-Modus..."
+echo "==> Baue B-Guard und batteryguardd im Release-Modus..."
 swift build --package-path "$PROJECT_DIR" -c release
 
 BUILD_DIR="$PROJECT_DIR/.build/release"
 DIST_DIR="$PROJECT_DIR/dist"
-APP_BUNDLE="$DIST_DIR/BatteryGuard.app"
+APP_BUNDLE="$DIST_DIR/B-Guard.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
@@ -77,15 +77,15 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>BatteryGuard</string>
+    <string>B-Guard</string>
     <key>CFBundleDisplayName</key>
-    <string>BatteryGuard</string>
+    <string>B-Guard</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.1</string>
+    <string>0.2.2</string>
     <key>CFBundleVersion</key>
-    <string>0.2.1</string>
+    <string>0.2.2</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>
@@ -107,10 +107,10 @@ echo "==> Signiere App-Bundle ad-hoc..."
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 # Optionales Distributionsarchiv erstellen
-ZIP_FILE="$DIST_DIR/BatteryGuard.zip"
+ZIP_FILE="$DIST_DIR/B-Guard.zip"
 echo "==> Erstelle Distributionsarchiv $ZIP_FILE..."
 rm -f "$ZIP_FILE"
-(cd "$DIST_DIR" && ditto -c -k --sequesterRsrc --keepParent "BatteryGuard.app" "BatteryGuard.zip")
+(cd "$DIST_DIR" && ditto -c -k --sequesterRsrc --keepParent "B-Guard.app" "B-Guard.zip")
 
 echo "==> Build erfolgreich abgeschlossen!"
 echo "    App: $APP_BUNDLE"

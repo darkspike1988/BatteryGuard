@@ -362,6 +362,15 @@ public final class BatteryController: @unchecked Sendable {
         return decision
     }
 
+    public func invalidateHardwareCache() {
+        lock.lock()
+        defer { lock.unlock() }
+        previousDecision = nil
+        lastAppliedCharging = nil
+        lastAppliedAdapter = nil
+        lastAppliedMagSafeLED = nil
+    }
+
     public func restoreNormal(logger: ((String) -> Void)? = nil) {
         lock.lock()
         defer { lock.unlock() }

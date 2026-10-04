@@ -37,7 +37,7 @@ final class NotificationManager: Sendable {
                 if !didNotifyLowerLimit, lowEnabled {
                     didNotifyLowerLimit = true
                     send(
-                        title: "BatteryGuard",
+                        title: "B-Guard",
                         body: "Akku bei \(status.percent) % – bitte laden"
                     )
                 }
@@ -56,7 +56,7 @@ final class NotificationManager: Sendable {
                 if !didNotifyUpperLimit, limitEnabled {
                     didNotifyUpperLimit = true
                     send(
-                        title: "BatteryGuard",
+                        title: "B-Guard",
                         body: "Limit erreicht"
                     )
                 }

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="B-Guard für deinen Mac. Ladeprofile, Reiseplanung und lokaler Akkuverlauf. Kostenlos, Open Source und ohne Konto.">
+  <meta name="theme-color" content="#fafafa">
+  <meta property="og:title" content="B-Guard — Dein Akku. Dein Alltag.">
+  <meta property="og:description" content="Mehr Möglichkeiten für deinen Mac-Akku. Kostenlos. Open Source. Lokal.">
+  <title>B-Guard — Dein Akku. Dein Alltag.</title>
+  <link rel="icon" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt</a>
+<header class="nav"><nav aria-label="Hauptnavigation" class="wrap">
+  <a class="brand" href="#"><img src="assets/icon.png" width="36" height="36" alt="">B-Guard</a>
+  <div class="nav-links"><a href="#features">Funktionen</a><a href="#compare">Warum B-Guard?</a><a href="https://github.com/darkspike1988/BatteryGuard">GitHub ↗</a></div>
+  <a class="button small" href="https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg" data-download>Download</a>
+</nav></header>
+<main id="main">
+  <section class="hero wrap">
+    <p class="eyebrow">FÜR DEINEN MAC. FÜR DEINEN ALLTAG.</p>
+    <h1>Dein Akku.<br><span>Deine Entscheidung.</span></h1>
+    <p class="intro">Am Schreibtisch. Auf dem Sprung. Unterwegs.<br>B-Guard macht deinen Ladeplan so flexibel wie deinen Tag.</p>
+    <div class="actions"><a class="button" href="https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg" data-download>Für Mac laden <span aria-hidden="true">↓</span></a><a class="text-link" href="https://github.com/darkspike1988/BatteryGuard">Quellcode ansehen ↗</a></div>
+    <p class="compat">Kostenlos · Open Source · Apple Silicon · macOS 14+</p>
+    <div class="showcase">
+      <div class="window-bar"><span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span><span>B-Guard</span><span class="window-note">Vorschau</span></div>
+      <img id="app-preview" src="previews/light/overview.png" width="1960" height="2120" alt="B-Guard Übersicht mit Akkuwerten, Ladeprofilen und Reiseplanung. Die Vorschau zeigt Beispieldaten." fetchpriority="high">
+    </div>
+    <div class="preview-controls" role="group" aria-label="App-Ansicht wechseln"><button class="selected" type="button" data-preview="overview" aria-pressed="true">Übersicht</button><button type="button" data-preview="history" aria-pressed="false">Verlauf</button><button type="button" data-theme aria-pressed="false">Dunkle Ansicht</button></div>
+    <p class="caption">Echte App-Oberfläche. Vorschau mit Beispieldaten.</p>
+  </section>
+
+  <section class="section wrap" id="features">
+    <p class="eyebrow">MEHR ALS EIN LADELIMIT</p>
+    <h2>Ein kleiner Helfer.<br>Für große und kleine Pläne.</h2>
+    <div class="feature-grid">
+      <article class="feature feature-wide"><div><p class="kicker">LADEPROFILE</p><h3>Ein Klick.<br>Ein anderer Tag.</h3><p>Drei Profile für drei Situationen. Wechsle direkt in der Menüleiste oder passe Minimum und Maximum an deinen Alltag an.</p></div><div class="profiles" role="group" aria-label="Ladeprofile ausprobieren"><button type="button" class="profile selected" data-profile="desk" aria-pressed="true"><span>Schreibtisch</span><strong>55–60 <small>%</small></strong><span>Für lange Tage am Netzteil</span></button><button type="button" class="profile" data-profile="everyday" aria-pressed="false"><span>Alltag</span><strong>75–80 <small>%</small></strong><span>Dein Bereich für jeden Tag</span></button><button type="button" class="profile" data-profile="mobile" aria-pressed="false"><span>Unterwegs</span><strong>85–90 <small>%</small></strong><span>Mehr Reserve für unterwegs</span></button><p class="caption" id="profile-note" aria-live="polite">Profilvorschau. Die verfügbaren Eingriffe hängen von der Hardware ab.</p></div></article>
+      <article class="feature"><p class="kicker">REISEPLANUNG</p><h3>Bereit, wenn<br>du loswillst.</h3><p>Termin wählen. B-Guard beginnt drei Stunden vorher mit dem Vollladen und kehrt nach 100 % oder spätestens eine Stunde nach dem Termin zu deinem Ladebereich zurück.</p><div class="timeline" aria-label="Beispiel: Termin 9 Uhr, Ladebeginn 6 Uhr"><span>06:00<br><small>Ladebeginn</small></span><i aria-hidden="true"></i><span>09:00<br><small>Dein Termin</small></span></div><p class="fine">Der Mac muss wach und am Netzteil sein. Ein voller Akku zum Termin ist nicht garantiert.</p></article>
+      <article class="feature"><p class="kicker">LOKALER VERLAUF</p><h3>Wissen, was<br>dein Akku macht.</h3><p>Ladung, Temperatur und Leistung über bis zu sieben Tage. Sieh beobachtete Zeiten bei hoher Ladung oder Temperatur und exportiere deine Messwerte als CSV.</p><img class="history-image" src="previews/light/history.png" width="1580" height="1520" loading="lazy" alt="Verlaufsansicht mit Ladekurve und Auswertung; Beispieldaten."></article>
+      <article class="feature simple"><p class="kicker">GEPLANTE AUSNAHMEN</p><h3>Flexibilität inklusive.</h3><p>Einmal voll laden oder den Schutz für eine, zwei oder zwölf Stunden pausieren. Danach gelten automatisch wieder deine gespeicherten Einstellungen.</p></article>
+      <article class="feature simple"><p class="kicker">TEMPERATUR IM BLICK</p><h3>Auch an warmen Tagen.</h3><p>Konfigurierbarer Hitzeschutz und getrennte Mitteilungen für Temperatur, niedrigen Akkustand und erreichtes Limit. Du entscheidest, was dich informiert.</p><p class="fine">Während einer Schutzpause greift auch der Hitzeschutz nicht ein. Eingriffe sind hardwareabhängig.</p></article>
+    </div>
+  </section>
+
+  <section class="privacy section"><div class="wrap"><p class="eyebrow">DEIN MAC BLEIBT DEIN MAC</p><h2>Kein Konto.<br>Keine Cloud.<br><span>Keine Rechnung.</span></h2><p>Deine Akkuwerte bleiben lokal. Keine Telemetrie in der App.<br>Kein Abo. Keine versteckten Freischaltungen. MIT-Lizenz.</p><a class="text-link" href="https://github.com/darkspike1988/BatteryGuard">Offen entwickelt. Offen für Verbesserungen. ↗</a></div></section>
+
+  <section class="section wrap comparison" id="compare">
+    <p class="eyebrow">EINE SINNVOLLE ERGÄNZUNG</p><h2>macOS macht viel.<br>B-Guard macht es persönlicher.</h2>
+    <p class="section-intro">Apples optimiertes Laden und natives Ladelimit sind eine gute Grundlage. B-Guard ergänzt bewusst gewählte Profile, Zeitpläne und Messdaten — mit klaren Grenzen.</p>
+    <div class="table-scroll"><table><caption class="sr-only">Ladefunktionen von macOS und Ergänzungen durch B-Guard</caption><thead><tr><th scope="col">Dein Wunsch</th><th scope="col">macOS-Bordmittel</th><th scope="col">Mit B-Guard</th></tr></thead><tbody>
+      <tr><th scope="row">Ein Ladelimit setzen</th><td>Nativ 80–100 % auf unterstützten Macs¹</td><td>Eigene Bereiche und drei schnell wechselbare Profile²</td></tr>
+      <tr><th scope="row">Sofort voll laden</th><td>Bereits vorhanden¹</td><td>Mit zeitlich begrenzter Ausnahme und konfiguriertem Hitzeschutz²</td></tr>
+      <tr><th scope="row">Für einen Termin planen</th><td>Optimiertes Laden lernt deine Routine¹</td><td>Einen konkreten Reisetermin selbst festlegen</td></tr>
+      <tr><th scope="row">Schutz kurz pausieren</th><td>Einstellungen manuell ändern</td><td>1, 2 oder 12 Stunden, automatisch zurück zum Profil</td></tr>
+      <tr><th scope="row">Messwerte selbst auswerten</th><td>Batterieinformationen und Nutzungsansichten</td><td>Temperatur- und Leistungskurven, sieben Tage Messwerte, CSV-Export</td></tr>
+      <tr><th scope="row">Nur beobachten</th><td>macOS steuert die Ladung</td><td>Nativer Modus mit zusätzlichem Messverlauf und Hinweisen</td></tr>
+    </tbody></table></div>
+    <p class="fine">¹ <a href="https://support.apple.com/102338">Apple: Optimiertes Laden und Ladelimit</a>. Das native Ladelimit erfordert Apple Silicon und macOS 26.4 oder neuer. ² B-Guard verwendet hardwareabhängige SMC-Steuerung. Mit externem Monitor bleibt das Netzteil verbunden; ohne separate Ladesperre übernimmt dort macOS. Ein zusätzliches natives Limit kann höhere Ziele verhindern.</p>
+  </section>
+
+  <section class="section wrap installation" id="download"><div><p class="eyebrow">IN WENIGEN SCHRITTEN</p><h2>Einfach rüberziehen.<br>Und loslegen.</h2><p>Kein Terminal. Kein Paketmanager. Nur dein Mac.</p><a class="button" href="https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg" data-download>B-Guard kostenlos laden ↓</a><p class="compat">Version <span data-version>0.2.2</span> · Apple Silicon · macOS 14+</p></div><ol><li><span>01</span><div><h3>DMG öffnen.</h3><p>Lade die aktuelle Version direkt von GitHub.</p></div></li><li><span>02</span><div><h3>Auf Programme ziehen.</h3><p>B-Guard anschließend aus dem Programme-Ordner öffnen.</p></div></li><li><span>03</span><div><h3>Einmal einrichten.</h3><p>Der macOS-Administratordialog richtet den Hintergrunddienst ein.</p></div></li></ol></section>
+
+  <section class="faq wrap"><h2>Noch gut zu wissen.</h2>
+    <details><summary>Funktioniert B-Guard mit meinem Mac?</summary><p>Die App unterstützt Apple Silicon ab macOS 14. Welche Ladeeingriffe funktionieren, hängt von Modell, macOS-Version und verfügbaren SMC-Schlüsseln ab. Nicht unterstützte Steuerung zeigt die App an. Intel-Macs sind für diesen Download nicht vorgesehen.</p></details>
+    <details><summary>Kann ich mein MacBook am externen Monitor zuklappen?</summary><p>Ja, B-Guard hält bei erkanntem externem Monitor die Netzversorgung verbunden und erzeugt keine Schlafsperre. Die normalen macOS-Voraussetzungen gelten. Ohne separate Ladesperre übernimmt macOS das Limit; das Schreibtischprofil kann dort seine 60 % nicht erzwingen.</p></details>
+    <details><summary>Warum zeigt macOS beim Öffnen eine Warnung?</summary><p>Die Community-Version ist ad-hoc signiert, aber noch nicht notarisiert. Wenn du der Quelle vertraust, kannst du sie nach dem Öffnungsversuch unter Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen freigeben. <a href="https://support.apple.com/102445">Apples Anleitung</a>. Für den Hintergrunddienst ist einmalig ein Administratorpasswort erforderlich.</p></details>
+    <details><summary>Verlängert B-Guard garantiert die Akkulebensdauer?</summary><p>Nein. Temperatur, Ladeverhalten und viele weitere Faktoren beeinflussen die Alterung. B-Guard gibt dir Kontrolle und Messdaten, keine Lebensdauer-Garantie. Auf Hardware mit Pendelsteuerung entstehen zusätzliche Lade- und Entladebewegungen.</p></details>
+    <details><summary>Was läuft weiter, wenn ich die App beende?</summary><p>Der Hintergrunddienst führt deine Einstellungen und Zeitpläne weiter aus. Die Verlaufsaufzeichnung endet mit der App. Sie erfasst bei laufender App ungefähr einen Messpunkt pro Minute; Schlaf- und Ausfallzeiten bleiben Lücken. Vor dem Systemschlaf gibt der Dienst die Ladesteuerung frei.</p></details>
+  </section>
+  <section class="final-cta wrap"><img src="assets/icon.png" width="84" height="84" alt=""><h2>Ein guter Platz<br>für deinen Akku.</h2><a class="button" href="https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg" data-download>B-Guard laden ↓</a><p class="compat">Kostenlos. Heute und im offenen Quellcode.</p></section>
+</main>
+<footer class="wrap"><span>© 2026 B-Guard · Ein unabhängiges Open-Source-Projekt.</span><div><a href="https://github.com/darkspike1988/BatteryGuard">GitHub</a><a href="https://github.com/darkspike1988/BatteryGuard/blob/main/LICENSE">MIT-Lizenz</a><a href="https://github.com/darkspike1988/BatteryGuard/issues">Fehler melden</a></div><p>Keine Verbindung zu Apple. Mac und macOS sind Marken von Apple. Diese Website setzt keine Analyse-Cookies ein; Website und Downloads werden von GitHub bereitgestellt.</p></footer>
+</body>
+</html>

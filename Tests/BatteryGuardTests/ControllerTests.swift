@@ -98,6 +98,15 @@ struct ControllerTests {
         #expect(!decision(config, temperature: 45, adapterDisconnectAllowed: false).chargingEnabled)
     }
 
+    @Test func batteryPowerDistinguishesZeroMissingAndDischarging() {
+        #expect(BatteryReader.batteryPower(voltageMillivolts: 12000, amperageRaw: 0) == 0)
+        #expect(BatteryReader.batteryPower(voltageMillivolts: 12000, amperageRaw: 1000) == 12)
+        #expect(BatteryReader.batteryPower(voltageMillivolts: 12000,
+            amperageRaw: UInt64(UInt32(bitPattern: -1000))) == -12)
+        #expect(BatteryReader.batteryPower(voltageMillivolts: nil, amperageRaw: 0) == nil)
+        #expect(BatteryReader.batteryPower(voltageMillivolts: .nan, amperageRaw: 0) == nil)
+    }
+
     @Test func oldConfigAndHostileBounds() throws {
         let old = try BGJSON.decoder().decode(BGConfig.self, from: Data("{}".utf8))
         #expect(old == BGConfig())

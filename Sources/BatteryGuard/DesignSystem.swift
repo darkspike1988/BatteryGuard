@@ -37,7 +37,7 @@ extension BGStatus {
         case .holding: return "Laden pausiert"
         case .discharging: return "Akku entlädt am Netzteil"
         case .onBattery: return "Akkubetrieb"
-        case .disabled: return "Ladeschutz ausgeschaltet"
+        case .disabled: return config.enabled ? "macOS übernimmt das Laden" : "Ladeschutz ausgeschaltet"
         case .unsupported: return "Ladesteuerung nicht verfügbar"
         }
     }

@@ -39,7 +39,7 @@ struct ModePickerView: View {
                 Text("Modus")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .help("Legt fest, wie BatteryGuard das Ladelimit erzwingt.")
+                    .help("Legt fest, wie B-Guard das Ladelimit erzwingt.")
                 
                 Spacer()
                 

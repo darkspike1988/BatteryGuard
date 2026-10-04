@@ -95,21 +95,21 @@ struct PreferencesView: View {
                 if configStore.hasWriteError {
                     Text("Einstellungen nicht gespeichert: \(configStore.writeErrorMessage ?? "Unbekannter Fehler")")
                         .font(.caption).foregroundStyle(.orange)
-                    Button("Erneut speichern") { configStore.saveConfigAtomically() }
+                    Button("Erneut speichern") { configStore.saveConfig() }
                 }
             } header: { Text("Hintergrunddienst") }
 
             Section {
-                LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.1")
+                LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.2")
                 Text("Verlauf und Einstellungen bleiben auf diesem Mac. Keine Anmeldung, keine Cloud. Die Akkugesundheit ist eine Schätzung aus den gemeldeten Kapazitäten.")
                     .font(.caption).foregroundStyle(.secondary)
-                Button("BatteryGuard beenden") {
+                Button("B-Guard beenden") {
                     configStore.flushPendingSave()
                     NSApplication.shared.terminate(nil)
                 }
                 Text("Der Dienst und geplante Ladeaktionen bleiben nach dem Beenden der App aktiv. Die Verlaufsaufzeichnung endet.")
                     .font(.caption).foregroundStyle(.secondary)
-            } header: { Text("BatteryGuard") }
+            } header: { Text("B-Guard") }
         }
         .formStyle(.grouped)
         .confirmationDialog("Hintergrunddienst entfernen?", isPresented: $confirmUninstall, titleVisibility: .visible) {

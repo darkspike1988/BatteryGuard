@@ -21,7 +21,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 9) {
                     Image(systemName: "shield.lefthalf.filled").font(.system(size: 32, weight: .light)).foregroundStyle(Color.accentColor)
-                    Text("BatteryGuard").font(.headline)
+                    Text("B-Guard").font(.headline)
                     Text("Energie. Bewusst.").font(.caption).foregroundStyle(.secondary)
                 }.padding(22).padding(.top, 10)
                 List(DashboardPage.allCases, selection: $page) { item in
@@ -49,7 +49,7 @@ struct DashboardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .windowBackgroundColor))
-            .navigationTitle(page?.rawValue ?? "BatteryGuard")
+            .navigationTitle(page?.rawValue ?? "B-Guard")
         }
         .frame(minWidth: 780, minHeight: 600)
         .onDisappear { configStore.flushPendingSave() }
@@ -90,7 +90,7 @@ struct OverviewView: View {
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
                     metric("Gesundheit", value: statusStore.status.healthPercent.map { "\($0) %" }, symbol: "heart")
-                    metric("Leistung", value: statusStore.status.watts.map { String(format: "%.1f W", $0) }, symbol: "bolt")
+                    metric("Akkuleistung", value: statusStore.status.watts.map { String(format: "%.1f W", $0) }, symbol: "bolt")
                 }
                 BGPanel {
                     VStack(alignment: .leading, spacing: 14) {
@@ -101,7 +101,7 @@ struct OverviewView: View {
                         }
                         ProfilePickerView(store: configStore)
                         Text(configStore.config.mode == .native
-                             ? "Im macOS-Modus bleibt BatteryGuard ein Beobachter. Die Steuerung kannst du in den Einstellungen aktivieren."
+                             ? "Im macOS-Modus bleibt B-Guard ein Beobachter. Die Steuerung kannst du in den Einstellungen aktivieren."
                              : "Ein Profil ändert nur deinen Ladebereich. Hitzeschutz und weitere Einstellungen bleiben erhalten.")
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
@@ -112,7 +112,7 @@ struct OverviewView: View {
                     BGPanel {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("macOS begrenzt zusätzlich auf \(nativeLimit) %", systemImage: "info.circle").font(.callout.weight(.medium))
-                            Text("Für ein höheres Ziel oder Vollladen musst du das native Limit in den Batterieeinstellungen anheben. BatteryGuard verändert diese Systemeinstellung nicht.")
+                            Text("Für ein höheres Ziel oder Vollladen musst du das native Limit in den Batterieeinstellungen anheben. B-Guard verändert diese Systemeinstellung nicht.")
                                 .font(.caption).foregroundStyle(.secondary)
                             Button("Batterieeinstellungen öffnen") {
                                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)
@@ -143,7 +143,7 @@ struct OverviewView: View {
         if configStore.config.mode == .pendulum || (!statusStore.status.smcKeysDetected.contains("CHTE") && !statusStore.status.smcKeysDetected.contains("CH0B") && configStore.config.mode == .auto) {
             return "Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Dabei läuft er zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku."
         }
-        return "Dein Verlauf bleibt auf diesem Mac. BatteryGuard zeichnet nur auf, während die App läuft und aktuelle Messwerte verfügbar sind."
+        return "Dein Verlauf bleibt auf diesem Mac. B-Guard zeichnet nur auf, während die App läuft und aktuelle Messwerte verfügbar sind."
     }
 
     private func metric(_ title: String, value: String?, symbol: String) -> some View {
@@ -152,6 +152,10 @@ struct OverviewView: View {
                 Label(title, systemImage: symbol).font(.caption).foregroundStyle(.secondary)
                 Text(statusStore.isDaemonActive ? (value ?? "—") : "—")
                     .font(.system(size: 22, weight: .medium)).monospacedDigit()
+                if title == "Akkuleistung" {
+                    Text(!statusStore.isDaemonActive || value == nil ? "Messwert nicht verfügbar" : "Plus: Laden · Minus: Entladen")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -171,7 +175,7 @@ struct OverviewView: View {
                     Text("Geplant für \(planned.formatted(date: .abbreviated, time: .shortened))")
                         .font(.callout.weight(.medium))
                     Text(configStore.config.mode == .native
-                         ? "Der Plan wartet, solange macOS die Ladung steuert. Aktiviere die BatteryGuard-Steuerung in den Einstellungen, damit er ausgeführt wird."
+                         ? "Der Plan wartet, solange macOS die Ladung steuert. Aktiviere die B-Guard-Steuerung in den Einstellungen, damit er ausgeführt wird."
                          : "Vollladen startet drei Stunden vorher. Nach 100 % oder spätestens eine Stunde nach dem Termin gilt wieder dein Ladeprofil.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
@@ -227,9 +231,9 @@ struct ChargingActionsView: View {
 
     private var exceptionDescription: String {
         if let pause = configStore.config.pauseUntil, pause > Date() {
-            return "Automatisch wieder aktiv: \(pause.formatted(date: .omitted, time: .shortened)). Während der Pause greift BatteryGuard nicht ein."
+            return "Automatisch wieder aktiv: \(pause.formatted(date: .omitted, time: .shortened)). Während der Pause greift B-Guard nicht ein."
         }
-        if fullActive { return "Nach 100 % kehrt BatteryGuard zum Ladeprofil zurück. Manuelles Vollladen endet spätestens nach acht Stunden." }
-        return "Vollladen behält den Hitzeschutz bei. Eine Pause setzt die BatteryGuard-Steuerung für die gewählte Dauer aus."
+        if fullActive { return "Nach 100 % kehrt B-Guard zum Ladeprofil zurück. Manuelles Vollladen endet spätestens nach acht Stunden." }
+        return "Vollladen behält den Hitzeschutz bei. Eine Pause setzt die B-Guard-Steuerung für die gewählte Dauer aus."
     }
 }

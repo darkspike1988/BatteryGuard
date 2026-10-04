@@ -88,6 +88,23 @@ struct AppActionsTests {
         store.flushPendingSave()
     }
 
+    @Test func savingLimitDoesNotResurrectCompletedFullCharge() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("config.json")
+        store.startFullCharge()
+        store.flushPendingSave()
+        store.config.upperLimit = 90
+        try BGConfigFile.update(at: url) { config in
+            config.chargeToFullOnce = false
+            config.fullChargeUntil = nil
+        }
+        store.flushPendingSave()
+        #expect(store.config.upperLimit == 90)
+        #expect(!store.config.chargeToFullOnce)
+        #expect(store.config.fullChargeUntil == nil)
+    }
+
     @Test func timedActionsRequireUpdatedLiveDaemon() {
         let status = StatusStore(startImmediately: false)
         status.isDaemonActive = true
@@ -96,7 +113,7 @@ struct AppActionsTests {
         status.status.daemonVersion = "0.2.0"
         #expect(status.supportsChargingPlans)
         #expect(status.daemonNeedsUpdate)
-        status.status.daemonVersion = "0.2.1"
+        status.status.daemonVersion = "0.2.2"
         #expect(!status.daemonNeedsUpdate)
         status.isDaemonActive = false
         #expect(!status.supportsChargingPlans)
@@ -111,7 +128,7 @@ struct AppActionsTests {
         preview.apply(.mobile)
         preview.startFullCharge()
         preview.flushPendingSave()
-        preview.saveConfigAtomically()
+        preview.saveConfig()
         #expect(try Data(contentsOf: url) == before)
         #expect(live.config.upperLimit == 80)
     }

@@ -26,3 +26,7 @@ DerivedData/
 # Logs & Temporary Files
 *.log
 /var/log/batteryguard.log
+
+# Local browser review artifacts
+.playwright-cli/
+output/

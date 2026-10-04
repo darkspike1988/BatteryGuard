@@ -15,7 +15,7 @@ final class ServiceManager {
         guard !isBusy else { return }
         guard let path = Bundle.main.path(forResource: name, ofType: "sh") else {
             isError = true
-            message = "Installationsdatei fehlt. Bitte die gebaute BatteryGuard.app verwenden."
+            message = "Installationsdatei fehlt. Bitte die gebaute B-Guard.app verwenden."
             return
         }
         isBusy = true

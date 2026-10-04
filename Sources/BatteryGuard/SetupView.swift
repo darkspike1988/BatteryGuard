@@ -14,9 +14,9 @@ struct SetupView: View {
         VStack(alignment: .leading, spacing: 20) {
             Image(systemName: "battery.75percent")
                 .font(.system(size: 52, weight: .regular)).foregroundStyle(.secondary)
-            Text("Willkommen bei BatteryGuard").font(.title2.weight(.semibold))
+            Text("Willkommen bei B-Guard").font(.title2.weight(.semibold))
             Text(needsCopy
-                 ? "Ziehe BatteryGuard zuerst in den Programme-Ordner. Öffne die App anschließend von dort."
+                 ? "Ziehe B-Guard zuerst in den Programme-Ordner. Öffne die App anschließend von dort."
                  : "Ein letzter Schritt: Der Hintergrunddienst liest die Akkuwerte und führt deine Ladeprofile aus. macOS fragt dafür einmal nach deinem Administratorpasswort.")
                 .foregroundStyle(.secondary)
             if let message = services.message {
@@ -27,7 +27,7 @@ struct SetupView: View {
                 Button(services.message != nil && !services.isError ? "Fertig" : "Später", action: close)
                 Spacer()
                 if !needsCopy && (services.message == nil || services.isError) {
-                    Button(services.isBusy ? "Wird eingerichtet …" : "BatteryGuard einrichten") {
+                    Button(services.isBusy ? "Wird eingerichtet …" : "B-Guard einrichten") {
                         services.install()
                     }
                     .buttonStyle(.borderedProminent).disabled(services.isBusy)

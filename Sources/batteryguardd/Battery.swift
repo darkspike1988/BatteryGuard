@@ -28,6 +28,13 @@ public enum BatteryReader {
         return Int64(bitPattern: raw)
     }
 
+    public static func batteryPower(voltageMillivolts: Double?, amperageRaw: UInt64?) -> Double? {
+        guard let voltageMillivolts, voltageMillivolts.isFinite, voltageMillivolts > 0,
+              let amperageRaw else { return nil }
+        let watts = voltageMillivolts * Double(signedAmperage(amperageRaw)) / 1_000_000
+        return watts.isFinite ? round(watts * 100) / 100 : nil
+    }
+
     public static func read(smcClient: SMCClient = .shared) -> BatteryInfo {
         var info = BatteryInfo()
 
@@ -85,13 +92,16 @@ public enum BatteryReader {
 
                 // Leistung in Watt: Voltage (mV) * Amperage (mA, vorzeichenbehaftet) / 1_000_000
                 let rawVolts = (dict["AppleRawBatteryVoltage"] as? NSNumber)?.doubleValue ?? (dict["Voltage"] as? NSNumber)?.doubleValue
-                let rawAmpsNum = (dict["Amperage"] as? NSNumber) ?? (dict["InstantAmperage"] as? NSNumber)
+                    ?? (bData?["AppleRawBatteryVoltage"] as? NSNumber)?.doubleValue
+                    ?? (bData?["Voltage"] as? NSNumber)?.doubleValue
+                let rawAmpsNum = (dict["InstantAmperage"] as? NSNumber) ?? (dict["Amperage"] as? NSNumber)
+                    ?? (bData?["InstantAmperage"] as? NSNumber) ?? (bData?["Amperage"] as? NSNumber)
                 
                 if let v = rawVolts, let aNum = rawAmpsNum {
                     let a = signedAmperage(aNum.uint64Value)
                     info.voltage = v
                     info.amperage = Double(a)
-                    info.watts = round((v * Double(a) / 1_000_000.0) * 100.0) / 100.0
+                    info.watts = batteryPower(voltageMillivolts: v, amperageRaw: aNum.uint64Value)
                 }
             }
             IOObjectRelease(service)

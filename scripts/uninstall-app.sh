@@ -2,28 +2,28 @@
 set -euo pipefail
 
 # scripts/uninstall-app.sh
-# Deinstalliert BatteryGuard.app für den aktuellen Benutzer:
+# Deinstalliert B-Guard.app für den aktuellen Benutzer:
 # 1. Beendet die laufende App
 # 2. Entfernt eventuelle Login-Items (Autostart)
-# 3. Löscht /Applications/BatteryGuard.app
+# 3. Löscht /Applications/B-Guard.app
 # 4. Löscht den Finder-Alias auf dem Schreibtisch
 # 5. Deregistriert die App bei LaunchServices
 
-DEST_APP="/Applications/BatteryGuard.app"
+DEST_APP="/Applications/B-Guard.app"
 DESKTOP_DIR="$HOME/Desktop"
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
-echo "==> Deinstallation von BatteryGuard.app gestartet..."
+echo "==> Deinstallation von B-Guard.app gestartet..."
 
 # 1. App beenden
-echo "--> Beende BatteryGuard..."
+echo "--> Beende B-Guard..."
 osascript -e 'tell application id "com.batteryguard.app" to quit' 2>/dev/null || true
 pkill -x "BatteryGuard" 2>/dev/null || true
 sleep 0.5
 
 # 2. Autostart-Eintrag entfernen
 echo "--> Entferne Login-Items (Autostart)..."
-osascript -e 'tell application "System Events" to delete (every login item whose name is "BatteryGuard")' 2>/dev/null || true
+osascript -e 'tell application "System Events" to delete (every login item whose name is "B-Guard" or name is "BatteryGuard")' 2>/dev/null || true
 
 # 3. LaunchServices deregistrieren
 if [[ -x "$LSREGISTER" && -d "$DEST_APP" ]]; then
@@ -47,6 +47,6 @@ fi
 echo "--> Entferne Desktop-Alias..."
 rm -f "$DESKTOP_DIR/BatteryGuard" "$DESKTOP_DIR/BatteryGuard.app"
 
-echo "==> BatteryGuard.app wurde erfolgreich deinstalliert!"
+echo "==> B-Guard.app wurde erfolgreich deinstalliert!"
 echo "Hinweis: Falls auch der Root-Daemon installiert war, kannst du ihn mit folgendem Befehl entfernen:"
 echo "    sudo ./scripts/uninstall-daemon.sh --purge"

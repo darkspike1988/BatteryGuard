@@ -1,19 +1,21 @@
-# BatteryGuard 0.2.1
+# B-Guard 0.2.2
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
-## Was BatteryGuard ergänzt
+[Website](https://darkspike1988.github.io/BatteryGuard/) · [DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg) · [GitHub](https://github.com/darkspike1988/BatteryGuard)
 
-macOS bringt ein eigenes Ladelimit mit. BatteryGuard ergänzt Werkzeuge für den Alltag:
+## Was B-Guard ergänzt
+
+macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Alltag:
 
 - **Ladeprofile:** Schreibtisch (55–60 %), Alltag (75–80 %) und Unterwegs (85–90 %). Eigene Grenzen bleiben in den Einstellungen verfügbar.
 - **Reiseplanung:** Vollladen startet drei Stunden vor einem gewählten Termin. Nach 100 % oder spätestens eine Stunde nach dem Termin gilt wieder der vorherige Ladebereich. Der Mac muss wach und am Netzteil sein; eine vollständige Ladung zum Termin ist keine Garantie.
-- **Zeitliche Schutzpause:** Eine, zwei oder zwölf Stunden mit automatischer Rückkehr zu den gespeicherten Einstellungen. Während der Pause greift BatteryGuard einschließlich Hitzeschutz nicht ein.
+- **Zeitliche Schutzpause:** Eine, zwei oder zwölf Stunden mit automatischer Rückkehr zu den gespeicherten Einstellungen. Während der Pause greift B-Guard einschließlich Hitzeschutz nicht ein.
 - **Einmaliges Vollladen:** Mit weiterhin aktivem konfiguriertem Hitzeschutz und einer maximalen Dauer von acht Stunden.
 - **Lokaler Verlauf:** Ladung, Temperatur und Lade-/Entladeleistung. Ein Messpunkt pro Minute, bis zu sieben Tage. Aufzeichnung nur bei laufender App und aktuellen Messwerten; Schlaf- und Ausfallzeiten bleiben Lücken.
 - **Auswertung:** Beobachtete Zeit, Zeit ab 90 % und Zeit ab 40 °C sowie höchste gemessene Temperatur. Keine erfundenen Verschleiß- oder Lebensdauerprognosen.
 - **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
-- **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren BatteryGuard-Zielen und verweist auf die Systemeinstellungen.
+- **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren B-Guard-Zielen und verweist auf die Systemeinstellungen.
 - **Mitteilungen:** Niedriger Akkustand, erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 
 ## Oberfläche
@@ -32,19 +34,19 @@ Weitere Vorschauen: [Verlauf](docs/previews/light/history.png), [Menüleiste](do
 
 **Pendel:** Verwendet ausdrücklich den Netzteil-Schalter. Das erzeugt zusätzliche Lade-/Entladebewegungen. Es ist keine Garantie für eine längere Akkulebensdauer.
 
-**Externer Monitor / geschlossener Deckel:** BatteryGuard hält das Netzteil verbunden, sobald ein externer Bildschirm erkannt wird oder der Deckel geschlossen ist. Aktives Entladen entfällt dann. Auf Macs ohne separate SMC-Ladesperre übernimmt macOS das Ladelimit, auch wenn ein BatteryGuard-Profil gewählt ist; der Status zeigt diese Einschränkung. Stelle das native Limit in den macOS-Batterieeinstellungen ein. BatteryGuard erzeugt keine Schlafsperre mehr. Bei fehlgeschlagener Monitor-/Deckelerkennung bleibt das Netzteil vorsorglich verbunden.
+**Externer Monitor / geschlossener Deckel:** B-Guard hält das Netzteil verbunden, sobald ein externer Bildschirm erkannt wird oder der Deckel geschlossen ist. Aktives Entladen entfällt dann. Auf Macs ohne separate SMC-Ladesperre übernimmt macOS das Ladelimit, auch wenn ein B-Guard-Profil gewählt ist; der Status zeigt diese Einschränkung. Stelle das native Limit in den macOS-Batterieeinstellungen ein. B-Guard erzeugt keine Schlafsperre mehr. Bei fehlgeschlagener Monitor-/Deckelerkennung bleibt das Netzteil vorsorglich verbunden.
 
 Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht als verfügbare Option angeboten.
 
-**Ein zusätzliches macOS-Limit kann höhere Ziele und Vollladen verhindern.** BatteryGuard verändert Apples native Einstellung nicht. Passe sie bei Bedarf in den macOS-Batterieeinstellungen an. Apples Akkumanagement kann weiterhin Einfluss auf den Ladevorgang haben.
+**Ein zusätzliches macOS-Limit kann höhere Ziele und Vollladen verhindern.** B-Guard verändert Apples native Einstellung nicht. Passe sie bei Bedarf in den macOS-Batterieeinstellungen an. Apples Akkumanagement kann weiterhin Einfluss auf den Ladevorgang haben.
 
 ## Installation ohne Terminal
 
 1. [Aktuelle DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest).
-2. DMG öffnen und **BatteryGuard auf „Programme“ ziehen**.
-3. BatteryGuard aus Programme öffnen und **„BatteryGuard einrichten“** wählen. macOS fragt einmal nach einem Administratorpasswort für den Hintergrunddienst.
+2. DMG öffnen und **B-Guard auf „Programme“ ziehen**.
+3. B-Guard aus Programme öffnen und **„B-Guard einrichten“** wählen. macOS fragt einmal nach einem Administratorpasswort für den Hintergrunddienst.
 
-Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz starten/pausieren und Beenden. Eine Profilwahl aktiviert BatteryGuard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz pausieren“ gibt das Laden frei, bis der Schutz wieder gestartet wird.
+Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz starten/pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz pausieren“ gibt das Laden frei, bis der Schutz wieder gestartet wird.
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
 
@@ -64,8 +66,8 @@ Erstellt App, ZIP, DMG und SHA-256-Prüfsumme unter `dist/`. Die DMG enthält di
 .build/debug/batteryguardd --once
 
 # Gerenderte Entwickler-Vorschauen, isoliert von Benutzer-Konfiguration und Verlauf
-.build/debug/BatteryGuard --render-preview /tmp/BatteryGuardPreview
-.build/debug/BatteryGuard --render-preview /tmp/BatteryGuardDark --dark
+.build/debug/BatteryGuard --render-preview /tmp/B-GuardPreview
+.build/debug/BatteryGuard --render-preview /tmp/B-GuardDark --dark
 ```
 
 Weitere Renderingzustände: `--native`, `--offline`, `--travel`, `--warm`, `--empty-history`, `--small`.
@@ -79,7 +81,7 @@ Weitere Renderingzustände: `--native`, `--offline`, `--travel`, `--warm`, `--em
 - Autostart und Dock-Sichtbarkeit lassen sich in den Einstellungen ändern.
 - SMC-Steuerung verwendet undokumentierte Hardware-Schlüssel. Unbekannte oder abgelehnte Schreibvorgänge werden als Fehler angezeigt.
 
-Die dateibasierte Konfigurationskommunikation und die erneute Registerprüfung nach dem Aufwachen sind weitere technische Verbesserungsfelder; siehe [Review](docs/review-2026-10-03.md). Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
+App und Dienst lesen und ändern die Konfiguration unter einer gemeinsamen Dateisperre; lokale Änderungen werden feldweise mit aktuellen Dienständerungen zusammengeführt. Vor dem Systemschlaf wird die Steuerung freigegeben, nach dem Aufwachen neu geprüft. Authentifizierte IPC bleibt ein Verbesserungsfeld; siehe [Review](docs/review-2026-10-03.md). Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
 
 ## Entfernen
 

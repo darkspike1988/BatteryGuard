@@ -20,6 +20,7 @@ final class ConfigStore: Sendable {
     private var isInitialLoad: Bool = true
     private var saveTask: Task<Void, Never>?
     private var hasPendingSave = false
+    private var baseline = BGConfig().sanitized()
     
     init(loadImmediately: Bool = true, persistenceEnabled: Bool = true,
          configURL: URL = URL(fileURLWithPath: BGPaths.config)) {
@@ -41,13 +42,13 @@ final class ConfigStore: Sendable {
         
         guard fileManager.fileExists(atPath: path) else {
             self.config = BGConfig().sanitized()
+            baseline = config
             return
         }
         
         do {
-            let data = try Data(contentsOf: URL(fileURLWithPath: path))
-            let decoded = try BGJSON.decoder().decode(BGConfig.self, from: data)
-            let clean = decoded.sanitized()
+            let clean = try BGConfigFile.read(at: configURL)
+            baseline = clean
             if self.config != clean { self.config = clean }
             self.hasWriteError = false
             self.writeErrorMessage = nil
@@ -67,23 +68,23 @@ final class ConfigStore: Sendable {
                 return // Vorzeitig abgebrochen
             }
             guard !Task.isCancelled, let self else { return }
-            self.saveConfigAtomically()
+            self.saveConfig()
         }
     }
     
-    func saveConfigAtomically() {
+    func saveConfig() {
         guard persistenceEnabled else { return }
         let sanitized = self.config.sanitized()
         
         do {
-            let data = try BGJSON.encoder().encode(sanitized)
-            // Wir schreiben direkt in die Datei (ohne .atomic), 
-            // da der übergeordnete Ordner root gehört (0755) und die 
-            // Datei selbst 0666 hat. Atomic Save würde versuchen, eine 
-            // Temp-Datei im selben Ordner zu erstellen und umzubenennen, 
-            // was an fehlenden Ordner-Schreibrechten scheitert.
-            try data.write(to: configURL)
-            
+            let saved = try BGConfigFile.update(at: configURL) { latest in
+                latest = sanitized.mergingEdits(since: baseline, into: latest)
+            }
+            let wasInitialLoad = isInitialLoad
+            isInitialLoad = true
+            config = saved
+            baseline = saved
+            isInitialLoad = wasInitialLoad
             hasPendingSave = false
             self.hasWriteError = false
             self.writeErrorMessage = nil
@@ -95,7 +96,7 @@ final class ConfigStore: Sendable {
     }
     
     func apply(_ profile: BGProfile) {
-        config = profile.applying(to: config)
+        activateProfile(profile)
     }
 
     func activateProfile(_ profile: BGProfile) {
@@ -148,7 +149,7 @@ final class ConfigStore: Sendable {
     func flushPendingSave() {
         guard hasPendingSave else { return }
         saveTask?.cancel()
-        saveConfigAtomically()
+        saveConfig()
     }
 
     static var preview: ConfigStore {

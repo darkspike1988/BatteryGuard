@@ -1,12 +1,17 @@
 import Foundation
 import BatteryGuardShared
 import IOKit.ps
+import IOKit.pwr_mgt
 
 final class DaemonRunner: @unchecked Sendable {
     private let controller: BatteryController
     private let dryRun: Bool
     private let isOnce: Bool
     private var detectedSMCKeys: [String] = []
+    private var sleeping = false
+    private var powerConnection: io_connect_t = 0
+    private var powerPort: IONotificationPortRef?
+    private var powerNotifier: io_object_t = 0
 
     public init(controller: BatteryController = BatteryController(), dryRun: Bool = false, isOnce: Bool = false) {
         self.controller = controller
@@ -64,8 +69,7 @@ final class DaemonRunner: @unchecked Sendable {
     }
 
     func loadConfig() -> BGConfig {
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: BGPaths.config)),
-              let decoded = try? BGJSON.decoder().decode(BGConfig.self, from: data) else {
+        guard let decoded = try? BGConfigFile.read(at: URL(fileURLWithPath: BGPaths.config)) else {
             var fallback = BGConfig()
             fallback.enabled = false
             return fallback.sanitized()
@@ -88,23 +92,21 @@ final class DaemonRunner: @unchecked Sendable {
 
     func resetChargeToFullOnceInConfig() {
         guard !dryRun else { return }
-        var cfg = loadConfig()
-        cfg.chargeToFullOnce = false
-        cfg.fullChargeUntil = nil
-        if cfg.isTravelCharging(at: Date()) { cfg.travelReadyAt = nil }
-        if let data = try? BGJSON.encoder().encode(cfg) {
-            do {
-                try data.write(to: URL(fileURLWithPath: BGPaths.config), options: .atomic)
-                chmod(BGPaths.config, 0o666)
-                log("chargeToFullOnce erfolgreich im Config-File auf false zurückgesetzt.")
-            } catch {
-                logStderr("Fehler beim Zurücksetzen von chargeToFullOnce in \(BGPaths.config): \(error.localizedDescription)")
+        do {
+            try BGConfigFile.update(at: URL(fileURLWithPath: BGPaths.config)) { cfg in
+                cfg.chargeToFullOnce = false
+                cfg.fullChargeUntil = nil
+                if cfg.isTravelCharging(at: Date()) { cfg.travelReadyAt = nil }
             }
+            log("Volllade-Anforderung zurückgesetzt.")
+        } catch {
+            logStderr("Volllade-Anforderung konnte nicht zurückgesetzt werden: \(error.localizedDescription)")
         }
     }
 
     @discardableResult
     func tick() -> BGStatus {
+        guard !sleeping else { return BGStatus() }
         let storedConfig = loadConfig()
         let now = Date()
         let config = storedConfig.effective(at: now)
@@ -139,7 +141,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.2.1"
+        status.daemonVersion = "0.2.2"
         status.updatedAt = Date()
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
             ? "Schutz pausiert bis " + (storedConfig.pauseUntil?.formatted(date: .omitted, time: .shortened) ?? "")
@@ -157,6 +159,38 @@ final class DaemonRunner: @unchecked Sendable {
         if let data = try? BGJSON.encoder().encode(status),
            let jsonString = String(data: data, encoding: .utf8) {
             print(jsonString)
+        }
+    }
+
+    private func registerSleepWakeNotifications() {
+        let callback: IOServiceInterestCallback = { context, _, message, argument in
+            guard let context else { return }
+            let runner = Unmanaged<DaemonRunner>.fromOpaque(context).takeUnretainedValue()
+            switch message {
+            case 0xe0000270 /* kIOMessageCanSystemSleep, IOMessage.h */:
+                IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
+            case 0xe0000280 /* kIOMessageSystemWillSleep */:
+                runner.sleeping = true
+                if !runner.dryRun { runner.controller.restoreNormal(logger: { runner.log($0) }) }
+                runner.log("Schlafmodus: Normalbetrieb wiederhergestellt, Steuerung pausiert.")
+                IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
+            case 0xe0000300 /* kIOMessageSystemHasPoweredOn */:
+                // Firmware may have changed SMC registers while asleep. Forget all cached writes.
+                runner.controller.invalidateHardwareCache()
+                runner.sleeping = false
+                runner.log("Aufgewacht: Konfiguration und Hardware werden neu geprüft.")
+                runner.tick()
+            default: break
+            }
+        }
+        powerConnection = IORegisterForSystemPower(Unmanaged.passUnretained(self).toOpaque(),
+                                                   &powerPort, callback, &powerNotifier)
+        if powerConnection != 0, let port = powerPort,
+           let source = IONotificationPortGetRunLoopSource(port)?.takeUnretainedValue() {
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .defaultMode)
+            log("Schlaf-/Aufwachbenachrichtigungen registriert.")
+        } else {
+            logStderr("Schlaf-/Aufwachbenachrichtigungen konnten nicht registriert werden.")
         }
     }
 
@@ -192,6 +226,8 @@ final class DaemonRunner: @unchecked Sendable {
         }
         signal(SIGINT, SIG_IGN)
         sigintSource.resume()
+
+        registerSleepWakeNotifications()
 
         // Initialer Tick
         tick()

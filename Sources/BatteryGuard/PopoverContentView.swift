@@ -16,14 +16,14 @@ struct PopoverContentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Label("BatteryGuard", systemImage: "shield.lefthalf.filled").font(.callout.weight(.semibold))
+                Label("B-Guard", systemImage: "shield.lefthalf.filled").font(.callout.weight(.semibold))
                 Spacer()
                 Button { openWindow(id: "dashboard"); NSApplication.shared.activate(ignoringOtherApps: true) } label: {
                     Image(systemName: "arrow.up.right.square")
                 }
                 .buttonStyle(.plain).foregroundStyle(.secondary)
                 .help("Übersicht, Verlauf und Einstellungen öffnen")
-                .accessibilityLabel("BatteryGuard öffnen")
+                .accessibilityLabel("B-Guard öffnen")
             }
             BatteryHeroView(status: statusStore.status, config: configStore.config,
                             active: statusStore.isDaemonActive, compact: true)
@@ -64,7 +64,7 @@ struct PopoverContentView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if configStore.config.mode == .native {
-                    Text("Profil wählen oder Schutz starten, um BatteryGuard zu aktivieren.")
+                    Text("Profil wählen oder Schutz starten, um B-Guard zu aktivieren.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }

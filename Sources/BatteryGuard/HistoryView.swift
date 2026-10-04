@@ -72,11 +72,25 @@ struct HistoryView: View {
                                 Text("7 Tage").tag(168)
                             }.labelsHidden().frame(width: 130)
                         }
-                        if points.count < 2 {
+                        if metric == .power {
+                            HStack {
+                                Text("Akkuleistung").foregroundStyle(.secondary)
+                                Spacer()
+                                Text(points.last.map { String(format: "%.1f W", $0.value) } ?? "Nicht verfügbar")
+                                    .monospacedDigit()
+                            }.font(.callout)
+                            Text("Plus: Akku lädt. Minus: Akku entlädt. 0 W: kein Stromfluss am Akku. Dies ist nicht der Gesamtverbrauch des Macs.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        if points.isEmpty && metric != .charge && !filtered.isEmpty {
+                            ContentUnavailableView("Messwert nicht verfügbar", systemImage: "waveform.path",
+                                description: Text("Für diesen Zeitraum liefert der Dienst keine \(metric.rawValue.lowercased())-Messwerte."))
+                                .frame(height: 260)
+                        } else if points.count < 2 {
                             ContentUnavailableView {
                                 Label("Der Verlauf beginnt jetzt", systemImage: "chart.xyaxis.line")
                             } description: {
-                                Text("Lass BatteryGuard geöffnet. Nach zwei aktuellen Messpunkten erscheint hier die erste Kurve.")
+                                Text("Lass B-Guard geöffnet. Nach zwei aktuellen Messpunkten erscheint hier die erste Kurve.")
                             }.frame(height: 260)
                         } else {
                             chart
@@ -93,7 +107,7 @@ struct HistoryView: View {
                     }
                 }
                 summaryPanel
-                Text("Lücken bedeuten, dass keine Messwerte aufgezeichnet wurden, etwa im Ruhezustand. Sie werden nicht als durchgehende Nutzung gerechnet. Eine Ladelimit-Linie zeigt den aktuell eingestellten BatteryGuard-Zielwert.")
+                Text("Lücken bedeuten, dass keine Messwerte aufgezeichnet wurden, etwa im Ruhezustand. Sie werden nicht als durchgehende Nutzung gerechnet. Eine Ladelimit-Linie zeigt den aktuell eingestellten B-Guard-Zielwert.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if let exportMessage {
                     Label(exportMessage, systemImage: exportFailed ? "exclamationmark.triangle" : "checkmark.circle")
@@ -104,10 +118,16 @@ struct HistoryView: View {
     }
 
     private var chart: some View {
-        Chart {
+        let segmentCounts = Dictionary(grouping: points, by: \.segment).mapValues { $0.count }
+        return Chart {
             ForEach(points) { point in
                 LineMark(x: .value("Zeit", point.time), y: .value(metric.unit, point.value), series: .value("Abschnitt", point.segment))
                     .foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth: 2))
+                // Isolated samples otherwise disappear when a gap splits the line series.
+                if segmentCounts[point.segment] == 1 {
+                    PointMark(x: .value("Zeit", point.time), y: .value(metric.unit, point.value))
+                        .foregroundStyle(Color.accentColor).symbolSize(18)
+                }
             }
             if metric == .charge, currentConfig.mode != .native {
                 RuleMark(y: .value("Aktuelles Ladelimit", currentConfig.upperLimit))
@@ -189,7 +209,7 @@ struct HistoryView: View {
     private func exportCSV() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.commaSeparatedText]
-        panel.nameFieldStringValue = "BatteryGuard-\(Date().formatted(.iso8601.year().month().day().dateSeparator(.dash))).csv"
+        panel.nameFieldStringValue = "B-Guard-\(Date().formatted(.iso8601.year().month().day().dateSeparator(.dash))).csv"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try BGHistory.csv(history.samples).write(to: url, atomically: true, encoding: .utf8)

@@ -3,7 +3,7 @@ import AppKit
 import ServiceManagement
 import Observation
 
-/// Verwaltet die Systempräsenz von BatteryGuard:
+/// Verwaltet die Systempräsenz von B-Guard:
 /// - Autostart bei der Anmeldung (SMAppService)
 /// - Sichtbarkeit im Dock (NSApplication.ActivationPolicy)
 /// - Initialer Setup beim ersten Start
@@ -58,7 +58,7 @@ public final class AppPresence {
         }
     }
 
-    /// Steuert, ob BatteryGuard im macOS-Dock sichtbar ist
+    /// Steuert, ob B-Guard im macOS-Dock sichtbar ist
     public var showInDock: Bool {
         didSet {
             UserDefaults.standard.set(showInDock, forKey: Self.showInDockKey)
