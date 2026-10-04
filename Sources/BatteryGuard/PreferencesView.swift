@@ -6,7 +6,9 @@ struct PreferencesView: View {
     @Bindable var statusStore: StatusStore
     @Bindable var configStore: ConfigStore
     @Bindable var services: ServiceManager
+    var updates: UpdateStore? = nil
     @Bindable private var presence = AppPresence.shared
+    @Environment(\.openWindow) private var openWindow
     @State private var confirmUninstall = false
     @AppStorage("bg.notifyLow") private var notifyLow = true
     @AppStorage("bg.notifyLimit") private var notifyLimit = false
@@ -100,9 +102,21 @@ struct PreferencesView: View {
             } header: { Text("Hintergrunddienst") }
 
             Section {
-                LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.2")
+                LabeledContent("Version", value: AppVersion.installed)
                 Text("Verlauf und Einstellungen bleiben auf diesem Mac. Keine Anmeldung, keine Cloud. Die Akkugesundheit ist eine Schätzung aus den gemeldeten Kapazitäten.")
                     .font(.caption).foregroundStyle(.secondary)
+                if let updates {
+                    Toggle("Automatisch nach Updates suchen", isOn: Binding(
+                        get: { updates.automaticChecksEnabled },
+                        set: { updates.automaticChecksEnabled = $0 }
+                    ))
+                    Text("Höchstens täglich über GitHub. Neue Versionen werden in der App angezeigt; bei erlaubten Mitteilungen auch als Hinweis. Downloads starten erst nach deinem Klick.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Button("Updates & Changelog …") {
+                    openWindow(id: "updates")
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                }
                 Button("B-Guard beenden") {
                     configStore.flushPendingSave()
                     NSApplication.shared.terminate(nil)

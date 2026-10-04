@@ -1,4 +1,4 @@
-# B-Guard 0.2.2
+# B-Guard 0.2.3
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
@@ -16,6 +16,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Auswertung:** Beobachtete Zeit, Zeit ab 90 % und Zeit ab 40 °C sowie höchste gemessene Temperatur. Keine erfundenen Verschleiß- oder Lebensdauerprognosen.
 - **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
 - **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren B-Guard-Zielen und verweist auf die Systemeinstellungen.
+- **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick.
 - **Mitteilungen:** Niedriger Akkustand, erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 
 ## Oberfläche
@@ -50,7 +51,7 @@ Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste biet
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
 
-**Updates:** App beenden, neue App nach Programme ziehen und ersetzen, wieder öffnen. Den Hintergrunddienst bei einem angezeigten Versionshinweis in den Einstellungen aktualisieren. Konfiguration und Verlauf bleiben erhalten.
+**Updates:** App beenden, neue App nach Programme ziehen und ersetzen, wieder öffnen. Den Hintergrunddienst bei einem angezeigten Versionshinweis in den Einstellungen aktualisieren. Konfiguration und Verlauf bleiben erhalten. Updates & Neuigkeiten erreichst du direkt aus der Menüleiste oder den Einstellungen.
 
 ## Aus Quellcode bauen
 
@@ -76,7 +77,7 @@ Weitere Renderingzustände: `--native`, `--offline`, `--travel`, `--warm`, `--em
 
 - Konfiguration und Dienststatus: `/Library/Application Support/BatteryGuard/`
 - Benutzerverlauf: `~/Library/Application Support/BatteryGuard/history.json` (0600, Verzeichnis 0700)
-- Keine Cloud, kein Konto, keine Telemetrie.
+- Keine Cloud für Akkuwerte, kein Konto, keine Telemetrie. Automatische Updateprüfungen kontaktieren GitHub höchstens täglich; abschaltbar. Manuelle Prüfungen und Downloads kontaktieren ebenfalls GitHub.
 - Der Root-Dienst bleibt beim Beenden der App aktiv, einschließlich Zeitplänen. Die Verlaufsaufzeichnung endet.
 - Autostart und Dock-Sichtbarkeit lassen sich in den Einstellungen ändern.
 - SMC-Steuerung verwendet undokumentierte Hardware-Schlüssel. Unbekannte oder abgelehnte Schreibvorgänge werden als Fehler angezeigt.

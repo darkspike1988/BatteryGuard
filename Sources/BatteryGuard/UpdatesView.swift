@@ -1,0 +1,108 @@
+import SwiftUI
+import AppKit
+
+struct ChangeEntry: Identifiable {
+    var id: String { version }
+    let version: String
+    let title: String
+    let changes: [String]
+    static let history: [ChangeEntry] = [
+        .init(version: "0.2.3", title: "Updates & Neuigkeiten", changes: [
+            "Automatische Updateprüfung höchstens täglich über GitHub, abschaltbar und ohne Konto.",
+            "DMG direkt laden, per SHA-256 prüfen und öffnen.",
+            "Neue Versionen mit Änderungen und Verbesserungen in der App anzeigen; Changelog auch offline verfügbar.",
+            "App-Updates verlangen nur dann ein Dienstupdate, wenn dessen Funktionen tatsächlich benötigt werden."
+        ]),
+        .init(version: "0.2.2", title: "Hallo, B-Guard", changes: [
+            "Neuer Name für App und DMG; Einstellungen und Verlauf bleiben erhalten.",
+            "Gemeinsame Dateisperren und Zusammenführen paralleler Einstellungsänderungen.",
+            "Ladesteuerung vor dem Schlafen freigeben und nach dem Aufwachen neu prüfen.",
+            "Akkuleistung verständlicher erklärt; einzelne Verlaufspunkte nach Lücken bleiben sichtbar.",
+            "Neue kostenlose Open-Source-Website mit direktem DMG-Download."
+        ]),
+        .init(version: "0.2.1", title: "Externer Monitor", changes: [
+            "Netzteil bleibt bei externem Monitor oder geschlossenem Deckel verbunden.",
+            "Keine System-Schlafsperre durch B-Guard mehr.",
+            "Ohne separate Ladesperre übernimmt macOS im Monitorbetrieb das Limit."
+        ]),
+        .init(version: "0.2.0", title: "Ein Akkuplan für deinen Alltag", changes: [
+            "Ladeprofile, Reiseplanung, zeitliche Schutzpausen und einmaliges Vollladen.",
+            "Sieben Tage lokaler Messverlauf mit Temperatur, Leistung, Auswertung und CSV-Export.",
+            "Native macOS-Oberfläche, grauweißes Icon und DMG-Installation.",
+            "Verbesserte Hardware-Erkennung, Fehleranzeigen und Regressionstests."
+        ])
+    ]
+}
+
+struct UpdatesView: View {
+    @Bindable var updates: UpdateStore
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                BGSectionHeading(title: "Updates & Neuigkeiten", subtitle: "B-Guard bleibt in Bewegung.")
+                BGPanel {
+                    VStack(alignment: .leading, spacing: 14) {
+                        LabeledContent("Installierte App", value: updates.currentVersion)
+                        if let release = updates.release {
+                            LabeledContent("Aktuelle Veröffentlichung", value: release.version)
+                        }
+                        HStack {
+                            Button(updates.isChecking ? "Wird geprüft …" : "Nach Updates suchen") {
+                                Task { await updates.check() }
+                            }.disabled(updates.isChecking || updates.isDownloading)
+                            if updates.updateAvailable {
+                                Button(updates.isDownloading ? "Wird geladen …" : "Update laden und öffnen") {
+                                    Task { await updates.downloadAndOpen() }
+                                }.buttonStyle(.borderedProminent)
+                                    .disabled(updates.isChecking || updates.isDownloading || updates.release?.safeDownload == nil)
+                            }
+                            if updates.isChecking || updates.isDownloading { ProgressView().controlSize(.small) }
+                        }
+                        if let message = updates.message {
+                            Text(message).font(.callout).foregroundStyle(updates.isError ? Color.orange : Color.secondary)
+                                .textSelection(.enabled)
+                        }
+                        if let checked = updates.checkedAt {
+                            Text("Zuletzt erfolgreich geprüft: \(checked.formatted(date: .abbreviated, time: .shortened))")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        if let downloaded = updates.downloadedURL {
+                            Button("Download im Finder zeigen") { NSWorkspace.shared.activateFileViewerSelecting([downloaded]) }
+                        }
+                        Link("Veröffentlichungen auf GitHub ↗", destination: URL(string: "https://github.com/darkspike1988/BatteryGuard/releases")!)
+                        Toggle("Automatisch nach Updates suchen", isOn: $updates.automaticChecksEnabled)
+                        Text("Die automatische Prüfung kontaktiert GitHub höchstens täglich und lässt sich abschalten. Manuelle Prüfungen sind jederzeit möglich. Der Download bleibt eine DMG: App beenden, auf Programme ziehen und ersetzen. Deine Einstellungen und dein Verlauf bleiben erhalten.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                if let release = updates.release, updates.updateAvailable, let body = release.body, !body.isEmpty {
+                    BGPanel {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Neu in \(release.version)").font(.headline)
+                            Text(body).font(.callout).textSelection(.enabled)
+                        }
+                    }
+                }
+                Text("Versionshistorie").font(.title2.weight(.semibold))
+                ForEach(ChangeEntry.history) { entry in
+                    BGPanel {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text(entry.title).font(.headline)
+                                Spacer()
+                                Text(entry.version).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                            }
+                            ForEach(entry.changes, id: \.self) { change in
+                                HStack(alignment: .top, spacing: 10) {
+                                    Text("•").foregroundStyle(.secondary)
+                                    Text(change).font(.callout).fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                }
+            }.padding(28).frame(maxWidth: 740)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+}

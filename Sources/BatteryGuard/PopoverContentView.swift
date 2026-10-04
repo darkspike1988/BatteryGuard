@@ -6,6 +6,7 @@ struct PopoverContentView: View {
     @Bindable var statusStore: StatusStore
     @Bindable var configStore: ConfigStore
     let historyStore: HistoryStore
+    var updates: UpdateStore? = nil
     @State private var editingLimits = false
     @Environment(\.openWindow) private var openWindow
 
@@ -24,6 +25,15 @@ struct PopoverContentView: View {
                 .buttonStyle(.plain).foregroundStyle(.secondary)
                 .help("Übersicht, Verlauf und Einstellungen öffnen")
                 .accessibilityLabel("B-Guard öffnen")
+            }
+            if let updates, updates.updateAvailable, let release = updates.release {
+                Button {
+                    openWindow(id: "updates")
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                } label: {
+                    Label("B-Guard \(release.version) verfügbar · Was ist neu?", systemImage: "arrow.down.circle")
+                        .font(.callout)
+                }.buttonStyle(.plain).foregroundStyle(Color.accentColor)
             }
             BatteryHeroView(status: statusStore.status, config: configStore.config,
                             active: statusStore.isDaemonActive, compact: true)
@@ -107,6 +117,10 @@ struct PopoverContentView: View {
                 .help("App beenden. Der Hintergrunddienst steuert das Laden weiter.")
             }
             .buttonStyle(.bordered)
+            Button("Updates & Neuigkeiten …") {
+                openWindow(id: "updates")
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }.buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
             if configStore.hasWriteError {
                 Label("Einstellungen konnten nicht gespeichert werden.", systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.orange)

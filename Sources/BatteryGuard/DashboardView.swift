@@ -14,6 +14,8 @@ struct DashboardView: View {
     @Bindable var configStore: ConfigStore
     let historyStore: HistoryStore
     let services: ServiceManager
+    var updates: UpdateStore? = nil
+    @Environment(\.openWindow) private var openWindow
     @State private var page: DashboardPage? = .overview
 
     var body: some View {
@@ -40,11 +42,11 @@ struct DashboardView: View {
             Group {
                 switch page ?? .overview {
                 case .overview:
-                    OverviewView(statusStore: statusStore, configStore: configStore, history: historyStore)
+                    OverviewView(statusStore: statusStore, configStore: configStore, history: historyStore, updates: updates)
                 case .history:
                     HistoryView(history: historyStore, currentConfig: configStore.config)
                 case .settings:
-                    PreferencesView(statusStore: statusStore, configStore: configStore, services: services)
+                    PreferencesView(statusStore: statusStore, configStore: configStore, services: services, updates: updates)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -60,6 +62,8 @@ struct OverviewView: View {
     let statusStore: StatusStore
     @Bindable var configStore: ConfigStore
     let history: HistoryStore
+    var updates: UpdateStore? = nil
+    @Environment(\.openWindow) private var openWindow
     @State private var readyAt = Date().addingTimeInterval(12 * 3600)
     private var canControl: Bool {
         statusStore.supportsChargingPlans && statusStore.status.state != .unsupported && configStore.config.mode != .native && configStore.config.mode != .direct
@@ -79,6 +83,15 @@ struct OverviewView: View {
                                 .font(.system(size: 28, weight: .light)).monospacedDigit()
                             Text(profileName).font(.caption).foregroundStyle(.secondary)
                         }.frame(minWidth: 86)
+                    }
+                }
+                if let updates, updates.updateAvailable, let release = updates.release {
+                    BGPanel {
+                        HStack {
+                            Label("B-Guard \(release.version) ist verfügbar.", systemImage: "arrow.down.circle")
+                            Spacer()
+                            Button("Änderungen ansehen") { openWindow(id: "updates") }
+                        }.font(.callout)
                     }
                 }
                 if statusStore.daemonNeedsUpdate {

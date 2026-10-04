@@ -4,14 +4,35 @@ import BatteryGuardShared
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static weak var configStore: ConfigStore?
+    @MainActor static weak var updateStore: UpdateStore?
     private var setupWindow: NSWindow?
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         Self.configStore?.flushPendingSave()
+        Self.updateStore?.stopAutomaticChecks()
         return .terminateNow
     }
     func applicationDidFinishLaunching(_ notification: Notification) {
         if DesignPreview.isRendering { DesignPreview.render(); return }
+        if ProcessInfo.processInfo.arguments.contains("--check-updates") {
+            Task {
+                guard let updater = Self.updateStore else { exit(1) }
+                await updater.check()
+                print("Installed: \(updater.currentVersion), latest: \(updater.release?.version ?? "unknown"), available: \(updater.updateAvailable), verified download metadata: \(updater.release?.safeDownload != nil)")
+                if let message = updater.message { print(message) }
+                let args = ProcessInfo.processInfo.arguments
+                if let index = args.firstIndex(of: "--verify-update-file"), args.count > index + 1 {
+                    do {
+                        guard let asset = updater.release?.safeDownload else { throw UpdateError.invalidDownload }
+                        try UpdateStore.verify(Data(contentsOf: URL(fileURLWithPath: args[index + 1])), asset: asset)
+                        print("Downloaded release file: SHA-256 verified")
+                    } catch { print(error.localizedDescription); exit(1) }
+                }
+                exit(updater.isError ? 1 : 0)
+            }
+            return
+        }
         AppPresence.shared.applyOnLaunch()
+        Self.updateStore?.startAutomaticChecks()
         guard AppPresence.isRunningFromBundle,
               !FileManager.default.fileExists(atPath: BGPaths.daemonBinary) else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
@@ -34,12 +55,16 @@ struct BatteryGuardApp: App {
     @State private var configStore: ConfigStore
     @State private var historyStore: HistoryStore
     @State private var services = ServiceManager()
+    @State private var updates: UpdateStore
     
     init() {
-        let preview = DesignPreview.isRendering
+        let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates")
         let config = preview ? ConfigStore.preview : ConfigStore()
         let status = preview ? StatusStore.preview : StatusStore()
         let history = HistoryStore(preview: preview)
+        let updater = UpdateStore(preferences: preview ? UserDefaults(suiteName: "BGuardPreview.\(UUID().uuidString)")! : .standard)
+        AppDelegate.updateStore = updater
+        _updates = State(wrappedValue: updater)
         AppDelegate.configStore = config
         status.onFreshStatus = { [weak history] in history?.record($0) }
         if status.isDaemonActive { history.record(status.status) }
@@ -57,24 +82,31 @@ struct BatteryGuardApp: App {
             PopoverContentView(
                 statusStore: statusStore,
                 configStore: configStore,
-                historyStore: historyStore
+                historyStore: historyStore,
+                updates: updates
             )
         } label: {
             MenuBarLabelView(
                 status: statusStore.status,
-                isDaemonActive: statusStore.isDaemonActive
+                isDaemonActive: statusStore.isDaemonActive,
+                updateAvailable: updates.updateAvailable
             )
         }
         .menuBarExtraStyle(.window)
 
         Window("B-Guard", id: "dashboard") {
             DashboardView(statusStore: statusStore, configStore: configStore,
-                          historyStore: historyStore, services: services)
+                          historyStore: historyStore, services: services, updates: updates)
         }
         .defaultSize(width: 980, height: 760)
 
+        Window("Updates & Neuigkeiten", id: "updates") {
+            UpdatesView(updates: updates)
+        }
+        .defaultSize(width: 720, height: 780)
+
         Settings {
-            PreferencesView(statusStore: statusStore, configStore: configStore, services: services)
+            PreferencesView(statusStore: statusStore, configStore: configStore, services: services, updates: updates)
                 .frame(width: 620, height: 720)
         }
     }
@@ -83,6 +115,7 @@ struct BatteryGuardApp: App {
 struct MenuBarLabelView: View {
     let status: BGStatus
     let isDaemonActive: Bool
+    var updateAvailable = false
     
     var body: some View {
         HStack(spacing: 5) {
@@ -115,6 +148,10 @@ struct MenuBarLabelView: View {
             .frame(width: 14, height: 14)
             .padding(.trailing, 1)
             
+            if updateAvailable {
+                Image(systemName: "arrow.down.circle.fill").font(.system(size: 9))
+                    .foregroundStyle(Color.accentColor).help("Neue B-Guard-Version verfügbar")
+            }
             Text(isDaemonActive ? "\(status.percent) %" : "– %")
                 .monospacedDigit()
                 .font(.system(size: 13, weight: .medium, design: .rounded))
