@@ -1,0 +1,55 @@
+import Foundation
+import Testing
+import BatteryGuardShared
+@testable import batteryguardd
+
+struct ReviewReproductionTests {
+    @Test func explicitProtectionOffIsLostAcrossFieldDiffMerge() throws {
+        var baseline = BGConfig()
+        baseline.enabled = false
+        let desired = try BGChargingActionRequest(action: .protection, enabled: false).applying(to: baseline)
+        var intervening = baseline
+        intervening.enabled = true
+        let result = desired.mergingEdits(since: baseline, into: intervening)
+        // Current behavior proves the bug: the explicit "off" request returns "on".
+        #expect(result.enabled == true)
+    }
+
+    @Test func serviceConfirmsWrongStateAfterExplicitOffAction() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("BGuardReview-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        var baseline = BGConfig()
+        baseline.enabled = false
+        let desired = try BGChargingActionRequest(action: .protection, enabled: false).applying(to: baseline)
+        var intervening = baseline
+        intervening.enabled = true
+        try BGJSON.encoder().encode(intervening).write(to: url)
+        let result = try ConfigServer.apply(BGConfigRequest(baseline: baseline, desired: desired),
+                                           peerUID: 0, consoleUID: nil, configURL: url)
+        #expect(result.enabled == true)
+        #expect(try BGConfigFile.read(at: url).enabled == true)
+    }
+
+    @Test func oldTickResetDeletesNewFullChargeDeadlineAndActiveTravel() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("BGuardReview-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let now = Date()
+        var oldSnapshot = BGConfig()
+        oldSnapshot.chargeToFullOnce = true
+        oldSnapshot.fullChargeUntil = now.addingTimeInterval(60)
+        // A tick already decided to reset oldSnapshot at 100%; a new request wins the lock first.
+        var newlySaved = oldSnapshot
+        newlySaved.fullChargeUntil = now.addingTimeInterval(8 * 3600)
+        newlySaved.travelReadyAt = now.addingTimeInterval(3600)
+        try BGJSON.encoder().encode(newlySaved).write(to: url)
+        // Exact state mutation currently used by DaemonRunner.resetChargeToFullOnceInConfig.
+        let result = try BGConfigFile.update(at: url) { cfg in
+            cfg.chargeToFullOnce = false
+            cfg.fullChargeUntil = nil
+            if cfg.isTravelCharging(at: now) { cfg.travelReadyAt = nil }
+        }
+        #expect(result.chargeToFullOnce == false)
+        #expect(result.fullChargeUntil == nil)
+        #expect(result.travelReadyAt == nil)
+    }
+}

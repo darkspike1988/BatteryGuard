@@ -2,6 +2,8 @@
 
 Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.1
 
+Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind offen; neue Funktionen sind geplant, nicht bereits implementiert.
+
 Die Reihenfolge richtet sich nach konkreten Review-Befunden. Die folgenden Funktionen sind in 0.3.0 umgesetzt; offene Abnahmen und externe Voraussetzungen stehen separat.
 
 ## Erledigt: Stabilität
@@ -42,7 +44,7 @@ Interne Review-Agenten prüfen Code, Hardwarelogik und Bedienung getrennt. Die l
 
 Agentenbefunde werden am Code geprüft, bevor sie zu Änderungen werden. Hardwarevermutungen werden nicht als physisch bestätigte Fehler dargestellt. Keine automatischen Hardware-Schreibtests, Installationen oder Veröffentlichungen durch Research-Agenten. Der externe Review bestätigte den Reiseplanfehler und schlug Protokolltests vor; pauschale thermische Gefahrenbehauptungen wurden nicht als Befunde übernommen.
 
-Validierung: 63 Tests in acht Suiten bestanden, Debug-/Release-Build und DMG-Verifikation erfolgreich, gerenderte Hell-/Dunkel- und Monitor-Vorschauen geprüft. Hardwarewirkung von Monitorereignissen, Schlaf/Aufwachen und Readback muss weiterhin am jeweiligen Mac geprüft werden.
+Validierung der damaligen 0.3.0-Arbeiten: 63 Tests in acht Suiten bestanden, Debug-/Release-Build und DMG-Verifikation erfolgreich, gerenderte Hell-/Dunkel- und Monitor-Vorschauen geprüft. Hardwarewirkung von Monitorereignissen, Schlaf/Aufwachen und Readback muss weiterhin am jeweiligen Mac geprüft werden.
 
 ## Bewusst außerhalb des Plans
 
