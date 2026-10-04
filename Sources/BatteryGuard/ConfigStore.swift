@@ -2,6 +2,18 @@ import Foundation
 import Observation
 import BatteryGuardShared
 
+enum AppActionError: Error, LocalizedError {
+    case unsavedChanges
+    case saveFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .unsavedChanges: "Einstellungen werden noch gespeichert. Bitte erneut versuchen."
+        case .saveFailed(let message): message
+        }
+    }
+}
+
 @Observable
 @MainActor
 final class ConfigStore: Sendable {
@@ -95,58 +107,78 @@ final class ConfigStore: Sendable {
         }
     }
     
-    func apply(_ profile: BGProfile) {
-        activateProfile(profile)
+    var hasUnsavedChanges: Bool { hasPendingSave }
+
+    func savedConfig() throws -> BGConfig { try BGConfigFile.read(at: configURL) }
+
+    @discardableResult
+    func performAction(_ request: BGChargingActionRequest, at now: Date = Date()) -> Bool {
+        do {
+            let next = try request.applying(to: config, at: now)
+            if config != next { config = next }
+            return true
+        } catch {
+            hasWriteError = true
+            writeErrorMessage = error.localizedDescription
+            return false
+        }
     }
 
+    /// The API must return success only after the shared daemon has accepted the save.
+    func performAPIAction(_ request: BGChargingActionRequest, at now: Date = Date()) throws -> BGConfig {
+        guard !hasPendingSave else { throw AppActionError.unsavedChanges }
+        guard persistenceEnabled else { throw AppActionError.saveFailed("Vorschau kann keine Einstellungen speichern.") }
+        let saved = try BGConfigFile.update(at: configURL) { latest in
+            latest = try request.applying(to: latest, at: now)
+        }
+        let wasInitialLoad = isInitialLoad
+        isInitialLoad = true
+        config = saved
+        baseline = saved
+        isInitialLoad = wasInitialLoad
+        hasWriteError = false
+        writeErrorMessage = nil
+        return saved
+    }
+
+    func apply(_ profile: BGProfile) { activateProfile(profile) }
+
     func activateProfile(_ profile: BGProfile) {
-        var next = profile.applying(to: config)
-        if next.mode == .native || next.mode == .direct { next.mode = .auto }
-        next.chargeToFullOnce = false
-        next.fullChargeUntil = nil
-        if next.isTravelCharging(at: Date()) { next.travelReadyAt = nil }
-        config = next
+        performAction(BGChargingActionRequest(action: .profile, profile: profile.rawValue))
     }
 
     func setProtectionEnabled(_ enabled: Bool) {
-        var next = config
-        next.enabled = enabled
-        next.pauseUntil = nil
-        if enabled && (next.mode == .native || next.mode == .direct) { next.mode = .auto }
-        config = next
+        performAction(BGChargingActionRequest(action: .protection, enabled: enabled))
     }
 
     func pause(for duration: TimeInterval) {
-        config.pauseUntil = Date().addingTimeInterval(duration)
+        guard duration.isFinite, duration >= 60, duration <= 720 * 60,
+              duration.truncatingRemainder(dividingBy: 60) == 0 else {
+            hasWriteError = true
+            writeErrorMessage = "Eine Pause muss zwischen 1 und 720 ganzen Minuten dauern."
+            return
+        }
+        performAction(BGChargingActionRequest(action: .pause, minutes: Int(duration / 60)))
     }
 
-    func resumeProtection() { config.pauseUntil = nil }
+    func resumeProtection() {
+        performAction(BGChargingActionRequest(action: .resume))
+    }
 
     func startFullCharge() {
-        var next = config
-        next.enabled = true
-        next.pauseUntil = nil
-        next.chargeToFullOnce = true
-        next.fullChargeUntil = Date().addingTimeInterval(8 * 3600)
-        config = next
+        performAction(BGChargingActionRequest(action: .fullCharge))
     }
 
     func cancelFullCharge(at now: Date = Date()) {
-        var next = config
-        next.chargeToFullOnce = false
-        next.fullChargeUntil = nil
-        if next.isTravelCharging(at: now) { next.travelReadyAt = nil }
-        config = next
+        performAction(BGChargingActionRequest(action: .cancelFullCharge), at: now)
     }
 
     func scheduleTravel(readyAt: Date) {
-        var next = config
-        next.enabled = true
-        next.pauseUntil = nil
-        next.travelReadyAt = readyAt
-        next.chargeToFullOnce = false
-        next.fullChargeUntil = nil
-        config = next
+        performAction(BGChargingActionRequest(action: .travel, readyAt: readyAt))
+    }
+
+    func cancelTravel() {
+        performAction(BGChargingActionRequest(action: .cancelTravel))
     }
 
     func flushPendingSave() {

@@ -1,4 +1,4 @@
-# B-Guard 0.3.0
+# B-Guard 0.3.1
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
@@ -16,6 +16,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Einmaliges Vollladen:** Mit weiterhin aktivem konfiguriertem Hitzeschutz und einer maximalen Dauer von acht Stunden.
 - **Lokaler Verlauf:** Ladung, Temperatur und Lade-/Entladeleistung. Ein Messpunkt pro Minute, bis zu sieben Tage. Aufzeichnung nur bei laufender App und aktuellen Messwerten; Schlaf- und Ausfallzeiten bleiben Lücken.
 - **Auswertung:** Beobachtete Zeit, Zeit ab 90 % und Zeit ab 40 °C sowie höchste gemessene Temperatur. Keine erfundenen Verschleiß- oder Lebensdauerprognosen.
+- **Lokale REST API:** Status, gespeicherte Einstellungen und Verlauf als JSON oder CSV auslesen. Optionale Steuerbefehle für Profile, Pausen und Reiseplanung. Standardmäßig aus, nur lokal und mit Bearer-Token. [Dokumentation](docs/api.md).
 - **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
 - **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren B-Guard-Zielen und verweist auf die Systemeinstellungen.
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
@@ -53,7 +54,7 @@ Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste biet
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
 
-**Umstieg auf 0.3.0:** Nach dem Ersetzen der App den Hintergrunddienst in den Einstellungen aktualisieren. Bis dahin können neue Einstellungen nicht gespeichert werden; der bisherige Dienst führt seinen gespeicherten Stand weiter aus. Das Dienstupdate bewahrt bestehende Einstellungen und setzt die neuen Dateirechte.
+**Umstieg auf 0.3.1:** Von 0.3.0 genügt das Ersetzen der App; der Hintergrunddienst bleibt auf 0.3.0. Von älteren Versionen: Nach dem Ersetzen der App den Hintergrunddienst in den Einstellungen aktualisieren. Bis dahin können neue Einstellungen nicht gespeichert werden; der bisherige Dienst führt seinen gespeicherten Stand weiter aus. Das Dienstupdate bewahrt bestehende Einstellungen und setzt die neuen Dateirechte.
 
 **Updates:** App beenden, neue App nach Programme ziehen und ersetzen, wieder öffnen. Den Hintergrunddienst bei einem angezeigten Versionshinweis in den Einstellungen aktualisieren. Konfiguration und Verlauf bleiben erhalten. Updates & Neuigkeiten erreichst du direkt aus der Menüleiste oder den Einstellungen.
 
@@ -91,6 +92,10 @@ App und Dienst lesen die Konfiguration unter einer gemeinsamen Dateisperre. Änd
 Der Dienst sichert gültige Einstellungen vor Änderungen. Bei beschädigtem JSON bleiben die Originalbytes in einer Sicherungsdatei erhalten; ein gültiger vorheriger Stand oder Standardwerte werden mit ausgeschaltetem Schutz wiederhergestellt. Prüfe die Einstellungen vor erneuter Aktivierung. Beschädigte Verlaufsdateien werden ebenfalls gesichert, anschließend beginnt die Aufzeichnung neu.
 
 Vor dem Systemschlaf wird die Steuerung freigegeben, nach dem Aufwachen neu geprüft. Monitoränderungen lösen eine sofortige erneute Prüfung aus. Bekannte Hardware-Schalter werden ungefähr jede Minute nachgelesen; nicht verifizierbare Zustände werden nicht als Erfolg gewertet. Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
+
+## Lokale Automatisierung
+
+Die optionale [REST API v1](docs/api.md) ist standardmäßig aus und nur unter `127.0.0.1:8767` erreichbar. Bearer-Token und eine separate Freigabe für Schreibaktionen schützen die Schnittstelle. Die App muss laufen.
 
 ## Entfernen
 

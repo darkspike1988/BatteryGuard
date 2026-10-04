@@ -15,6 +15,7 @@ struct DashboardView: View {
     let historyStore: HistoryStore
     let services: ServiceManager
     var updates: UpdateStore? = nil
+    var api: LocalAPIStore? = nil
     @Environment(\.openWindow) private var openWindow
     @State private var page: DashboardPage? = .overview
 
@@ -46,7 +47,7 @@ struct DashboardView: View {
                 case .history:
                     HistoryView(history: historyStore, currentConfig: configStore.config)
                 case .settings:
-                    PreferencesView(statusStore: statusStore, configStore: configStore, services: services, updates: updates)
+                    PreferencesView(statusStore: statusStore, configStore: configStore, services: services, updates: updates, api: api)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

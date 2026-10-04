@@ -41,13 +41,14 @@ enum DesignPreview {
         do {
             let updatePreferences = UserDefaults(suiteName: "BGuardPreview.\(UUID().uuidString)")!
             let updater = UpdateStore(preferences: updatePreferences)
+            let api = LocalAPIStore(config: config, status: status, history: history, preferences: updatePreferences)
             if args.contains("--update-available") {
                 let json = #"{"tag_name":"v0.4.0","body":"Ladeprofile verbessert.\nSchlaf-/Aufwachverhalten robuster.\nNeue Möglichkeiten für deinen Alltag.","draft":false,"prerelease":false,"assets":[]}"#
                 updater.release = try JSONDecoder().decode(GitHubRelease.self, from: Data(json.utf8))
                 updater.checkedAt = Date()
                 updater.message = "B-Guard 0.4.0 ist verfügbar."
             }
-            try renderView(DashboardView(statusStore: status, configStore: config, historyStore: history, services: services, updates: updater)
+            try renderView(DashboardView(statusStore: status, configStore: config, historyStore: history, services: services, updates: updater, api: api)
                 .environment(\.colorScheme, theme), size: NSSize(width: args.contains("--small") ? 780 : 980, height: args.contains("--small") ? 600 : 1060),
                            to: directory.appendingPathComponent("overview.png"))
             try renderView(HistoryView(history: history, currentConfig: config.config)
@@ -56,8 +57,8 @@ enum DesignPreview {
             try renderView(PopoverContentView(statusStore: status, configStore: config, historyStore: history, updates: updater)
                 .environment(\.colorScheme, theme), size: NSSize(width: 370, height: 575),
                            to: directory.appendingPathComponent("menu.png"))
-            try renderView(PreferencesView(statusStore: status, configStore: config, services: services, updates: updater)
-                .environment(\.colorScheme, theme), size: NSSize(width: 660, height: 820),
+            try renderView(PreferencesView(statusStore: status, configStore: config, services: services, updates: updater, api: api)
+                .environment(\.colorScheme, theme), size: NSSize(width: 660, height: 1060),
                            to: directory.appendingPathComponent("settings.png"))
             try renderView(SetupView(close: {}).environment(\.colorScheme, theme),
                            size: NSSize(width: 480, height: 340),

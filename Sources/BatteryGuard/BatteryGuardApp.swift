@@ -5,10 +5,12 @@ import BatteryGuardShared
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static weak var configStore: ConfigStore?
     @MainActor static weak var updateStore: UpdateStore?
+    @MainActor static weak var apiStore: LocalAPIStore?
     private var setupWindow: NSWindow?
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         Self.configStore?.flushPendingSave()
         Self.updateStore?.stopAutomaticChecks()
+        Self.apiStore?.stop()
         return .terminateNow
     }
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -33,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         AppPresence.shared.applyOnLaunch()
         Self.updateStore?.startAutomaticChecks()
+        Self.apiStore?.startIfEnabled()
         guard AppPresence.isRunningFromBundle,
               !FileManager.default.fileExists(atPath: BGPaths.daemonBinary) else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
@@ -56,6 +59,7 @@ struct BatteryGuardApp: App {
     @State private var historyStore: HistoryStore
     @State private var services = ServiceManager()
     @State private var updates: UpdateStore
+    @State private var api: LocalAPIStore
     
     init() {
         let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates")
@@ -63,6 +67,10 @@ struct BatteryGuardApp: App {
         let status = preview ? StatusStore.preview : StatusStore()
         let history = HistoryStore(preview: preview)
         let updater = UpdateStore(preferences: preview ? UserDefaults(suiteName: "BGuardPreview.\(UUID().uuidString)")! : .standard)
+        let api = LocalAPIStore(config: config, status: status, history: history,
+                                preferences: preview ? UserDefaults(suiteName: "BGuardAPIPreview.\(UUID().uuidString)")! : .standard)
+        AppDelegate.apiStore = api
+        _api = State(wrappedValue: api)
         AppDelegate.updateStore = updater
         _updates = State(wrappedValue: updater)
         AppDelegate.configStore = config
@@ -96,7 +104,7 @@ struct BatteryGuardApp: App {
 
         Window("B-Guard", id: "dashboard") {
             DashboardView(statusStore: statusStore, configStore: configStore,
-                          historyStore: historyStore, services: services, updates: updates)
+                          historyStore: historyStore, services: services, updates: updates, api: api)
         }
         .defaultSize(width: 980, height: 760)
 
@@ -106,7 +114,7 @@ struct BatteryGuardApp: App {
         .defaultSize(width: 720, height: 780)
 
         Settings {
-            PreferencesView(statusStore: statusStore, configStore: configStore, services: services, updates: updates)
+            PreferencesView(statusStore: statusStore, configStore: configStore, services: services, updates: updates, api: api)
                 .frame(width: 620, height: 720)
         }
     }

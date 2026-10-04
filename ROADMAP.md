@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.0
+Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.1
 
 Die Reihenfolge richtet sich nach konkreten Review-Befunden. Die folgenden Funktionen sind in 0.3.0 umgesetzt; offene Abnahmen und externe Voraussetzungen stehen separat.
 
@@ -47,3 +47,11 @@ Validierung: 63 Tests in acht Suiten bestanden, Debug-/Release-Build und DMG-Ver
 ## Bewusst außerhalb des Plans
 
 Keine garantierten Lebensdauer- oder Verschleißprognosen, keine Telemetrie und keine eigenmächtigen Änderungen an Apples nativem Ladelimit. Unbeaufsichtigte privilegierte Selbstupdates sind derzeit nicht geplant.
+
+## Lokale Automatisierung · umgesetzt in 0.3.1
+
+- Optionale REST API v1 auf 127.0.0.1:8767 mit Bearer-Token; standardmäßig ausgeschaltet.
+- Status, gespeicherte Konfiguration, Fähigkeiten und sieben Tage Verlauf als JSON/CSV.
+- Separat freigegebene Aktionen verwenden dieselben validierten Regeln wie die Oberfläche.
+- Tests für Authentifizierung, Token-Erneuerung, Anfragen, Konflikte, Speicherfehler und echten HTTP-Verkehr.
+- [Dokumentation und Beispiele](docs/api.md). Die App muss laufen; keine LAN-Freigabe.

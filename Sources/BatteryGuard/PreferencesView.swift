@@ -8,6 +8,7 @@ struct PreferencesView: View {
     @Bindable var configStore: ConfigStore
     @Bindable var services: ServiceManager
     var updates: UpdateStore? = nil
+    var api: LocalAPIStore? = nil
     @Bindable private var presence = AppPresence.shared
     @Environment(\.openWindow) private var openWindow
     @State private var confirmUninstall = false
@@ -95,6 +96,8 @@ struct PreferencesView: View {
                 }
                 if let error = presence.lastError { Text(error).font(.caption).foregroundStyle(.orange) }
             } header: { Text("App") }
+
+            if let api { APISettingsView(api: api) }
 
             Section {
                 LabeledContent("Status", value: statusStore.isDaemonActive ? "Verbunden" : "Nicht erreichbar")
