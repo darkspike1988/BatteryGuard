@@ -4,6 +4,101 @@ Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.3
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 
+## Nächste Umsetzung: Funktionsumfang aus AlDente Pro
+
+Diese Roadmap beschreibt eigene B-Guard-Implementierungen anhand der [offiziellen Funktionsseite](https://apphousekitchen.com/aldente-overview/features/) und der [Preisübersicht](https://apphousekitchen.com/de/aldente/preisgestaltung/), geprüft am 4. Oktober 2026. Die Pakete sind priorisierte Ziele, keine bereits verfügbaren Funktionen oder festen Veröffentlichungstermine. B-Guard bleibt kostenlos und MIT Open Source. Die weiter unten dokumentierte Umsetzungshistorie bleibt erhalten. Für die nächste Arbeit gilt die Reihenfolge hier; sie aktualisiert die ältere Reihenfolge in [STRATEGY.md](docs/STRATEGY.md).
+
+### Reihenfolge und Abhängigkeiten
+
+| Paket | Priorität | Ergebnis | Voraussetzung |
+| --- | --- | --- | --- |
+| P1 | Hoch · zuerst | Power Flow und zusätzlicher Hardware-Ladestand | Verifizierte lesende Messquellen |
+| P2 | Hoch | Native Kurzbefehle und gemeinsame Aktionsschnittstelle | Bestehendes atomisches Dienstprotokoll |
+| P3 | Hoch | Vollständiges Top Up, Einmalentladung und „Laden hier halten“ | Fähigkeitsprüfung für jede Steueraktion |
+| P4 | Hoch | Eigene Profile und wiederkehrende Zeitpläne | P2/P3 und definierte Konfliktregeln |
+| P5 | Mittel | Frei konfigurierbares Menüfenster, Symbolstile und LED-Optionen | P1; LED-Fähigkeit je Hardware |
+| H1 | Parallel · zunächst lesend | Bestätigte Backends für Sailing, Deckel und Schlaf | Hardware-/Firmware-Abnahmematrix |
+| P6 | Später | Manueller Kalibrierungsassistent | H1 mit bestätigter Lade-/Entladesteuerung |
+
+### P1 — Energiefluss verständlich anzeigen
+
+- Tatsächlich verfügbare Eingangsmesswerte lesend erfassen und Quelle, Einheit, Vorzeichen, Aktualität sowie Verhalten mit USB-C, MagSafe und Dock prüfen. Netzteil-Nennleistung bleibt ein separat benannter Wert; sie ersetzt keine gemessene Leistung.
+- Netzteilzufuhr, Batteriefluss und daraus gegebenenfalls abgeleitete Mac-Leistung getrennt anzeigen. Abgeleitete Werte ausdrücklich kennzeichnen; Verluste und widersprüchliche Messzeitpunkte nicht als exakte Systemmessung darstellen.
+- Eigenes Energieflussdiagramm in Übersicht und optional im Menüfenster; Textalternative für VoiceOver und Reduced Motion. Bei fehlenden Messwerten „nicht verfügbar“ anzeigen, nicht 0 W erfinden.
+- Zusätzlichen Hardware-Ladestand neben dem macOS-Wert anzeigen, sofern Quelle und Berechnung bestätigt sind. Beide sind Schätzwerte; bestehende Steuerung bleibt am macOS-Prozentwert orientiert.
+- Neue Messwerte mit Quelle und Zeitpunkt optional im REST-Status bereitstellen; alte Clients und alte Statusdateien bleiben lesbar.
+
+**Abnahme:** Netzteilbetrieb bei 0 W Akkustrom, Laden, Entladen, schwaches Netzteil mit Akku-Unterstützung, fehlende/veraltete Sensoren und Vorzeichen getestet. Konkrete Hardwarewerte lesend gegenprüfen. Ein Diagramm darf nur die tatsächlich verfügbaren Flüsse zeigen. Falls die Eingangsmessung fehlt, Batteriefluss allein veröffentlichen und die fehlende Systemmessung klar kennzeichnen.
+
+### P2 — Native Kurzbefehle
+
+- App Intents für Batteriestand, Temperatur, Status und Profil/Ladeziel auslesen.
+- Danach Profile wählen, Schutz starten/stoppen, zeitlich pausieren/fortsetzen, Vollladen und Reise planen/abbrechen. Neue P3-Aktionen anschließend ergänzen.
+- UI, REST und Kurzbefehle verwenden dieselbe validierte, atomare Aktionslogik. Native Kurzbefehle benötigen keinen REST-Token und keine eingeschaltete REST API.
+- Fehlender/alter Dienst, inaktive Benutzersitzung und nicht unterstützte Hardware liefern einen konkreten Fehler. Erfolg erst nach bestätigter Speicherung; gespeicherter Wunsch und tatsächliche Hardwarewirkung bleiben unterscheidbar.
+- Stromspar-/Hochleistungsmodus als optionalen Teilauftrag recherchieren. Nur dokumentierte, unterstützte Wege integrieren; kein Modusangebot für ungeeignete Macs.
+
+**Abnahme:** Echte Kurzbefehle aus Apples Kurzbefehle-App ohne Terminal verwenden; Lese- und Schreibaktion bei geschlossener B-Guard-Oberfläche, verweigerte Aktion und Konkurrenz zu REST/UI prüfen. Build muss die erforderlichen App-Intents-Metadaten enthalten.
+
+### P3 — Sonderaktionen mit klarer Rückkehr
+
+- **Top Up bis Abstecken:** 100 % erreichen und am Netzteil bewahren; danach Basisprofil wiederherstellen. Persistente Request-ID, feste maximale Frist und Abbrechen. Wiederaufnahme nach App-/Dienstneustart und Netzteilwechsel definieren. Hitzeschutz bleibt aktiv.
+- **Einmal entladen auf X %:** Ziel, Reserve, Frist, Abbrechen und Rückkehr zum Basisprofil. Bei fehlender Fähigkeit oder Monitor-/Deckelkonflikt verständlich ablehnen. Automatische Entladung über dem Limit als getrennte bestehende Option behandeln.
+- **Laden hier halten:** Aktuellen Ladestand als befristetes Ziel übernehmen, nur bei bestätigter geeigneter Steuerung. Der Hitzeschutz bleibt aktiv. Die bestehende „Schutzpause“ gibt die Regelung weiterhin frei und wird nicht umgedeutet.
+- Alle Sonderaktionen in UI, REST und Kurzbefehlen anbieten; kein alter Abschluss darf eine erneuerte Anforderung löschen.
+
+**Abnahme:** Abstecken, USB-C-/Dockwechsel, Neustart, Timeout, erneuter Auftrag, alte Abschlüsse, Sensorverlust und Hitzeschutz simuliert prüfen. Wirkung auf dem jeweiligen Backend physisch bestätigen, bevor eine hardwareabhängige Aktion freigegeben wird.
+
+### P4 — Eigene Profile und wiederkehrende Regeln
+
+- Benannte Profile speichern, bearbeiten, löschen sowie mit Vorschau importieren/exportieren. Keine API-Tokens oder temporären Ausnahmeaufträge exportieren.
+- Eigene Profile atomar anwenden; untere/obere Grenze und optionale Schutzparameter explizit definieren. Import validieren, Größen begrenzen und Namens-/ID-Konflikte verständlich lösen.
+- Zeitpläne zunächst einmalig, täglich, an Werktagen und wöchentlich; danach zweiwöchentlich, monatlich und jährlich. Fehlende Monatstage ausdrücklich behandeln.
+- Aktionen: Profil/Ladelimit, Top Up, Laden hier halten und Einmalentladung. Kalibrierung und Energiemodi erst ergänzen, sobald die jeweiligen Pakete abgenommen sind.
+- Ausführung im Hintergrunddienst, damit die App geschlossen sein darf. Aktivierung, letzte/nächste Ausführung, Ergebnis und begrenzten lokalen Aufgabenverlauf anzeigen.
+- Optional nur die aktuell relevante verpasste Ausführung nachholen; keine alten Entlade-/Kalibrierungsaufträge stapeln. Zeitzone, Sommerzeit, Uhrzeitkorrektur und Wake berücksichtigen.
+- Priorität: Hardware-Sicherheit → wirksame Schutzbedingungen → aktive manuelle Ausnahme → gültiger Zeitplan → Basisprofil. Dauer einer manuellen Übersteuerung sichtbar machen.
+
+**Abnahme:** Genau eine Ausführung bei DST/Wake; kein unerwartetes Zurücksetzen einer manuellen Profilwahl; Regeln laufen bei geschlossener App. Import mit ungültigen Daten und Konflikten getestet, Einstellungen bleiben bei Fehlern erhalten.
+
+### P5 — Darstellung und MagSafe ausbauen
+
+- Menüfenster um wählbare Karten für Energiefluss, Hardware-Prozent, Verlauf und nächste Aufgabe erweitern. Reihenfolge, kompakte Ansicht und „Standard wiederherstellen“ anbieten; Aktionen und Fehler bleiben erreichbar.
+- Zusätzliche monochrome Symbolstile und kombinierbare Messanzeigen. Keine zusätzlichen Polling-Timer pro Widget; Tastatur, VoiceOver, Hell-/Dunkelmodus und geringe Bildschirmhöhe prüfen.
+- MagSafe-Modi: Automatisch, Grün, Orange, Orange blinkend und Aus; optional Aus im Schlaf. Nur nachgewiesene Modi freigeben, Fehler drosseln und vorherigen Hardwarezustand wiederherstellen.
+
+**Abnahme:** Alle Kartenkombinationen bleiben bedienbar, lange Menüs scrollbar. LED-Wirkung pro unterstütztem Anschluss/Modell tatsächlich bestätigt; unbekannte Fähigkeiten nicht als unterstützt anzeigen.
+
+### H1 — Sailing, Deckel, Schlaf und Benutzerwechsel
+
+- Backends anhand tatsächlicher Fähigkeiten auswählen: separate Ladesperre, Adaptersteuerung, bestätigte Firmwaresteuerung oder native Beobachtung. Modell, Firmware und Berechtigungen zählen; die macOS-Version allein genügt nicht.
+- **Sailing:** Netzteil verbunden lassen und erst unterhalb der Untergrenze nachladen. Aktives Adapter-Pendeln bleibt ein anderer Modus und darf nicht als gleichwertiges Sailing beworben werden.
+- **Deckelentladung:** Nur anbieten, wenn Displaybetrieb und Rückkehr zuverlässig funktionieren. Keine automatische Schlafsperre im normalen Schreibtischprofil; das behobene Deckelproblem darf nicht zurückkehren.
+- **Laden im Schlaf stoppen:** Persistente Hemmung mit Readback, physischer Wirkung und Wiederherstellung prüfen. Bis dahin bestehende Freigabe vor Schlaf beibehalten.
+- **Wach bis zum Limit:** Allenfalls ausdrückliche, befristete Option mit sichtbarer Erklärung; bei Abstecken, Frist, Abbruch oder Fehler Wachhaltung lösen.
+- **App-Ende und Benutzerwechsel:** Bestehenden weiterlaufenden Dienst dokumentieren; zwei Konten praktisch prüfen. Eine Batterie hat eine Gerätekonfiguration; Hintergrundkonten dürfen diese nicht ändern.
+
+**Abnahme:** Verfügbare Testgeräte nach Chip, macOS/Firmware, Anschluss und Monitor erfassen. Deckel zu/auf, Sleep/Wake, Neustart, Benutzerwechsel und Restore testen. Nicht geprüfte Kombinationen bleiben unbekannt. Keine geratenen SMC-Schreibwerte oder Umgehung privater Berechtigungen.
+
+### P6 — Kalibrierungsassistent
+
+- Explizit manuell starten; Phasen: bis 100 % laden → kontrolliert bis 10 % entladen → erneut bis 100 % laden → eine Stunde halten → Basisprofil wiederherstellen.
+- Zustand und Request-ID speichern; Abbruch, Gesamtfrist, Reserve, Stromunterbrechung, Sensorverlust und Neustart berücksichtigen. Temperaturbedingte Pause und Fortsetzung anzeigen; Hitzeschutz bleibt aktiv.
+- Nutzen als mögliche Verbesserung der Ladestandsschätzung erklären. Keine garantierte Lebensdauer-/Kapazitätsverbesserung und kein standardmäßiger monatlicher Zwangszyklus.
+- Zeitplanintegration erst nach manueller Abnahme; pro Gerät nur mit bestätigtem Backend freigeben.
+
+**Abnahme:** Jede Phase und jeder Ausfallpfad zunächst simuliert; danach eine ausdrücklich gestartete physische Testfolge auf geeigneter Hardware. Abbruch führt zuverlässig zum Basisprofil, ohne fremde oder neu gestartete Anforderungen zu löschen.
+
+### Begleitende Qualität und Veröffentlichung
+
+- Offene REST-Abnahme: acht langsame Verbindungen, Ablehnung der neunten, Freigabe nach Deadline und keine nachträgliche gespeicherte Aktion.
+- macOS-CI für relevante Tests, Release-Build, Shell- und Bundleprüfung; Diagnoseexport ohne Token, Seriennummern, persönliche Pfade oder genaue Reisezeiten.
+- Developer-ID/Notarisierung separat praktisch abnehmen, sobald ein Zertifikat verfügbar ist. E-Mail-Support ist kein kopierbares Softwaremerkmal; Issues und Diagnose bleiben der aktuelle Supportweg.
+- `agy` mit `gemini-3.8-flash-high` und effort high für kleine isolierte Programmieraufträge verwenden; Streaming-Fortschritt kontrollieren, anschließend Code selbst reviewen und erforderliche Tests ausführen. Agenten veröffentlichen oder installieren nicht eigenständig.
+- Pro freigegebenem Paket: Roadmap und Changelog aktualisieren, App-/Dienstversion passend setzen, Einstellungen und Verlauf erhalten, DMG bauen/verifizieren und GitHub/Website aktualisieren. Hardwarewirkung nur dort zusagen, wo sie belegt ist.
+
+## Bisherige Umsetzung und offene Abnahmen
+
 Die Reihenfolge richtet sich nach konkreten Review-Befunden. Die folgenden Funktionen sind in 0.3.0 umgesetzt; offene Abnahmen und externe Voraussetzungen stehen separat.
 
 ## Erledigt: Stabilität

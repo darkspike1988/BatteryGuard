@@ -128,3 +128,7 @@ A1/A2 sind anschließend in 0.3.2 umgesetzt: atomare typisierte Dienstaktionen s
 ## Umsetzungsnachtrag 0.3.3
 
 D4 und der Pro-Vergleich sind teilweise umgesetzt: frei wählbare Menüleistenanzeige, optionale Popover-Messwerte und unabhängige Niedrigakku-Warnschwelle. A3 ist mit UTF-8-Medientypen und frühzeitigem Größenabbruch bei DMG-Downloads teilweise umgesetzt; Verbindungssättigungs- und Deadline-Abnahme bleiben offen. Native Kurzbefehle, eigene Profile und wiederkehrende Regeln sind weiterhin geplant. Keine neue Hardwaresteuerung oder Systemleistungsmessung wird mit diesem Appupdate behauptet.
+
+## Aktuelle Umsetzungsreihenfolge
+
+Die [Pro-Funktionsroadmap](../ROADMAP.md#nächste-umsetzung-funktionsumfang-aus-aldente-pro) konkretisiert den Abgleich nach 0.3.3 und ersetzt die ältere Reihenfolge für die nächste Umsetzung: Power Flow/Messquellen → native Kurzbefehle → Sonderaktionen → eigene Profile/Zeitpläne → Darstellung/LED. Hardwareforschung läuft zunächst lesend parallel; Kalibrierung folgt erst nach bestätigter Steuerungsfähigkeit.
