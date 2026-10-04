@@ -6,13 +6,14 @@ import BatteryGuardShared
 struct ControllerTests {
     func decision(_ config: BGConfig = BGConfig(), percent: Int = 80,
                   temperature: Double = 25, plugged: Bool = true,
-                  previous: ControllerDecision? = nil, chargeControl: Bool = true) -> ControllerDecision {
+                  previous: ControllerDecision? = nil, chargeControl: Bool = true,
+                  adapterDisconnectAllowed: Bool = true) -> ControllerDecision {
         var battery = BatteryInfo()
         battery.percent = percent
         battery.temperatureCelsius = temperature
         battery.pluggedIn = plugged
         return ControllerLogic.evaluate(config: config.sanitized(), battery: battery,
-            previousDecision: previous, hasChargeControl: chargeControl, hasDischargeControl: true)
+            previousDecision: previous, hasChargeControl: chargeControl, hasDischargeControl: true, allowsAdapterDisconnect: adapterDisconnectAllowed)
     }
 
     @Test func chargeHysteresis() {
@@ -68,6 +69,33 @@ struct ControllerTests {
         var config = BGConfig(); config.chargeToFullOnce = true
         #expect(!decision(config, percent: 99).resetChargeToFullOnce)
         #expect(decision(config, percent: 100).resetChargeToFullOnce)
+    }
+
+    @Test func externalMonitorKeepsPowerInPendulumAndReconnectsPreviouslyDisabledAdapter() {
+        var config = BGConfig(); config.upperLimit = 60; config.lowerLimit = 55
+        let off = decision(config, percent: 80, chargeControl: false)
+        #expect(!off.adapterConnected)
+        let desktop = decision(config, percent: 80, plugged: false, previous: off,
+                               chargeControl: false, adapterDisconnectAllowed: false)
+        #expect(desktop.adapterConnected && desktop.chargingEnabled)
+        #expect(desktop.state == .disabled)
+        config.mode = .pendulum
+        config.heatProtectionCelsius = 40
+        #expect(decision(config, percent: 80, temperature: 45,
+                         adapterDisconnectAllowed: false).adapterConnected)
+        // Unplugging the external display allows ordinary pendulum control again.
+        #expect(!decision(config, percent: 80, previous: desktop,
+                          chargeControl: false).adapterConnected)
+    }
+
+    @Test func externalMonitorPreservesSeparateChargeInhibitionWithoutActiveDischarge() {
+        var config = BGConfig(); config.activeDischargeAboveUpper = true
+        let result = decision(config, percent: 90, adapterDisconnectAllowed: false)
+        #expect(result.adapterConnected)
+        #expect(!result.chargingEnabled)
+        #expect(result.state == .holding)
+        config.heatProtectionCelsius = 40
+        #expect(!decision(config, temperature: 45, adapterDisconnectAllowed: false).chargingEnabled)
     }
 
     @Test func oldConfigAndHostileBounds() throws {

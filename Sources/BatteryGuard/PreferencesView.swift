@@ -100,7 +100,7 @@ struct PreferencesView: View {
             } header: { Text("Hintergrunddienst") }
 
             Section {
-                LabeledContent("Version", value: "0.2.0")
+                LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.1")
                 Text("Verlauf und Einstellungen bleiben auf diesem Mac. Keine Anmeldung, keine Cloud. Die Akkugesundheit ist eine Schätzung aus den gemeldeten Kapazitäten.")
                     .font(.caption).foregroundStyle(.secondary)
                 Button("BatteryGuard beenden") {

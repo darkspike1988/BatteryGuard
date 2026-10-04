@@ -1,4 +1,4 @@
-# BatteryGuard 0.2
+# BatteryGuard 0.2.1
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
@@ -31,6 +31,8 @@ Weitere Vorschauen: [Verlauf](docs/previews/light/history.png), [Menüleiste](do
 **Automatisch:** Nutzt eine SMC-Ladesperre, falls vorhanden, sonst den Netzteil-Schalter. Bei letzterem läuft der Mac vom Akku zwischen Maximum und Maximum minus fünf Prozentpunkten. Die untere Grenze begrenzt die Entladung durch den Hitzeschutz.
 
 **Pendel:** Verwendet ausdrücklich den Netzteil-Schalter. Das erzeugt zusätzliche Lade-/Entladebewegungen. Es ist keine Garantie für eine längere Akkulebensdauer.
+
+**Externer Monitor / geschlossener Deckel:** BatteryGuard hält das Netzteil verbunden, sobald ein externer Bildschirm erkannt wird oder der Deckel geschlossen ist. Aktives Entladen entfällt dann. Auf Macs ohne separate SMC-Ladesperre übernimmt macOS das Ladelimit, auch wenn ein BatteryGuard-Profil gewählt ist; der Status zeigt diese Einschränkung. Stelle das native Limit in den macOS-Batterieeinstellungen ein. BatteryGuard erzeugt keine Schlafsperre mehr. Bei fehlgeschlagener Monitor-/Deckelerkennung bleibt das Netzteil vorsorglich verbunden.
 
 Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht als verfügbare Option angeboten.
 
@@ -77,7 +79,7 @@ Weitere Renderingzustände: `--native`, `--offline`, `--travel`, `--warm`, `--em
 - Autostart und Dock-Sichtbarkeit lassen sich in den Einstellungen ändern.
 - SMC-Steuerung verwendet undokumentierte Hardware-Schlüssel. Unbekannte oder abgelehnte Schreibvorgänge werden als Fehler angezeigt.
 
-Die dateibasierte Konfigurationskommunikation und das Schlaf-/Aufwachverhalten sind weitere technische Verbesserungsfelder; siehe [Review](docs/review-2026-10-03.md). Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
+Die dateibasierte Konfigurationskommunikation und die erneute Registerprüfung nach dem Aufwachen sind weitere technische Verbesserungsfelder; siehe [Review](docs/review-2026-10-03.md). Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
 
 ## Entfernen
 

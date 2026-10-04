@@ -33,7 +33,8 @@ public enum ControllerLogic {
         battery: BatteryInfo,
         previousDecision: ControllerDecision?,
         hasChargeControl: Bool,
-        hasDischargeControl: Bool
+        hasDischargeControl: Bool,
+        allowsAdapterDisconnect: Bool = true
     ) -> ControllerDecision {
         // Das von uns selbst deaktivierte Netzteil meldet sich evtl. als "nicht angesteckt".
         // Dann gilt es weiterhin als angesteckt, sonst würden wir zwischen den Zuständen flattern.
@@ -71,6 +72,10 @@ public enum ControllerLogic {
                     resetChargeToFullOnce: false,
                     message: "Keine unterstützten SMC-Schlüssel für Ladesteuerung gefunden (weder CHTE/CH0B noch CHIE/CH0J/CH0I)."
                 )
+            }
+            if config.enabled && effectivelyPlugged && !allowsAdapterDisconnect {
+                return ControllerDecision(state: .disabled, chargingEnabled: true, adapterConnected: true,
+                    message: "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit.")
             }
             return evaluatePendulum(
                 config: config,
@@ -140,7 +145,7 @@ public enum ControllerLogic {
 
         // 6. Aktives Entladen am Kabel: bei percent > upperLimit Adapter trennen
         //    bis percent <= upperLimit, dann Adapter wieder an und Laden aus.
-        if config.activeDischargeAboveUpper && hasDischargeControl {
+        if config.activeDischargeAboveUpper && hasDischargeControl && allowsAdapterDisconnect {
             if battery.percent > config.upperLimit {
                 return ControllerDecision(
                     state: .discharging,
@@ -256,7 +261,6 @@ public enum ControllerLogic {
     }
 }
 
-import IOKit.pwr_mgt
 
 public final class BatteryController: @unchecked Sendable {
     public let smc: SMCClient
@@ -264,7 +268,6 @@ public final class BatteryController: @unchecked Sendable {
     private var lastAppliedCharging: Bool?
     private var lastAppliedAdapter: Bool?
     private var lastAppliedMagSafeLED: SMCClient.MagSafeColor?
-    private var sleepAssertion: IOPMAssertionID = 0
     private let lock = NSLock()
 
     public init(smc: SMCClient = .shared) {
@@ -285,7 +288,8 @@ public final class BatteryController: @unchecked Sendable {
             battery: battery,
             previousDecision: previousDecision,
             hasChargeControl: smc.hasChargeControl,
-            hasDischargeControl: smc.hasDischargeControl
+            hasDischargeControl: smc.hasDischargeControl,
+            allowsAdapterDisconnect: DesktopEnvironment.allowsAdapterDisconnect()
         )
 
         var controlFailed = false
@@ -319,22 +323,7 @@ public final class BatteryController: @unchecked Sendable {
                 logger?("SMC: setAdapterConnected(\(decision.adapterConnected)) => \(success ? "ok" : "failed")")
                 if success {
                     lastAppliedAdapter = decision.adapterConnected
-                    
-                    // Sleep Assertion bei Adapter Disconnect (Aktives Entladen)
-                    if !decision.adapterConnected {
-                        if sleepAssertion == 0 {
-                            let reason = "BatteryGuard Pendulum Active Discharge" as CFString
-                            if IOPMAssertionCreateWithName(kIOPMAssertionTypePreventSystemSleep as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn), reason, &sleepAssertion) == kIOReturnSuccess {
-                                logger?("IOPMAssertionCreateWithName: System Sleep verhindert.")
-                            }
-                        }
-                    } else {
-                        if sleepAssertion != 0 {
-                            IOPMAssertionRelease(sleepAssertion)
-                            sleepAssertion = 0
-                            logger?("IOPMAssertionRelease: System Sleep wieder erlaubt.")
-                        }
-                    }
+
                 } else {
                     controlFailed = true
                 }
@@ -376,11 +365,6 @@ public final class BatteryController: @unchecked Sendable {
     public func restoreNormal(logger: ((String) -> Void)? = nil) {
         lock.lock()
         defer { lock.unlock() }
-
-        if sleepAssertion != 0 {
-            IOPMAssertionRelease(sleepAssertion)
-            sleepAssertion = 0
-        }
 
         if smc.hasChargeControl || smc.hasDischargeControl || smc.keyExists("ACLC") {
             let success = smc.restoreNormal()

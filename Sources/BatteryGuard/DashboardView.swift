@@ -81,9 +81,9 @@ struct OverviewView: View {
                         }.frame(minWidth: 86)
                     }
                 }
-                if statusStore.isDaemonActive && !statusStore.supportsChargingPlans {
+                if statusStore.daemonNeedsUpdate {
                     BGPanel {
-                        Label("Aktualisiere den Hintergrunddienst in den Einstellungen, um Reiseplanung und zeitliche Ausnahmen zu nutzen.", systemImage: "arrow.down.circle")
+                        Label("Aktualisiere den Hintergrunddienst in den Einstellungen, damit die aktuellen Funktionen und Fehlerkorrekturen aktiv sind.", systemImage: "arrow.down.circle")
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }

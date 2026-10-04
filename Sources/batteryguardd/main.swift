@@ -139,7 +139,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.2.0"
+        status.daemonVersion = "0.2.1"
         status.updatedAt = Date()
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
             ? "Schutz pausiert bis " + (storedConfig.pauseUntil?.formatted(date: .omitted, time: .shortened) ?? "")

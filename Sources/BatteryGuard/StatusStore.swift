@@ -12,6 +12,11 @@ final class StatusStore: Sendable {
         isDaemonActive && status.daemonVersion.compare("0.2.0", options: .numeric) != .orderedAscending
     }
 
+    var daemonNeedsUpdate: Bool {
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.2.1"
+        return isDaemonActive && status.daemonVersion.compare(appVersion, options: .numeric) == .orderedAscending
+    }
+
     var onFreshStatus: (@MainActor (BGStatus) -> Void)?
 
     var configRefresh: (@MainActor () -> Void)?
