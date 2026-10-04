@@ -4,6 +4,8 @@ Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen
 
 [Website](https://darkspike1988.github.io/BatteryGuard/) · [DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg) · [GitHub](https://github.com/darkspike1988/BatteryGuard)
 
+Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md).
+
 ## Was B-Guard ergänzt
 
 macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Alltag:
