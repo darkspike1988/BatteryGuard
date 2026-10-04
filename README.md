@@ -1,276 +1,95 @@
-# BatteryGuard 🛡️🔋
+# BatteryGuard 0.2
 
-<p align="center">
-  <img src="Resources/AppIcon-1024.png" width="160" height="160" alt="BatteryGuard Liquid Glass Icon" />
-</p>
+Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
-[![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)](https://www.apple.com/macos/)
-[![Apple Silicon](https://img.shields.io/badge/Arch-Apple%20Silicon-orange)](https://support.apple.com/apple-silicon)
-[![Swift 6.0](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift)](https://swift.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+## Was BatteryGuard ergänzt
 
-**BatteryGuard** ist ein leichtgewichtiges, quelloffenes Werkzeug für macOS (Apple Silicon), das die Lebensdauer deines MacBook-Akkus schont. Es verhindert unnötigen Verschleiß durch permanentes Verweilen bei 100 % Ladezustand, indem es intelligente Ladelimits direkt über das System Management Controller (SMC) Interface steuert.
+macOS bringt ein eigenes Ladelimit mit. BatteryGuard ergänzt Werkzeuge für den Alltag:
 
----
+- **Ladeprofile:** Schreibtisch (55–60 %), Alltag (75–80 %) und Unterwegs (85–90 %). Eigene Grenzen bleiben in den Einstellungen verfügbar.
+- **Reiseplanung:** Vollladen startet drei Stunden vor einem gewählten Termin. Nach 100 % oder spätestens eine Stunde nach dem Termin gilt wieder der vorherige Ladebereich. Der Mac muss wach und am Netzteil sein; eine vollständige Ladung zum Termin ist keine Garantie.
+- **Zeitliche Schutzpause:** Eine, zwei oder zwölf Stunden mit automatischer Rückkehr zu den gespeicherten Einstellungen. Während der Pause greift BatteryGuard einschließlich Hitzeschutz nicht ein.
+- **Einmaliges Vollladen:** Mit weiterhin aktivem konfiguriertem Hitzeschutz und einer maximalen Dauer von acht Stunden.
+- **Lokaler Verlauf:** Ladung, Temperatur und Lade-/Entladeleistung. Ein Messpunkt pro Minute, bis zu sieben Tage. Aufzeichnung nur bei laufender App und aktuellen Messwerten; Schlaf- und Ausfallzeiten bleiben Lücken.
+- **Auswertung:** Beobachtete Zeit, Zeit ab 90 % und Zeit ab 40 °C sowie höchste gemessene Temperatur. Keine erfundenen Verschleiß- oder Lebensdauerprognosen.
+- **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
+- **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren BatteryGuard-Zielen und verweist auf die Systemeinstellungen.
+- **Mitteilungen:** Niedriger Akkustand, erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 
-## Screenshot
+## Oberfläche
 
-```
-+-----------------------------------------------------------+
-|                                                   [ 78% ] |
-+-----------------------------------------------------------+
-|  BatteryGuard                                             |
-|  Status: Am Netzteil (Laden pausiert)                     |
-|  Gesundheit: 98 % | Zyklen: 142 | Temperatur: 31.4 °C     |
-|  -------------------------------------------------------  |
-|  [x] Ladeschutz aktiv                                     |
-|      Untere Grenze:  [ 20 % ]                             |
-|      Obere Grenze:   [ 80 % ]                             |
-|  [ ] Am Kabel aktiv entladen (> 80 %)                     |
-|  [ ] Hitzeschutz (> 40 °C pausieren)                      |
-|  [ ] Einmalig auf 100 % voll laden (z. B. vor Reisen)     |
-|  -------------------------------------------------------  |
-|  [x] Beim Anmelden starten (Autostart)                    |
-|  [ ] Im Dock anzeigen (Menüleiste + Dock)                 |
-|  -------------------------------------------------------  |
-|  Dienst installieren... / Dienst neu starten              |
-|  Beenden                                                  |
-+-----------------------------------------------------------+
-```
-*(Screenshot-Platzhalter: Lege deinen Screenshot unter `Resources/screenshot.png` ab)*
+Das Menüleistenfenster bietet Status, Profile und schnelle Aktionen. Das Hauptfenster gliedert sich in Übersicht, Verlauf und Einstellungen. Systemtypografie, Systemfarben, Standard-Bedienelemente und Hell-/Dunkelmodus bilden die Grundlage.
 
----
+![Übersicht, gerenderte Vorschau mit Beispieldaten](docs/previews/light/overview.png)
 
-## Kernfunktionen
+Weitere Vorschauen: [Verlauf](docs/previews/light/history.png), [Menüleiste](docs/previews/light/menu.png), [Dunkelmodus](docs/previews/dark/overview.png).
 
-- **Konfigurierbarer Ladebereich (z. B. 20–80 %):**
-  Laden stoppt zuverlässig bei Erreichen des oberen Grenzwerts (`upperLimit`) und startet erst wieder, wenn der Akku unter das untere Limit (`lowerLimit`) fällt.
-- **Aktives Entladen am Netzteil (`activeDischargeAboveUpper`):**
-  Trennt den Ladeadapter softwareseitig, sodass der Akku auch bei eingestecktem Kabel aktiv auf den gewünschten Schwellenwert entladen werden kann.
-- **Intelligenter Hitzeschutz (`heatProtectionCelsius`):**
-  Pausiert das Laden automatisch, wenn die Akkutemperatur einen definierten Grenzwert (z. B. 40 °C) überschreitet, um hitzebedingte Zellalterung zu verhindern.
-- **Einmalig voll laden (`chargeToFullOnce`):**
-  Lädt das MacBook vor Reisen oder mobilen Einsätzen einmalig auf 100 %. Sobald der Akku vollständig geladen ist, wird das Flag vom Hintergrunddienst automatisch zurückgesetzt.
-- **Vollständige System- und Desktop-Präsenz (`AppPresence`):**
-  - **Launchpad & Programme:** Liegt standardmäßig in `/Applications` und erscheint durch macOS-LaunchServices-Registrierung automatisch im Launchpad.
-  - **Schreibtisch-Alias:** Schneller Zugriff per Finder-Alias auf dem Desktop.
-  - **Autostart (Launch at Login):** Automatisches Starten beim Login via modernem `SMAppService` (beim ersten Start standardmäßig aktiv).
-  - **Menüleiste vs. Dock:** Standardmäßig schlank als Menüleisten-App (`LSUIElement = true`); optional kann per Klick ein reguläres Dock-Symbol zugeschaltet werden.
-- **Hochwertiges Liquid-Glass Icon:**
-  Abgerundetes Squircle-Design im tiefen Blau-Türkis-Look mit mattem Glasakku, leuchtendem 20–80 % Schutzbalken und Schutzkern (`Resources/AppIcon.icns`).
+## Drei Steuerungsmodi
 
----
+**macOS – nur beobachten:** macOS steuert das Laden. Profile, Reiseplan und Schutzpausen werden in diesem Modus nicht ausgeführt. Verlauf, Auswertung und Temperaturhinweise bleiben nutzbar.
 
-## Architektur
+**Automatisch:** Nutzt eine SMC-Ladesperre, falls vorhanden, sonst den Netzteil-Schalter. Bei letzterem läuft der Mac vom Akku zwischen Maximum und Maximum minus fünf Prozentpunkten. Die untere Grenze begrenzt die Entladung durch den Hitzeschutz.
 
-BatteryGuard setzt auf eine klare Trennung zwischen Benutzeroberfläche und Hardwarezugriff:
+**Pendel:** Verwendet ausdrücklich den Netzteil-Schalter. Das erzeugt zusätzliche Lade-/Entladebewegungen. Es ist keine Garantie für eine längere Akkulebensdauer.
 
-```mermaid
-graph TD
-    subgraph UserSpace ["User Space (Keine Root-Rechte)"]
-        UI["BatteryGuard.app<br/>(SwiftUI MenuBarExtra)"]
-        Presence["AppPresence.swift<br/>(Autostart & Dock-Richtlinie)"]
-    end
+Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht als verfügbare Option angeboten.
 
-    subgraph FileIPC ["Dateibasierte IPC (/Library/Application Support/BatteryGuard/)"]
-        Config["config.json<br/>(Modus 0666, von App geschrieben)"]
-        Status["status.json<br/>(Modus 0644, von Daemon geschrieben)"]
-    end
+**Ein zusätzliches macOS-Limit kann höhere Ziele und Vollladen verhindern.** BatteryGuard verändert Apples native Einstellung nicht. Passe sie bei Bedarf in den macOS-Batterieeinstellungen an. Apples Akkumanagement kann weiterhin Einfluss auf den Ladevorgang haben.
 
-    subgraph RootSpace ["Root / System Space"]
-        Daemon["batteryguardd<br/>(LaunchDaemon /usr/local/libexec/)"]
-        SMC["AppleSMC / IOKit<br/>(Hardware-Register Apple Silicon)"]
-    end
+## Installation ohne Terminal
 
-    UI --> Presence
-    UI -->|Schreibt Einstellungen| Config
-    Config -->|Liest & validiert sanitised| Daemon
-    Daemon -->|Aktualisiert Messwerte| Status
-    Status -->|Liest Status & Metriken| UI
-    Daemon <-->|Liest Sensorwerte & steuert Laden| SMC
+1. [Aktuelle DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest).
+2. DMG öffnen und **BatteryGuard auf „Programme“ ziehen**.
+3. BatteryGuard aus Programme öffnen und **„BatteryGuard einrichten“** wählen. macOS fragt einmal nach einem Administratorpasswort für den Hintergrunddienst.
+
+Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz starten/pausieren und Beenden. Eine Profilwahl aktiviert BatteryGuard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz pausieren“ gibt das Laden frei, bis der Schutz wieder gestartet wird.
+
+Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
+
+**Updates:** App beenden, neue App nach Programme ziehen und ersetzen, wieder öffnen. Den Hintergrunddienst bei einem angezeigten Versionshinweis in den Einstellungen aktualisieren. Konfiguration und Verlauf bleiben erhalten.
+
+## Aus Quellcode bauen
+
+```sh
+swift test
+./scripts/build-dmg.sh
 ```
 
-### IPC-Vertrag (`BatteryGuardShared`)
-- **Pfad:** `/Library/Application Support/BatteryGuard`
-- **`config.json`:** Wird von der App ohne Root-Rechte geschrieben (`0666`). Der Daemon liest die Datei periodisch ein und führt vor jeder Verarbeitung eine strikte Validierung (`BGConfig.sanitized()`) durch.
-- **`status.json`:** Wird ausschließlich vom Root-Daemon geschrieben (`0644`) und stellt der UI alle Live-Daten (Ladezustand, Akkugesundheit, Ladezyklen, Temperatur, Wattzahl) bereit.
+Erstellt App, ZIP, DMG und SHA-256-Prüfsumme unter `dist/`. Die DMG enthält die App, einen Programme-Link und eine kurze Anleitung. Alternativ installiert `./scripts/install-app.sh` die lokal gebaute App; der Dienst lässt sich aus den Einstellungen einrichten.
 
----
+```sh
+# Nur lesende Diagnose; keine Systemdateien oder SMC-Werte ändern
+.build/debug/batteryguardd --once
 
-## Installation & Erste Schritte
-
-### 1. App kompilieren & paketieren
-
-Das Build-Skript erzeugt sowohl die Menüleisten-App als auch den Daemon im Release-Modus, packt das Bundle `dist/BatteryGuard.app`, integriert das `AppIcon.icns` und signiert die App ad-hoc:
-
-```bash
-./scripts/build-app.sh
+# Gerenderte Entwickler-Vorschauen, isoliert von Benutzer-Konfiguration und Verlauf
+.build/debug/BatteryGuard --render-preview /tmp/BatteryGuardPreview
+.build/debug/BatteryGuard --render-preview /tmp/BatteryGuardDark --dark
 ```
 
-Das Ergebnis liegt unter `dist/BatteryGuard.app` und als Archiv `dist/BatteryGuard.zip` bereit.
+Weitere Renderingzustände: `--native`, `--offline`, `--travel`, `--warm`, `--empty-history`, `--small`.
 
-### 2. App auf dem Mac installieren (Benutzer-Installation)
+## Daten und Betrieb
 
-Das Installationsskript installiert die App nach `/Applications`, bindet sie in das Launchpad ein und erstellt einen Finder-Alias auf dem Schreibtisch:
+- Konfiguration und Dienststatus: `/Library/Application Support/BatteryGuard/`
+- Benutzerverlauf: `~/Library/Application Support/BatteryGuard/history.json` (0600, Verzeichnis 0700)
+- Keine Cloud, kein Konto, keine Telemetrie.
+- Der Root-Dienst bleibt beim Beenden der App aktiv, einschließlich Zeitplänen. Die Verlaufsaufzeichnung endet.
+- Autostart und Dock-Sichtbarkeit lassen sich in den Einstellungen ändern.
+- SMC-Steuerung verwendet undokumentierte Hardware-Schlüssel. Unbekannte oder abgelehnte Schreibvorgänge werden als Fehler angezeigt.
 
-```bash
-./scripts/install-app.sh
-```
+Die dateibasierte Konfigurationskommunikation und das Schlaf-/Aufwachverhalten sind weitere technische Verbesserungsfelder; siehe [Review](docs/review-2026-10-03.md). Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
 
-Was dieses Skript tut:
-- Beendet eventuell laufende Instanzen von BatteryGuard.
-- Kopiert die App nach `/Applications/BatteryGuard.app`.
-- Entfernt das macOS-Quarantäne-Attribut (`com.apple.quarantine`).
-- Registriert die App bei LaunchServices (`lsregister`), sodass sie **sofort im Launchpad und Spotlight** sichtbar ist.
-- Legt einen Finder-Alias auf dem Desktop an (`~/Desktop/BatteryGuard`).
-- Startet die App automatisch.
+## Entfernen
 
-### 3. Hintergrunddienst (LaunchDaemon) installieren
-
-Der Daemon `batteryguardd` benötigt Root-Rechte, um über IOKit mit dem AppleSMC zu kommunizieren.
-
-- **Option A (aus der App):** Klicke in der Menüleiste auf *BatteryGuard* -> *Dienst installieren…*. macOS fordert dich nach deinem Administrator-Passwort.
-- **Option B (über das Terminal):**
-  ```bash
-  sudo ./scripts/install-daemon.sh
-  ```
-
-Das Daemon-Installationsskript:
-- Kopiert die Binärdatei nach `/usr/local/libexec/batteryguardd` (0755, `root:wheel`).
-- Erstellt `/Library/Application Support/BatteryGuard` (0755).
-- Richtet den LaunchDaemon `/Library/LaunchDaemons/com.batteryguard.daemon.plist` ein.
-- Registriert und startet den Dienst via `launchctl bootstrap` und `launchctl kickstart`.
-
----
-
-## Hilfsskripte für Entwicklung & Tests
-
-- **App im Debug-Modus direkt ausführen:**
-  ```bash
-  ./scripts/dev-run.sh
-  ```
-- **Daemon-Testlauf (Dry-Run, ohne permanente Änderungen):**
-  ```bash
-  ./scripts/daemon-dry-run.sh
-  ```
-- **App-Icon neu generieren:**
-  ```bash
-  ./scripts/make-icon.swift
-  ```
-
----
-
-## Deinstallation
-
-### 1. App deinstallieren (Benutzer-Ebene)
-Entfernt `BatteryGuard.app` aus `/Applications`, löscht den Desktop-Alias und bereinigt den Autostart-Eintrag:
-
-```bash
+```sh
 ./scripts/uninstall-app.sh
-```
-
-### 2. Hintergrunddienst deinstallieren (Root-Ebene)
-Stellt den Standard-Ladezustand wieder her (`--restore`), stoppt und entlädt den LaunchDaemon und löscht die Systemdateien:
-
-```bash
 sudo ./scripts/uninstall-daemon.sh
 ```
 
-Um zusätzlich auch gespeicherte Einstellungen und Logdateien zu bereinigen:
+`--purge` am Daemon-Uninstaller löscht zusätzlich die Systemkonfiguration und Dienstlogs, aber nicht den Benutzerverlauf. Ohne Dienst übernimmt macOS wieder die Ladesteuerung.
 
-```bash
-sudo ./scripts/uninstall-daemon.sh --purge
-```
+## Lizenz und Inspiration
 
----
+MIT. Hardware-Erkenntnisse der Community: [actuallymentor/battery](https://github.com/actuallymentor/battery), [charlie0129/batt](https://github.com/charlie0129/batt) und [mhaeuser/Battery-Toolkit](https://github.com/mhaeuser/Battery-Toolkit). Der Anwendungscode ist eine eigenständige Swift-Implementierung.
 
-## Sicherheitsmodell
-
-1. **Kein unsicherer XPC-Dienst:**
-   Anstelle eines komplexen XPC-Mechanismus erfolgt der Austausch ausschließlich über zwei JSON-Dateien in einem definierten Systemordner.
-2. **Strikte Eingabe-Bereinigung (`sanitization`):**
-   Obwohl die `config.json` für den Benutzer schreibbar ist, validiert der Daemon alle Parameter rigide:
-   - Unteres Limit: 5 % bis 95 %
-   - Oberes Limit: 20 % bis 100 % (stets größer als das untere Limit)
-   - Hitzeschutz: 30 °C bis 50 °C (oder 0 für deaktiviert)
-   - Es werden **keinerlei** Befehle, Pfade oder Shell-Skripte verarbeitet – Code Injection ist somit ausgeschlossen.
-3. **Failsafe bei Programmende:**
-   Wird der Daemon gestoppt (`SIGTERM`, Neustart oder via `uninstall-daemon.sh --restore`), werden alle SMC-Register wieder in ihren Standardzustand zurückversetzt. Das System lädt wieder wie gewohnt normal über das Netzteil.
-
----
-
-## Haftungsausschluss & Wichtige Hinweise
-
-> [!IMPORTANT]
-> **Optimiertes Laden der Batterie deaktivieren:**
-> Bitte deaktiviere in den macOS-Systemeinstellungen unter **Systemeinstellungen > Batterie > Batteriezustand (i) > „Optimiertes Laden der Batterie“**, damit macOS nicht gegen die Ladekontrolle von BatteryGuard arbeitet.
-
-> [!WARNING]
-> **Undokumentierte SMC-Schnittstellen & Eigene Verantwortung:**
-> Die Ansteuerung des AppleSMC erfolgt über undokumentierte Register, die von Apple jederzeit mit neuen macOS- oder Firmware-Updates angepasst werden können. Die Nutzung der Software erfolgt vollständig auf **eigene Gefahr und eigenes Risiko**. Die Entwickler übernehmen keinerlei Haftung für eventuelle Schäden an Akku, Hardware oder Datenverlust.
-
----
-
-## Hinweis zu macOS 26.4 / 27 (Pendel-Modus)
-
-Auf neueren macOS-Versionen hat Apple die klassischen Lade-Sperr-Keys (`CHTE`, `CH0B`/`CH0C`) aus dem SMC entfernt.
-BatteryGuard erkennt das beim Start (`batteryguardd --dump-keys CH` listet die vorhandenen Keys, nur lesend) und schaltet dann
-automatisch in den **Pendel-Modus**: Das Limit wird ausschließlich über den Netzteil-Schalter (`CHIE`/`CH0J`/`CH0I`) erzwungen.
-Ab dem Maximum (z. B. 80 %) läuft der Mac vom Akku, bei Maximum − 5 % wird das Netzteil wieder zugeschaltet.
-Zusätzlich bietet macOS selbst unter *Systemeinstellungen → Batterie → Laden* ein natives Ladelimit (80–100 %).
-
----
-
-## Danksagung & Inspiration (Credits)
-
-BatteryGuard baut auf den Erkenntnissen und Pionierarbeiten der Open-Source-Community im Bereich macOS-Batteriesteuerung auf:
-
-- [actuallymentor/battery](https://github.com/actuallymentor/battery) (MIT License) – CLI & Tooling für Apple Silicon Ladelimits.
-- [charlie0129/batt](https://github.com/charlie0129/batt) (GPL-2.0 License) – Hintergrunddienst und SMC-Forschung.
-- [mhaeuser/Battery-Toolkit](https://github.com/mhaeuser/Battery-Toolkit) (BSD-3-Clause License, archiviert) – Referenzarchitektur für macOS-Akkuschnittstellen.
-
-*Hinweis: Der Quellcode von BatteryGuard wurde unabhängig und von Grund auf neu in modernem Swift 6 geschrieben.*
-
----
-
-## English Summary
-
-**BatteryGuard** is a lightweight open-source macOS menu bar utility (macOS 14+, Apple Silicon) designed to protect battery health and prolong battery lifespan by controlling charging limits directly via AppleSMC.
-
-### Features
-- Configurable charging threshold (e.g., 20–80%).
-- Active discharge on AC adapter (`activeDischargeAboveUpper`).
-- Battery heat protection (`heatProtectionCelsius`).
-- One-time 100% full charge mode (`chargeToFullOnce`).
-- Full system presence: Launchpad support, Desktop alias, Launch at Login (`SMAppService`), and optional Dock visibility.
-- Liquid-glass app icon (`Resources/AppIcon.icns`).
-
-### Quick Start
-```bash
-# 1. Build release app & daemon
-./scripts/build-app.sh
-
-# 2. Install to /Applications and launch
-./scripts/install-app.sh
-
-# 3. Install the root daemon
-sudo ./scripts/install-daemon.sh
-```
-
-### Uninstallation
-```bash
-# Uninstall app and desktop alias
-./scripts/uninstall-app.sh
-
-# Uninstall root daemon
-sudo ./scripts/uninstall-daemon.sh [--purge]
-```
-
-### Disclaimer
-SMC keys on Apple Silicon are undocumented and may change across macOS updates. Please turn off "Optimized Battery Charging" in macOS Battery settings. Use at your own risk.
-
----
-
-## Lizenz
-
-Dieses Projekt ist unter der [MIT-Lizenz](LICENSE) lizenziert – Copyright © 2026 BatteryGuard contributors.
+Designreferenz: [Apple Human Interface Guidelines für macOS](https://developer.apple.com/design/human-interface-guidelines/designing-for-macos/). Native macOS-Funktionen: [Apple Support zum Ladelimit](https://support.apple.com/en-au/102338).

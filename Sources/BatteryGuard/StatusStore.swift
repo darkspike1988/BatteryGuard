@@ -5,9 +5,17 @@ import BatteryGuardShared
 @Observable
 @MainActor
 final class StatusStore: Sendable {
-    var status: BGStatus = BGStatus.fallbackMock
+    var status: BGStatus = BGStatus.unavailable
     var isDaemonActive: Bool = false
     
+    var supportsChargingPlans: Bool {
+        isDaemonActive && status.daemonVersion.compare("0.2.0", options: .numeric) != .orderedAscending
+    }
+
+    var onFreshStatus: (@MainActor (BGStatus) -> Void)?
+
+    var configRefresh: (@MainActor () -> Void)?
+
     var configProvider: (@MainActor () -> BGConfig)?
     
     private var pollingTask: Task<Void, Never>?
@@ -36,6 +44,7 @@ final class StatusStore: Sendable {
     }
     
     func refreshStatus() {
+        configRefresh?()
         let statusPath = BGPaths.status
         let fileManager = FileManager.default
         
@@ -47,12 +56,14 @@ final class StatusStore: Sendable {
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: statusPath))
             let decoded = try BGJSON.decoder().decode(BGStatus.self, from: data)
-            self.status = decoded
+            if self.status != decoded { self.status = decoded }
             
             let age = Date().timeIntervalSince(decoded.updatedAt)
-            self.isDaemonActive = (age <= 60.0)
+            self.isDaemonActive = (age >= -5.0 && age <= 60.0)
             
-            if let config = configProvider?() {
+            if isDaemonActive { onFreshStatus?(decoded) }
+
+            if isDaemonActive, let config = configProvider?() {
                 NotificationManager.shared.checkNotifications(status: decoded, config: config)
             }
         } catch {
@@ -63,6 +74,7 @@ final class StatusStore: Sendable {
     static var preview: StatusStore {
         let store = StatusStore(startImmediately: false)
         var s = BGStatus()
+        s.nativeChargeLimit = 100
         s.percent = 78
         s.pluggedIn = true
         s.isChargingHardware = false
@@ -70,10 +82,10 @@ final class StatusStore: Sendable {
         s.temperatureCelsius = 31.4
         s.cycleCount = 142
         s.healthPercent = 96
-        s.watts = 18.2
-        s.daemonVersion = "0.1.0"
+        s.watts = 0
+        s.daemonVersion = "0.2.0"
         s.updatedAt = Date()
-        s.message = "Preview-Modus"
+        s.message = "Dein Akku bleibt im Ladebereich von 75–80 %."
         store.status = s
         store.isDaemonActive = true
         return store
@@ -81,19 +93,11 @@ final class StatusStore: Sendable {
 }
 
 extension BGStatus {
-    static var fallbackMock: BGStatus {
+    static var unavailable: BGStatus {
         var s = BGStatus()
-        s.percent = 80
-        s.pluggedIn = true
-        s.isChargingHardware = false
-        s.state = .holding
-        s.temperatureCelsius = 31.0
-        s.cycleCount = 120
-        s.healthPercent = 98
-        s.watts = 0.0
         s.daemonVersion = "–"
         s.updatedAt = Date.distantPast
-        s.message = "Dienst nicht aktiv (Fallback-Anzeige)"
+        s.message = "Keine aktuellen Messwerte verfügbar"
         return s
     }
 }

@@ -5,530 +5,122 @@ import BatteryGuardShared
 struct PopoverContentView: View {
     @Bindable var statusStore: StatusStore
     @Bindable var configStore: ConfigStore
-    
-    @State private var settingsExpanded = false
-    private var appPresence = AppPresence.shared
-    
-    init(statusStore: StatusStore, configStore: ConfigStore) {
-        self.statusStore = statusStore
-        self.configStore = configStore
+    let historyStore: HistoryStore
+    @State private var editingLimits = false
+    @Environment(\.openWindow) private var openWindow
+
+    private var chargingAvailable: Bool {
+        statusStore.supportsChargingPlans && statusStore.status.state != .unsupported && configStore.config.mode != .native && configStore.config.mode != .direct
     }
-    
-    private var visualState: BGVisualState {
-        BGVisualState.resolve(
-            status: statusStore.status,
-            isDaemonActive: statusStore.isDaemonActive,
-            config: configStore.config
-        )
-    }
-    @State private var showInstallConfirm = false
-    @State private var showUninstallConfirm = false
-    
-    public var body: some View {
-        ZStack {
-            // Transluzenter dynamischer Hintergrund mit langsam schwebenden Farbkugeln
-            LiquidGlassBackgroundView(
-                accentColor: visualState.accentColor,
-                secondaryColor: visualState.secondaryColor
-            )
-            
-            ScrollView(.vertical, showsIndicators: false) {
-                // Liquid Glass Effect Container für zusammenhängende Glas-Karten
-                GlassContainer(spacing: 10) {
-                    // 1. Kopfbereich: Großer Akku-Ladering + Prozent in SF Rounded + Mechanismus-Pille
-                    BatteryHeaderCardView(
-                        status: statusStore.status,
-                        config: configStore.config,
-                        isDaemonActive: statusStore.isDaemonActive,
-                        visualState: visualState
-                    )
-                    
-                    // 2. 4 Glas-Kacheln für Temperatur, Zyklen, Gesundheit, Leistung
-                    StatusTilesGridView(status: statusStore.status)
-                    
-                    // 3. Neuer Abschnitt 'Modus': Segment (Glas-Picker) mit Auto, Nativ, Pendel
-                    ModePickerView(mode: $configStore.config.mode)
-                    
-                    // 4. Custom Range-Slider als Glas-Kapsel mit Presets
-                    BatteryRangeSlider(
-                        lowerLimit: $configStore.config.lowerLimit,
-                        upperLimit: $configStore.config.upperLimit,
-                        isEnabled: $configStore.config.enabled,
-                        currentPercent: statusStore.status.percent
-                    )
-                    
-                    // 5. Toggles in Glas-Zeilen
-                    togglesView
-                    
-                    // 5b. Einstellungen Dropdown
-                    settingsView
-                    
-                    // 6. Schreibfehler-Banner falls vorhanden
-                    if configStore.hasWriteError {
-                        writeErrorBanner
-                    }
-                    
-                    // 7. Fußzeile: Daemon-Status + Beenden + Open Source
-                    footerView
-                }
-                .padding(14)
-            }
-        }
-        .confirmationDialog(
-            "Hintergrunddienst deinstallieren?",
-            isPresented: $showUninstallConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Deinstallieren (Passwort erforderlich)", role: .destructive) {
-                uninstallDaemon()
-            }
-            Button("Abbrechen", role: .cancel) {}
-        } message: {
-            Text("Der Dienst wird von deinem System entfernt. Dies erfordert dein Administratorpasswort.")
-        }
-        .confirmationDialog(
-            "Hintergrunddienst installieren?",
-            isPresented: $showInstallConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Installieren (Passwort erforderlich)") {
-                installDaemon()
-            }
-            Button("Abbrechen", role: .cancel) {}
-        } message: {
-            Text("Der Dienst benötigt Root-Rechte, um den Ladevorgang steuern zu dürfen. Dies erfordert dein Administratorpasswort.")
-        }
-        .frame(width: 340, height: 700)
-    }
-    
-    // MARK: - Toggles in Glas-Zeilen
-    
-    private var togglesView: some View {
-        VStack(spacing: 7) {
-            // Zeile 1: Schutz aktiv
-            HStack(spacing: 10) {
-                Image(systemName: "shield.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(configStore.config.enabled ? visualState.accentColor : Color.secondary)
-                    .frame(width: 20)
-                
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Schutz aktiv")
-                        .font(.callout.weight(.medium))
-                    Text("Ladelimitierung am Netzteil")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Label("BatteryGuard", systemImage: "shield.lefthalf.filled").font(.callout.weight(.semibold))
                 Spacer()
-                
-                Toggle("", isOn: $configStore.config.enabled)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
+                Button { openWindow(id: "dashboard"); NSApplication.shared.activate(ignoringOtherApps: true) } label: {
+                    Image(systemName: "arrow.up.right.square")
+                }
+                .buttonStyle(.plain).foregroundStyle(.secondary)
+                .help("Übersicht, Verlauf und Einstellungen öffnen")
+                .accessibilityLabel("BatteryGuard öffnen")
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .adaptiveGlassCard(cornerRadius: 12)
-            .help("Aktiviert oder deaktiviert den BatteryGuard-Ladeschutz komplett. Im deaktivierten Zustand verhält sich dein Mac so, als wäre BatteryGuard nicht installiert, und lädt den Akku immer bis 100%.")
-            
-            // Zeile 2: Am Netzteil aktiv entladen
-            HStack(spacing: 10) {
-                Image(systemName: "bolt.slash.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(configStore.config.activeDischargeAboveUpper ? Color.orange : Color.secondary)
-                    .frame(width: 20)
-                
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Am Netzteil aktiv entladen")
-                        .font(.callout.weight(.medium))
-                        .lineLimit(1)
-                    Text("Trennt Adapter bei Akku > Maximum")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                
-                Spacer()
-                
-                Toggle("", isOn: $configStore.config.activeDischargeAboveUpper)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .disabled(!configStore.config.enabled)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .adaptiveGlassCard(cornerRadius: 12)
-            .help("Wenn der Akku voller ist als das erlaubte Maximum (z.B. nach dem Abstecken und wieder Anstecken), wird das Netzteil virtuell deaktiviert, um den Akku auf das Zielniveau zu entladen.")
-            
-            // Zeile 3: Hitzeschutz (35–45 °C)
-            VStack(spacing: 8) {
-                HStack(spacing: 10) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(configStore.config.heatProtectionCelsius > 0 ? Color.orange : Color.secondary)
-                        .frame(width: 20)
-                    
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Hitzeschutz")
-                            .font(.callout.weight(.medium))
-                        Text("Laden pausieren bei Überhitzung")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Toggle("", isOn: Binding(
-                        get: { configStore.config.heatProtectionCelsius > 0 },
-                        set: { isEnabled in
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                configStore.config.heatProtectionCelsius = isEnabled ? 40 : 0
-                            }
-                        }
-                    ))
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .disabled(!configStore.config.enabled)
-                }
-                
-                if configStore.config.heatProtectionCelsius > 0 {
-                    HStack(spacing: 8) {
-                        Slider(
-                            value: Binding(
-                                get: { Double(configStore.config.heatProtectionCelsius) },
-                                set: { configStore.config.heatProtectionCelsius = Int($0) }
-                            ),
-                            in: 35...45,
-                            step: 1
-                        )
-                        
-                        Text("\(configStore.config.heatProtectionCelsius) °C")
-                            .font(.system(.caption, design: .rounded).weight(.bold))
-                            .monospacedDigit()
-                            .contentTransition(.numericText())
-                            .frame(width: 44, alignment: .trailing)
-                        
-                        Stepper(
-                            "",
-                            value: $configStore.config.heatProtectionCelsius,
-                            in: 35...45
-                        )
-                        .labelsHidden()
-                    }
-                    .padding(.top, 2)
-                    .padding(.leading, 30)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .adaptiveGlassCard(cornerRadius: 12)
-            .help("Pausiert den Ladevorgang (und trennt bei Bedarf virtuell das Netzteil), wenn der Akku heißer als die eingestellte Temperatur wird, um Zellverschleiß zu verhindern.")
-            
-            // Zeile 4: Einmal voll laden
-            Button(action: {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {
-                    configStore.config.chargeToFullOnce.toggle()
-                }
-            }) {
-                HStack(spacing: 10) {
-                    Image(systemName: configStore.config.chargeToFullOnce ? "bolt.badge.checkmark.fill" : "bolt.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(configStore.config.chargeToFullOnce ? Color.green : visualState.accentColor)
-                        .frame(width: 20)
-                    
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Einmal voll laden")
-                            .font(.callout.weight(.medium))
-                        Text("Bis 100 % vor Reisen")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    if configStore.config.chargeToFullOnce {
-                        Text("Aktiv")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.green)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .adaptiveGlassCapsule(tint: Color.green.opacity(0.18))
-                    } else {
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary.opacity(0.6))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-            }
-            .buttonStyle(.plain)
-            .adaptiveGlassCard(cornerRadius: 12)
-            .disabled(!configStore.config.enabled)
-            .help("Deaktiviert temporär das Ladelimit und lädt den Akku einmalig auf 100% auf. Praktisch, wenn du z. B. vor einer längeren Reise die volle Laufzeit benötigst. Sobald 100% erreicht sind, wird der normale Ladeschutz wieder aktiviert.")
-        }
-    }
-    
-    // MARK: - Einstellungen
-    private var settingsView: some View {
-        DisclosureGroup(isExpanded: $settingsExpanded) {
-            VStack(spacing: 8) {
-                Divider().opacity(0.5).padding(.vertical, 4)
-                
-                Toggle(isOn: $configStore.config.magsafeLed) {
-                    HStack {
-                        Text("MagSafe-LED anpassen")
-                            .font(.caption.weight(.medium))
-                        Spacer()
-                    }
-                }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                
-                @Bindable var presence = appPresence
-                
-                Toggle(isOn: $presence.launchAtLogin) {
-                    HStack {
-                        Text("Autostart (Login)")
-                            .font(.caption.weight(.medium))
-                        Spacer()
-                    }
-                }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                
-                Toggle(isOn: $presence.showInDock) {
-                    HStack {
-                        Text("Im Dock anzeigen")
-                            .font(.caption.weight(.medium))
-                        Spacer()
-                    }
-                }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                
-                Divider().opacity(0.5).padding(.vertical, 4)
-                
+            BatteryHeroView(status: statusStore.status, config: configStore.config,
+                            active: statusStore.isDaemonActive, compact: true)
+            Divider()
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Hintergrunddienst (Root)")
-                            .font(.caption.weight(.medium))
-                        Text(statusStore.isDaemonActive ? "Aktiv (v\(statusStore.status.daemonVersion))" : "Nicht installiert")
-                            .font(.caption2)
+                    Text("Ladeprofil").font(.callout.weight(.medium))
+                    Spacer()
+                    Text(configStore.config.mode == .native ? "macOS" : "\(configStore.config.upperLimit) % Limit")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Menu {
+                    ForEach(BGProfile.allCases) { profile in
+                        Button("\(profile.title) · \(profile.lower)–\(profile.upper) %") {
+                            configStore.activateProfile(profile)
+                        }
+                    }
+                    Divider()
+                    Button("Eigene Grenzen ändern …") { editingLimits.toggle() }
+                } label: {
+                    HStack {
+                        Text("\(BGProfile.allCases.first(where: { $0.matches(configStore.config) })?.title ?? "Eigene Grenzen") · \(configStore.config.lowerLimit)–\(configStore.config.upperLimit) %")
+                        Spacer()
+                        Text("\(configStore.config.lowerLimit)–\(configStore.config.upperLimit) %")
                             .foregroundStyle(.secondary)
                     }
-                    
-                    Spacer()
-                    
-                    if !statusStore.isDaemonActive {
-                        Button("Installieren…") {
-                            showInstallConfirm = true
-                        }
-                        .controlSize(.small)
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
+                    .frame(maxWidth: .infinity)
+                }
+                .disabled(!statusStore.supportsChargingPlans)
+                if editingLimits {
+                    Stepper("Minimum: \(configStore.config.lowerLimit) %",
+                            value: $configStore.config.lowerLimit,
+                            in: 5...min(95, configStore.config.upperLimit - 1))
+                    Stepper("Maximum: \(configStore.config.upperLimit) %",
+                            value: $configStore.config.upperLimit,
+                            in: max(20, configStore.config.lowerLimit + 1)...100)
+                    Text("Eigene Grenzen werden automatisch gespeichert.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if configStore.config.mode == .native {
+                    Text("Profil wählen oder Schutz starten, um BatteryGuard zu aktivieren.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            HStack(spacing: 10) {
+                Button {
+                    if configStore.config.effective(at: Date()).chargeToFullOnce {
+                        configStore.cancelFullCharge()
+                        configStore.config.travelReadyAt = nil
+                    } else { configStore.startFullCharge() }
+                } label: {
+                    Label(configStore.config.effective(at: Date()).chargeToFullOnce ? "Vollladen beenden" : "Einmal voll laden", systemImage: "bolt")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered).disabled(!chargingAvailable)
+                Menu {
+                    if configStore.config.isPaused(at: Date()) {
+                        Button("Schutz fortsetzen") { configStore.resumeProtection() }
                     } else {
-                        Button("Deinstallieren…") {
-                            showUninstallConfirm = true
-                        }
-                        .font(.caption2)
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.red.opacity(0.8))
+                        Button("Für 1 Stunde pausieren") { configStore.pause(for: 3600) }
+                        Button("Für 2 Stunden pausieren") { configStore.pause(for: 7200) }
                     }
-                }
+                } label: { Image(systemName: "pause") }
+                .menuStyle(.borderlessButton).fixedSize().disabled(!chargingAvailable || !configStore.config.enabled)
+                .help("Schutz mit automatischer Wiederaufnahme pausieren")
+                .accessibilityLabel("Schutz pausieren")
             }
-            .padding(.top, 4)
-        } label: {
             HStack {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.secondary)
-                Text("Einstellungen")
-                    .font(.callout.weight(.medium))
-                Spacer()
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .adaptiveGlassCard(cornerRadius: 12)
-    }
-    
-    // MARK: - Banner & Fußzeile
-    
-    private var writeErrorBanner: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-                .font(.subheadline)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Konfigurationsordner nicht beschreibbar")
-                    .font(.caption.weight(.semibold))
-                Text("Verzeichnis /Library/Application Support/BatteryGuard fehlt oder ist schreibgeschützt. Bitte Hintergrunddienst installieren.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(10)
-        .adaptiveGlassCard(cornerRadius: 12, tint: Color.orange.opacity(0.12))
-    }
-    
-    private var footerView: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(statusStore.isDaemonActive ? Color.green : Color.red)
-                    .frame(width: 8, height: 8)
-                    .shadow(color: (statusStore.isDaemonActive ? Color.green : Color.red).opacity(0.4), radius: 2)
-                
-                Text(statusStore.isDaemonActive ? "Dienst aktiv (v\(statusStore.status.daemonVersion))" : "Hintergrunddienst nicht installiert")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                
-                Spacer()
-            }
-            
-            HStack {
-                if let url = URL(string: "https://github.com/darkspike1988/BatteryGuard") {
-                    Link("Open Source (GitHub)", destination: url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Button(configStore.config.enabled && configStore.config.mode != .native
+                       && !configStore.config.isPaused(at: Date()) ? "Schutz pausieren" : "Schutz starten") {
+                    let running = configStore.config.enabled && configStore.config.mode != .native
+                        && !configStore.config.isPaused(at: Date())
+                    configStore.setProtectionEnabled(!running)
                 }
-                
+                .disabled(!statusStore.supportsChargingPlans)
                 Spacer()
-                
                 Button("Beenden") {
-                    NSApp.terminate(nil)
+                    configStore.flushPendingSave()
+                    NSApplication.shared.terminate(nil)
                 }
-                .font(.caption)
-                .buttonStyle(.plain)
-                .foregroundStyle(.red.opacity(0.8))
+                .help("App beenden. Der Hintergrunddienst steuert das Laden weiter.")
+            }
+            .buttonStyle(.bordered)
+            if configStore.hasWriteError {
+                Label("Einstellungen konnten nicht gespeichert werden.", systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            HStack {
+                Circle().fill(statusStore.isDaemonActive ? Color.green : Color.orange).frame(width: 5, height: 5)
+                Text(statusStore.isDaemonActive ? "Dienst verbunden" : "Dienst nicht erreichbar").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Übersicht") { openWindow(id: "dashboard"); NSApplication.shared.activate(ignoringOtherApps: true) }
+                    .buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .adaptiveGlassCard(cornerRadius: 12)
-    }
-    
-    // MARK: - Daemon Installation
-    
-    @MainActor
-    private func installDaemon() {
-        var candidates: [String] = []
-        
-        // 1. App-Bundle Ressourcen
-        if let bundleResource = Bundle.main.path(forResource: "install-daemon", ofType: "sh") {
-            candidates.append(bundleResource)
-        }
-        let bundleResourcePath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/install-daemon.sh").path
-        candidates.append(bundleResourcePath)
-        
-        // 2. Relativ zur Executable
-        if let execURL = Bundle.main.executableURL {
-            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../scripts/install-daemon.sh").standardized.path)
-            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../../scripts/install-daemon.sh").standardized.path)
-            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../../../scripts/install-daemon.sh").standardized.path)
-        }
-        
-        // 3. Aktuelles Arbeitsverzeichnis / Projekt-Struktur
-        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        candidates.append(cwd.appendingPathComponent("scripts/install-daemon.sh").standardized.path)
-        candidates.append(cwd.appendingPathComponent("../scripts/install-daemon.sh").standardized.path)
-        candidates.append("/Users/michaelkatschko/BatteryGuard/scripts/install-daemon.sh")
-        
-        guard let scriptPath = candidates.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
-            let alert = NSAlert()
-            alert.messageText = "Installationsskript nicht gefunden"
-            alert.informativeText = "Das Skript 'install-daemon.sh' wurde weder im App-Bundle noch unter scripts/ gefunden."
-            alert.alertStyle = .warning
-            alert.runModal()
-            return
-        }
-        
-        Task.detached {
-            let escaped = scriptPath.replacingOccurrences(of: "\"", with: "\\\"")
-            let scriptSource = "do shell script \"/bin/bash \\\"\(escaped)\\\"\" with administrator privileges"
-            
-            var errorDict: NSDictionary?
-            if let appleScript = NSAppleScript(source: scriptSource) {
-                _ = appleScript.executeAndReturnError(&errorDict)
-                if let errorDict {
-                    let errorMsg = errorDict[NSAppleScript.errorMessage] as? String ?? "Unbekannter Fehler bei der Ausführung."
-                    await MainActor.run {
-                        let alert = NSAlert()
-                        alert.messageText = "Installation fehlgeschlagen"
-                        alert.informativeText = errorMsg
-                        alert.alertStyle = .critical
-                        alert.runModal()
-                    }
-                } else {
-                    await MainActor.run {
-                        let alert = NSAlert()
-                        alert.messageText = "Installation erfolgreich"
-                        alert.informativeText = "Der Hintergrunddienst wurde erfolgreich installiert."
-                        alert.alertStyle = .informational
-                        alert.runModal()
-                    }
-                }
-            }
-        }
-    }
-    
-    @MainActor
-    private func uninstallDaemon() {
-        var candidates: [String] = []
-        
-        if let bundleResource = Bundle.main.path(forResource: "uninstall-daemon", ofType: "sh") {
-            candidates.append(bundleResource)
-        }
-        let bundleResourcePath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/uninstall-daemon.sh").path
-        candidates.append(bundleResourcePath)
-        
-        if let execURL = Bundle.main.executableURL {
-            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../scripts/uninstall-daemon.sh").standardized.path)
-            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../../scripts/uninstall-daemon.sh").standardized.path)
-            candidates.append(execURL.deletingLastPathComponent().appendingPathComponent("../../../scripts/uninstall-daemon.sh").standardized.path)
-        }
-        
-        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        candidates.append(cwd.appendingPathComponent("scripts/uninstall-daemon.sh").standardized.path)
-        candidates.append(cwd.appendingPathComponent("../scripts/uninstall-daemon.sh").standardized.path)
-        candidates.append("/Users/michaelkatschko/BatteryGuard/scripts/uninstall-daemon.sh")
-        
-        guard let scriptPath = candidates.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
-            let alert = NSAlert()
-            alert.messageText = "Deinstallationsskript nicht gefunden"
-            alert.informativeText = "Das Skript 'uninstall-daemon.sh' konnte nicht gefunden werden."
-            alert.alertStyle = .warning
-            alert.runModal()
-            return
-        }
-        
-        Task.detached {
-            let escaped = scriptPath.replacingOccurrences(of: "\"", with: "\\\"")
-            let scriptSource = "do shell script \"/bin/bash \\\"\(escaped)\\\"\" with administrator privileges"
-            
-            var errorDict: NSDictionary?
-            if let appleScript = NSAppleScript(source: scriptSource) {
-                _ = appleScript.executeAndReturnError(&errorDict)
-                if let errorDict {
-                    let errorMsg = errorDict[NSAppleScript.errorMessage] as? String ?? "Unbekannter Fehler bei der Ausführung."
-                    await MainActor.run {
-                        let alert = NSAlert()
-                        alert.messageText = "Deinstallation fehlgeschlagen"
-                        alert.informativeText = errorMsg
-                        alert.alertStyle = .critical
-                        alert.runModal()
-                    }
-                } else {
-                    await MainActor.run {
-                        let alert = NSAlert()
-                        alert.messageText = "Deinstallation erfolgreich"
-                        alert.informativeText = "Der Hintergrunddienst wurde vollständig entfernt. (Um ihn neu zu installieren, klicke auf 'Dienst installieren…')"
-                        alert.alertStyle = .informational
-                        alert.runModal()
-                    }
-                }
-            }
-        }
+        .padding(22).frame(width: 370)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .onDisappear { configStore.flushPendingSave() }
     }
 }

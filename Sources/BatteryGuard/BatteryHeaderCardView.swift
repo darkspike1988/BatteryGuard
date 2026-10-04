@@ -24,7 +24,7 @@ struct BatteryHeaderCardView: View {
         }
         switch status.state {
         case .holding:
-            return "Hält bei \(config.upperLimit) % – Netzteil versorgt"
+            return status.message ?? "Laden pausiert – Netzteil versorgt"
         case .charging:
             if let w = status.watts, w > 0 {
                 return String(format: "Lädt (%.1f W)", w)
@@ -35,7 +35,7 @@ struct BatteryHeaderCardView: View {
         case .onBattery:
             return "Akkubetrieb"
         case .disabled:
-            return "Schutz deaktiviert"
+            return config.mode == .native ? "macOS steuert das Laden" : "Schutz deaktiviert"
         case .unsupported:
             return "Hardware nicht unterstützt"
         }
@@ -129,7 +129,7 @@ struct BatteryHeaderCardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     // Prozent in SF Rounded mit monospaced Ziffern
-                    Text("\(status.percent) %")
+                    Text(isDaemonActive ? "\(status.percent) %" : "– %")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .contentTransition(.numericText())

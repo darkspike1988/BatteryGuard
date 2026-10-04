@@ -26,7 +26,7 @@ struct StatusTilesGridView: View {
                 iconColor: .purple,
                 title: "Zyklen",
                 value: status.cycleCount != nil ? "\(status.cycleCount!)" : "–",
-                helpText: "Anzahl der vollständigen Lade-/Entladezyklen. (Apple garantiert 1000 Zyklen)"
+                helpText: "Anzahl der vollständigen Lade-/Entladezyklen. Die Zahl steigt mit der kumulierten Entladung um eine volle Akkukapazität."
             )
             StatusGlassTile(
                 icon: "heart.fill",

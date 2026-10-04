@@ -8,7 +8,7 @@ final class NotificationManager: Sendable {
     
     private var didNotifyLowerLimit: Bool = false
     private var didNotifyUpperLimit: Bool = false
-    private var hasRequestedAuthorization: Bool = false
+    private var didNotifyHeat: Bool = false
     
     private init() {}
     
@@ -16,17 +16,25 @@ final class NotificationManager: Sendable {
         // UNUserNotificationCenter nur verwenden, wenn Bundle-ID vorhanden, sonst still ignorieren
         guard Bundle.main.bundleIdentifier != nil else { return }
         
-        if !hasRequestedAuthorization {
-            hasRequestedAuthorization = true
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        let preferences = UserDefaults.standard
+        let lowEnabled = preferences.object(forKey: "bg.notifyLow") as? Bool ?? true
+        let limitEnabled = preferences.object(forKey: "bg.notifyLimit") as? Bool ?? false
+        let heatEnabled = preferences.object(forKey: "bg.notifyHeat") as? Bool ?? true
+        let config = config.effective(at: Date())
+        if let temperature = status.temperatureCelsius {
+            let threshold = Double(config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : 40)
+            if temperature > threshold, heatEnabled, !didNotifyHeat {
+                didNotifyHeat = true
+                send(title: "Akku ist warm", body: String(format: "Aktuell %.1f °C. Prüfe Belüftung und Hitzeschutz.", temperature))
+            } else if temperature < threshold - 2 { didNotifyHeat = false }
         }
-        
+
         let onBattery = !status.pluggedIn || status.state == .onBattery
         
         // 1. Bei Akkubetrieb <= lowerLimit: 'Akku bei X % – bitte laden'
         if onBattery {
             if status.percent <= config.lowerLimit {
-                if !didNotifyLowerLimit {
+                if !didNotifyLowerLimit, lowEnabled {
                     didNotifyLowerLimit = true
                     send(
                         title: "BatteryGuard",
@@ -43,9 +51,9 @@ final class NotificationManager: Sendable {
         
         // 2. Beim Erreichen von upperLimit am Netzteil: 'Limit erreicht'
         if status.pluggedIn {
-            let reachedUpper = status.percent >= config.upperLimit || status.state == .holding
+            let reachedUpper = config.enabled && config.mode != .native && config.mode != .direct && !config.chargeToFullOnce && status.percent >= config.upperLimit
             if reachedUpper {
-                if !didNotifyUpperLimit {
+                if !didNotifyUpperLimit, limitEnabled {
                     didNotifyUpperLimit = true
                     send(
                         title: "BatteryGuard",
@@ -61,6 +69,11 @@ final class NotificationManager: Sendable {
         }
     }
     
+    func requestAuthorization() {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
     private func send(title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title

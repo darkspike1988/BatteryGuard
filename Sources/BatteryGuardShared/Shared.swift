@@ -15,7 +15,7 @@ public enum BGPaths {
 
 /// Wie das Limit durchgesetzt wird.
 public enum BGMode: String, Codable, CaseIterable, Sendable {
-    /// Daemon wählt selbst: natives macOS-Limit, wenn es zum Maximum passt, sonst Pendel-Modus.
+    /// Daemon wählt selbst: SMC-Ladesperre, falls vorhanden, sonst Pendel-Modus.
     case auto
     /// Nur beobachten: das native macOS-Ladelimit (Systemeinstellungen → Batterie) macht die Arbeit.
     case native
@@ -42,6 +42,12 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var magsafeLed: Bool = true
     /// Durchsetzungs-Modus (siehe BGMode).
     public var mode: BGMode = .auto
+    /// Zeitlich begrenzte Pause. Die ursprünglichen Schutzeinstellungen bleiben erhalten.
+    public var pauseUntil: Date? = nil
+    /// Reiseplanung: Vollladen startet drei Stunden vor diesem Termin.
+    public var travelReadyAt: Date? = nil
+    /// Manuelles Vollladen endet spätestens zu diesem Zeitpunkt.
+    public var fullChargeUntil: Date? = nil
 
     public init() {}
 
@@ -57,6 +63,9 @@ public struct BGConfig: Codable, Equatable, Sendable {
         chargeToFullOnce = try c.decodeIfPresent(Bool.self, forKey: .chargeToFullOnce) ?? d.chargeToFullOnce
         magsafeLed = try c.decodeIfPresent(Bool.self, forKey: .magsafeLed) ?? d.magsafeLed
         mode = (try? c.decodeIfPresent(BGMode.self, forKey: .mode)) ?? d.mode
+        pauseUntil = try c.decodeIfPresent(Date.self, forKey: .pauseUntil)
+        travelReadyAt = try c.decodeIfPresent(Date.self, forKey: .travelReadyAt)
+        fullChargeUntil = try c.decodeIfPresent(Date.self, forKey: .fullChargeUntil)
     }
 
     /// Daemon MUSS jede gelesene Config durch diese Funktion schicken (Config-Datei ist world-writable).
@@ -81,6 +90,8 @@ public enum BGChargeState: String, Codable, Sendable {
 }
 
 public struct BGStatus: Codable, Equatable, Sendable {
+    /// Nur lesend erkannter nativer macOS-SMC-Grenzwert, falls verfügbar.
+    public var nativeChargeLimit: Int? = nil
     public var percent: Int = 0
     public var pluggedIn: Bool = false
     public var isChargingHardware: Bool = false
@@ -96,7 +107,7 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var maxCapacityMah: Int? = nil
     public var designCapacityMah: Int? = nil
     public var smcKeysDetected: [String] = []
-    public var daemonVersion: String = "0.1.0"
+    public var daemonVersion: String = "0.2.0"
     public var updatedAt: Date = Date()
     public var message: String? = nil
 

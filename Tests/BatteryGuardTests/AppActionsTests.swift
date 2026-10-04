@@ -1,0 +1,115 @@
+import Foundation
+import Testing
+import BatteryGuardShared
+@testable import BatteryGuard
+
+@MainActor
+struct AppActionsTests {
+    private func fixture() throws -> (ConfigStore, URL) {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("config.json")
+        try BGJSON.encoder().encode(BGConfig()).write(to: url)
+        return (ConfigStore(configURL: url), directory)
+    }
+
+    @Test func userActionsPersistAndReturnToProfile() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        store.apply(.desk)
+        store.pause(for: 3600)
+        #expect(store.config.isPaused(at: Date()))
+        store.resumeProtection()
+        store.startFullCharge()
+        #expect(store.config.chargeToFullOnce)
+        #expect(store.config.fullChargeUntil != nil)
+        store.cancelFullCharge()
+        #expect(!store.config.chargeToFullOnce)
+        let ready = Date().addingTimeInterval(12 * 3600)
+        store.scheduleTravel(readyAt: ready)
+        store.flushPendingSave()
+        let persisted = try BGJSON.decoder().decode(BGConfig.self, from: Data(contentsOf: directory.appendingPathComponent("config.json")))
+        #expect(persisted.upperLimit == 60)
+        #expect(persisted.lowerLimit == 55)
+        #expect(abs(persisted.travelReadyAt!.timeIntervalSince(ready)) < 1)
+        #expect(!store.hasWriteError)
+    }
+
+    @Test func externalDaemonChangesReloadWithoutClobberingPendingEdit() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        store.config.upperLimit = 90
+        var external = BGConfig(); external.upperLimit = 70
+        try BGJSON.encoder().encode(external).write(to: directory.appendingPathComponent("config.json"))
+        store.loadConfig()
+        #expect(store.config.upperLimit == 90)
+        store.flushPendingSave()
+        external.chargeToFullOnce = false
+        external.upperLimit = 70
+        try BGJSON.encoder().encode(external).write(to: directory.appendingPathComponent("config.json"))
+        store.loadConfig()
+        #expect(store.config.upperLimit == 70)
+    }
+
+    @Test func failedSaveKeepsEditsUntilSuccessfulRetry() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("config.json")
+        store.config.upperLimit = 90
+        try FileManager.default.removeItem(at: url)
+        // A directory at the file path reliably forces a write failure, even as root.
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+        store.flushPendingSave()
+        #expect(store.hasWriteError)
+        try FileManager.default.removeItem(at: url)
+        var external = BGConfig(); external.upperLimit = 70
+        try BGJSON.encoder().encode(external).write(to: url)
+        store.loadConfig()
+        #expect(store.config.upperLimit == 90)
+        store.flushPendingSave()
+        #expect(!store.hasWriteError)
+        #expect(try BGJSON.decoder().decode(BGConfig.self, from: Data(contentsOf: url)).upperLimit == 90)
+    }
+
+    @Test func menuActionsActivateProfilesAndToggleProtection() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        store.config.mode = .native
+        store.startFullCharge()
+        store.activateProfile(.desk)
+        #expect(store.config.mode == .auto)
+        #expect(store.config.upperLimit == 60)
+        #expect(!store.config.chargeToFullOnce)
+        store.pause(for: 3600)
+        store.setProtectionEnabled(true)
+        #expect(store.config.enabled && store.config.pauseUntil == nil)
+        store.setProtectionEnabled(false)
+        #expect(!store.config.effective(at: Date()).enabled)
+        store.flushPendingSave()
+    }
+
+    @Test func timedActionsRequireUpdatedLiveDaemon() {
+        let status = StatusStore(startImmediately: false)
+        status.isDaemonActive = true
+        status.status.daemonVersion = "0.1.0"
+        #expect(!status.supportsChargingPlans)
+        status.status.daemonVersion = "0.2.0"
+        #expect(status.supportsChargingPlans)
+        status.isDaemonActive = false
+        #expect(!status.supportsChargingPlans)
+    }
+
+    @Test func previewActionsNeverWrite() throws {
+        let (live, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("config.json")
+        let before = try Data(contentsOf: url)
+        let preview = ConfigStore(loadImmediately: false, persistenceEnabled: false, configURL: url)
+        preview.apply(.mobile)
+        preview.startFullCharge()
+        preview.flushPendingSave()
+        preview.saveConfigAtomically()
+        #expect(try Data(contentsOf: url) == before)
+        #expect(live.config.upperLimit == 80)
+    }
+}

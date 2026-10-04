@@ -20,6 +20,14 @@ public struct BatteryInfo: Sendable, Equatable {
 }
 
 public enum BatteryReader {
+    /// Registry-Werte können negative Ströme als UInt32 oder UInt64 enthalten.
+    public static func signedAmperage(_ raw: UInt64) -> Int64 {
+        if raw <= UInt64(UInt32.max), raw > UInt64(Int32.max) {
+            return Int64(Int32(bitPattern: UInt32(raw)))
+        }
+        return Int64(bitPattern: raw)
+    }
+
     public static func read(smcClient: SMCClient = .shared) -> BatteryInfo {
         var info = BatteryInfo()
 
@@ -68,12 +76,11 @@ public enum BatteryReader {
                     info.designCapacityMah = ds
                 }
                 
-                if let timeEmpty = dict["AvgTimeToEmpty"] as? NSNumber, timeEmpty.intValue > 0, timeEmpty.intValue < 65535 {
-                    info.timeRemainingMinutes = timeEmpty.intValue
-                } else if let timeFull = dict["AvgTimeToFull"] as? NSNumber, timeFull.intValue > 0, timeFull.intValue < 65535 {
-                    info.timeRemainingMinutes = timeFull.intValue
-                } else if let trc = dict["TimeRemaining"] as? NSNumber, trc.intValue > 0, trc.intValue < 65535 {
-                    info.timeRemainingMinutes = trc.intValue
+                let timeKey = info.isCharging ? "AvgTimeToFull" : "AvgTimeToEmpty"
+                if let time = dict[timeKey] as? NSNumber, time.intValue > 0, time.intValue < 65535 {
+                    info.timeRemainingMinutes = time.intValue
+                } else if let time = dict["TimeRemaining"] as? NSNumber, time.intValue > 0, time.intValue < 65535 {
+                    info.timeRemainingMinutes = time.intValue
                 }
 
                 // Leistung in Watt: Voltage (mV) * Amperage (mA, vorzeichenbehaftet) / 1_000_000
@@ -81,11 +88,7 @@ public enum BatteryReader {
                 let rawAmpsNum = (dict["Amperage"] as? NSNumber) ?? (dict["InstantAmperage"] as? NSNumber)
                 
                 if let v = rawVolts, let aNum = rawAmpsNum {
-                    var a = aNum.int64Value
-                    // UInt64 wrap-around für negative Werte (Entladen) korrigieren, falls NSNumber es als positiv liest
-                    if a > 4000000000 {
-                        a = Int64(bitPattern: aNum.uint64Value)
-                    }
+                    let a = signedAmperage(aNum.uint64Value)
                     info.voltage = v
                     info.amperage = Double(a)
                     info.watts = round((v * Double(a) / 1_000_000.0) * 100.0) / 100.0
@@ -99,6 +102,7 @@ public enum BatteryReader {
            let psList = IOPSCopyPowerSourcesList(psBlob)?.takeRetainedValue() as? [CFTypeRef] {
             for ps in psList {
                 if let desc = IOPSGetPowerSourceDescription(psBlob, ps)?.takeUnretainedValue() as? [String: Any] {
+                    guard desc[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
                     if let cur = desc[kIOPSCurrentCapacityKey] as? Int,
                        let maxCap = desc[kIOPSMaxCapacityKey] as? Int, maxCap > 0 {
                         info.percent = Swift.min(100, Swift.max(0, Int(round(Double(cur) / Double(maxCap) * 100.0))))

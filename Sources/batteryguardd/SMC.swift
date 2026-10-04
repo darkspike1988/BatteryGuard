@@ -238,7 +238,7 @@ public final class SMCClient: @unchecked Sendable {
             if keyData.size == 4 {
                 // Float32 (flt )
                 let floatVal = keyData.bytes.withUnsafeBytes { rawPtr in
-                    rawPtr.load(as: Float32.self)
+                    rawPtr.loadUnaligned(as: Float32.self)
                 }
                 if floatVal > 0.0 && floatVal < 120.0 {
                     let formatted = String(format: "%.1f", floatVal)
@@ -254,6 +254,14 @@ public final class SMCClient: @unchecked Sendable {
             }
         }
         return nil
+    }
+
+    /// Auf diesem Mac als dreibytes CHLT bestätigt. Unbekannte Layouts ignorieren.
+    /// Keine privaten Apple-APIs und kein Schreiben des nativen Limits.
+    public func readNativeChargeLimit() -> Int? {
+        guard let data = readKey("CHLT"), data.size == 3, data.bytes.count == 3 else { return nil }
+        let limit = Int(data.bytes[0])
+        return (20...100).contains(limit) ? limit : nil
     }
 
     // MARK: - High-level SMC-Steuerung
@@ -285,7 +293,7 @@ public final class SMCClient: @unchecked Sendable {
             if success { success = readKey("CH0B")?.bytes == byte }
             if keyExists("CH0C") {
                 let s2 = writeKey("CH0C", bytes: byte)
-                if s2 { success = success && (readKey("CH0C")?.bytes == byte) }
+                success = success && s2 && (readKey("CH0C")?.bytes == byte)
             }
             return success
         }
@@ -334,9 +342,9 @@ public final class SMCClient: @unchecked Sendable {
     /// Normalzustand wiederherstellen (Laden an, Adapter an, LED Auto)
     @discardableResult
     public func restoreNormal() -> Bool {
-        let a = setAdapterConnected(true)
-        let c = setChargingEnabled(true)
-        let l = setMagSafeLED(.auto)
+        let a = !hasDischargeControl || setAdapterConnected(true)
+        let c = !hasChargeControl || setChargingEnabled(true)
+        let l = !keyExists("ACLC") || setMagSafeLED(.auto)
         return a && c && l
     }
 

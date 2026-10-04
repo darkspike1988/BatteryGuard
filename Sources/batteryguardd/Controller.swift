@@ -7,19 +7,22 @@ public struct ControllerDecision: Sendable, Equatable {
     public var adapterConnected: Bool
     public var resetChargeToFullOnce: Bool
     public var message: String?
+    public var heatProtectionActive: Bool
 
     public init(
         state: BGChargeState,
         chargingEnabled: Bool,
         adapterConnected: Bool,
         resetChargeToFullOnce: Bool = false,
-        message: String? = nil
+        message: String? = nil,
+        heatProtectionActive: Bool = false
     ) {
         self.state = state
         self.chargingEnabled = chargingEnabled
         self.adapterConnected = adapterConnected
         self.resetChargeToFullOnce = resetChargeToFullOnce
         self.message = message
+        self.heatProtectionActive = heatProtectionActive
     }
 }
 
@@ -46,6 +49,14 @@ public enum ControllerLogic {
                 resetChargeToFullOnce: false,
                 message: "Natives macOS-Limit aktiv (App greift nicht ein)"
             )
+        }
+
+        // Der experimentelle Direktmodus ist nicht implementiert. Niemals still auf
+        // aktive Entladung umschalten, wenn dieser Modus ausgewählt wurde.
+        if config.mode == .direct {
+            return ControllerDecision(state: .unsupported, chargingEnabled: true,
+                                      adapterConnected: true,
+                                      message: "Direktmodus nicht implementiert – bitte Auto, Nativ oder Pendel wählen")
         }
 
         // 1. Hardware/SMC-Unterstützung prüfen
@@ -92,6 +103,20 @@ public enum ControllerLogic {
             )
         }
 
+        // 5. Hitzeschutz: temperatur > heatProtectionCelsius → Laden aus
+        if config.heatProtectionCelsius > 0,
+           let temp = battery.temperatureCelsius,
+           temp > Double(config.heatProtectionCelsius) {
+            return ControllerDecision(
+                state: .holding,
+                chargingEnabled: false,
+                adapterConnected: true,
+                resetChargeToFullOnce: false,
+                message: "Hitzeschutz aktiv: \(String(format: "%.1f", temp))°C > \(config.heatProtectionCelsius)°C",
+                heatProtectionActive: true
+            )
+        }
+
         // 4. Einmalig voll laden (chargeToFullOnce): bis 100% laden
         if config.chargeToFullOnce {
             if battery.percent >= 100 {
@@ -111,19 +136,6 @@ public enum ControllerLogic {
                     message: "Einmaliges Vollladen aktiv (\(battery.percent) %)"
                 )
             }
-        }
-
-        // 5. Hitzeschutz: temperatur > heatProtectionCelsius → Laden aus
-        if config.heatProtectionCelsius > 0,
-           let temp = battery.temperatureCelsius,
-           temp > Double(config.heatProtectionCelsius) {
-            return ControllerDecision(
-                state: .holding,
-                chargingEnabled: false,
-                adapterConnected: true,
-                resetChargeToFullOnce: false,
-                message: "Hitzeschutz aktiv: \(String(format: "%.1f", temp))°C > \(config.heatProtectionCelsius)°C"
-            )
         }
 
         // 6. Aktives Entladen am Kabel: bei percent > upperLimit Adapter trennen
@@ -166,7 +178,7 @@ public enum ControllerLogic {
             // Zwischen lowerLimit und upperLimit: Vorherigen Zustand beibehalten
             let isCharging: Bool
             if let prev = previousDecision {
-                isCharging = prev.chargingEnabled
+                isCharging = prev.heatProtectionActive ? true : prev.chargingEnabled
             } else {
                 isCharging = battery.isCharging
             }
@@ -204,6 +216,17 @@ public enum ControllerLogic {
         guard config.enabled else {
             return normal(.disabled, "Batterieschutz deaktiviert", config.chargeToFullOnce && battery.percent >= 100)
         }
+        // Hitzeschutz: lieber vom Akku laufen als heiß weiter laden
+        if config.heatProtectionCelsius > 0,
+           let temp = battery.temperatureCelsius,
+           temp > Double(config.heatProtectionCelsius), battery.percent > config.lowerLimit {
+            return ControllerDecision(
+                state: .discharging, chargingEnabled: false, adapterConnected: false,
+                message: "Hitzeschutz aktiv: \(String(format: "%.1f", temp))°C > \(config.heatProtectionCelsius)°C",
+                heatProtectionActive: true
+            )
+        }
+
         if config.chargeToFullOnce {
             if battery.percent >= 100 {
                 return normal(.holding, "Einmaliges Vollladen abgeschlossen (100 %)", true)
@@ -218,15 +241,6 @@ public enum ControllerLogic {
             adapterOff = true
         } else if battery.percent <= resumeLevel {
             adapterOff = false
-        }
-        // Hitzeschutz: lieber vom Akku laufen als heiß weiter laden
-        if config.heatProtectionCelsius > 0,
-           let temp = battery.temperatureCelsius,
-           temp > Double(config.heatProtectionCelsius), battery.percent > config.lowerLimit {
-            return ControllerDecision(
-                state: .discharging, chargingEnabled: false, adapterConnected: false,
-                message: "Hitzeschutz aktiv: \(String(format: "%.1f", temp))°C > \(config.heatProtectionCelsius)°C"
-            )
         }
 
         if adapterOff {
@@ -274,7 +288,7 @@ public final class BatteryController: @unchecked Sendable {
             hasDischargeControl: smc.hasDischargeControl
         )
 
-        previousDecision = decision
+        var controlFailed = false
 
         // MagSafe LED bestimmen
         let targetLED: SMCClient.MagSafeColor
@@ -295,6 +309,8 @@ public final class BatteryController: @unchecked Sendable {
                 logger?("SMC: setChargingEnabled(\(decision.chargingEnabled)) => \(success ? "ok" : "failed")")
                 if success {
                     lastAppliedCharging = decision.chargingEnabled
+                } else {
+                    controlFailed = true
                 }
             }
 
@@ -319,6 +335,8 @@ public final class BatteryController: @unchecked Sendable {
                             logger?("IOPMAssertionRelease: System Sleep wieder erlaubt.")
                         }
                     }
+                } else {
+                    controlFailed = true
                 }
             }
             
@@ -344,6 +362,14 @@ public final class BatteryController: @unchecked Sendable {
             }
         }
 
+        if controlFailed {
+            // Nicht als erfolgreiches Halten/Entladen anzeigen, wenn SMC ablehnt.
+            return ControllerDecision(state: .unsupported,
+                chargingEnabled: lastAppliedCharging ?? true,
+                adapterConnected: lastAppliedAdapter ?? true,
+                message: "SMC-Steuerung fehlgeschlagen – Ladezustand konnte nicht angewendet werden")
+        }
+        previousDecision = decision
         return decision
     }
 
@@ -357,8 +383,16 @@ public final class BatteryController: @unchecked Sendable {
         }
 
         if smc.hasChargeControl || smc.hasDischargeControl || smc.keyExists("ACLC") {
-            smc.restoreNormal()
-            logger?("SMC: Alle Schalter auf Normalbetrieb zurückgesetzt (Laden an, Adapter an, LED Auto).")
+            let success = smc.restoreNormal()
+            logger?(success ? "SMC: Alle unterstützten Schalter auf Normalbetrieb zurückgesetzt."
+                            : "SMC: Wiederherstellung mindestens eines Schalters fehlgeschlagen.")
+            if !success {
+                previousDecision = nil
+                lastAppliedCharging = nil
+                lastAppliedAdapter = nil
+                lastAppliedMagSafeLED = nil
+                return
+            }
         }
         previousDecision = nil
         lastAppliedCharging = true

@@ -89,7 +89,7 @@ public final class AppPresence {
     /// Wendet die Dock-Sichtbarkeit gemäß aktueller Einstellung an
     public func applyDockPolicy() {
         let policy: NSApplication.ActivationPolicy = showInDock ? .regular : .accessory
-        NSApp.setActivationPolicy(policy)
+        NSApplication.shared.setActivationPolicy(policy)
     }
 
     /// Führt die Initialisierung beim Start aus:

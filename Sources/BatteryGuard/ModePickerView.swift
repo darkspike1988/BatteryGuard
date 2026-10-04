@@ -23,9 +23,9 @@ extension BGMode {
     var description: String {
         switch self {
         case .auto: return "Automatisch (Empfohlen): Wählt eigenständig die beste Methode für dein MacBook-Modell aus."
-        case .native: return "Nativ (macOS): Nutzt Apples interne Steuerung. Wird vom System verwaltet und ist oft nicht sofort wirksam."
-        case .pendulum: return "Pendel-Modus: Simuliert das Abstecken des Netzteils (Sägezahn), um das Limit zu 100% genau zu erzwingen."
-        case .direct: return "Direkt (SMC): Schreibt das Limit hart in die Firmware (nur für ältere Intel-Macs relevant)."
+        case .native: return "Nativ: Beobachtet nur. Das Ladelimit stellst du selbst in den macOS-Batterieeinstellungen ein."
+        case .pendulum: return "Pendel: Trennt das Netzteil am Maximum und verbindet es wieder fünf Prozentpunkte darunter."
+        case .direct: return "Direktmodus nicht implementiert. Bitte Auto, Nativ oder Pendel wählen."
         }
     }
 }

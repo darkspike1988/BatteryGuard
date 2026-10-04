@@ -59,6 +59,9 @@ fi
 
 echo "--> Verwende Quell-Binary: $DAEMON_SRC"
 
+# Vor dem Ersetzen stoppen: Der alte Dienst darf nicht mit der neuen Binary neu starten.
+launchctl bootout "system/${SERVICE_LABEL}" 2>/dev/null || launchctl bootout system "$PLIST_PATH" 2>/dev/null || true
+
 # 3. Zielverzeichnis anlegen und Binary kopieren
 echo "--> Kopiere Binary nach $TARGET_BINARY..."
 mkdir -p "$(dirname "$TARGET_BINARY")"
@@ -123,10 +126,22 @@ xattr -d com.apple.quarantine "$PLIST_PATH" 2>/dev/null || true
 
 # 6. Alten Dienst beenden (falls geladen) und neuen Dienst aktivieren
 echo "--> Lade LaunchDaemon..."
-launchctl bootout "system/${SERVICE_LABEL}" 2>/dev/null || launchctl bootout system "$PLIST_PATH" 2>/dev/null || true
+launchctl enable "system/${SERVICE_LABEL}"
 
 echo "--> Registriere Dienst mit launchctl bootstrap..."
-launchctl bootstrap system "$PLIST_PATH"
+# launchd benötigt nach bootout gelegentlich Zeit für die vollständige Freigabe.
+BOOTSTRAPPED=false
+for attempt in 1 2 3 4 5; do
+    if launchctl bootstrap system "$PLIST_PATH"; then
+        BOOTSTRAPPED=true
+        break
+    fi
+    sleep 1
+done
+if [[ "$BOOTSTRAPPED" != true ]]; then
+    echo "Fehler: Dienst konnte nicht registriert werden. Binary und Plist bleiben für einen erneuten Start erhalten." >&2
+    exit 1
+fi
 
 echo "--> Starte Dienst mit launchctl kickstart..."
 launchctl kickstart -k "system/${SERVICE_LABEL}"

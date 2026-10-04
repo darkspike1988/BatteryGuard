@@ -33,6 +33,7 @@ final class DaemonRunner: @unchecked Sendable {
     }
 
     func ensureEnvironment() {
+        guard !dryRun else { return }
         let fm = FileManager.default
         if !fm.fileExists(atPath: BGPaths.directory) {
             do {
@@ -65,12 +66,15 @@ final class DaemonRunner: @unchecked Sendable {
     func loadConfig() -> BGConfig {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: BGPaths.config)),
               let decoded = try? BGJSON.decoder().decode(BGConfig.self, from: data) else {
-            return BGConfig().sanitized()
+            var fallback = BGConfig()
+            fallback.enabled = false
+            return fallback.sanitized()
         }
         return decoded.sanitized()
     }
 
     func writeStatus(_ status: BGStatus) {
+        guard !dryRun else { return }
         guard let data = try? BGJSON.encoder().encode(status) else { return }
         do {
             try data.write(to: URL(fileURLWithPath: BGPaths.status), options: .atomic)
@@ -83,8 +87,11 @@ final class DaemonRunner: @unchecked Sendable {
     }
 
     func resetChargeToFullOnceInConfig() {
+        guard !dryRun else { return }
         var cfg = loadConfig()
         cfg.chargeToFullOnce = false
+        cfg.fullChargeUntil = nil
+        if cfg.isTravelCharging(at: Date()) { cfg.travelReadyAt = nil }
         if let data = try? BGJSON.encoder().encode(cfg) {
             do {
                 try data.write(to: URL(fileURLWithPath: BGPaths.config), options: .atomic)
@@ -98,7 +105,9 @@ final class DaemonRunner: @unchecked Sendable {
 
     @discardableResult
     func tick() -> BGStatus {
-        let config = loadConfig()
+        let storedConfig = loadConfig()
+        let now = Date()
+        let config = storedConfig.effective(at: now)
         let battery = BatteryReader.read(smcClient: controller.smc)
 
         let decision = controller.step(
@@ -115,6 +124,7 @@ final class DaemonRunner: @unchecked Sendable {
         }
 
         var status = BGStatus()
+        status.nativeChargeLimit = controller.smc.readNativeChargeLimit()
         status.percent = battery.percent
         status.pluggedIn = battery.pluggedIn
         status.isChargingHardware = battery.isCharging
@@ -129,9 +139,11 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.1.0"
+        status.daemonVersion = "0.2.0"
         status.updatedAt = Date()
-        status.message = decision.message
+        status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
+            ? "Schutz pausiert bis " + (storedConfig.pauseUntil?.formatted(date: .omitted, time: .shortened) ?? "")
+            : decision.message
 
         writeStatus(status)
         return status
@@ -155,7 +167,9 @@ final class DaemonRunner: @unchecked Sendable {
         detectedSMCKeys = controller.smc.detectSupportedKeys()
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
         if !controller.smc.hasChargeControl {
-            log("WARNUNG: Weder CHTE noch CH0B vorhanden - Hardware nicht unterstützt.")
+            log(controller.smc.hasDischargeControl
+                ? "SMC-Ladesperre nicht vorhanden – Pendelsteuerung verfügbar."
+                : "WARNUNG: Keine unterstützte Ladesteuerung vorhanden.")
         }
 
         // Failsafe bei SIGTERM / SIGINT: Normalbetrieb wiederherstellen
@@ -163,7 +177,7 @@ final class DaemonRunner: @unchecked Sendable {
         sigtermSource.setEventHandler { [weak self] in
             guard let self = self else { exit(0) }
             self.log("SIGTERM empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
-            self.controller.restoreNormal(logger: { self.log($0) })
+            if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
         signal(SIGTERM, SIG_IGN)
@@ -173,7 +187,7 @@ final class DaemonRunner: @unchecked Sendable {
         sigintSource.setEventHandler { [weak self] in
             guard let self = self else { exit(0) }
             self.log("SIGINT empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
-            self.controller.restoreNormal(logger: { self.log($0) })
+            if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
         signal(SIGINT, SIG_IGN)
@@ -230,7 +244,11 @@ if args.contains("--dump-keys") {
 } else if args.contains("--restore") {
     let smc = SMCClient.shared
     _ = smc.open()
-    _ = smc.restoreNormal()
+    let restored = smc.restoreNormal()
+    guard restored else {
+        fputs("Normalbetrieb konnte nicht vollständig wiederhergestellt werden.\n", stderr)
+        exit(1)
+    }
     let iso = ISO8601DateFormatter().string(from: Date())
     print("[\(iso)] [batteryguardd] Normalbetrieb wiederhergestellt (Laden an, Adapter an).")
     exit(0)

@@ -22,5 +22,6 @@ let package = Package(
             name: "BatteryGuard",
             dependencies: ["BatteryGuardShared"]
         ),
+        .testTarget(name: "BatteryGuardTests", dependencies: ["batteryguardd", "BatteryGuardShared", "BatteryGuard"]),
     ]
 )
