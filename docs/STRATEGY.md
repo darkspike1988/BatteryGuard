@@ -123,4 +123,4 @@ Keine Telemetrie als Voraussetzung. Lokale Diagnoseexporte werden nur nach ausdr
 
 Drei interne Subagents bearbeiteten Preise, Funktionen und unabhängige Codeprüfung. Die lokal installierte Antigravity-CLI `agy` lieferte zusätzlich eine begrenzte Produktkritik. Übernommen wurde die Idee offener Integrationen. Nicht übernommen wurden unbelegte Alleinstellungsbehauptungen zur Temperatur-Hysterese, ein angeblicher Vertrauensvorteil fehlender Notarisierung, eine unbewiesene Spenden-Konversionsquote und ein zu einfacher Kapazitäts-/Zyklenvergleich als Lebensdauerbeweis.
 
-Nächster Umsetzungsschritt ist A1/A2 mit Regressionstests und korrektem Dienstupdate. B1 kann lesend parallel laufen. Danach C1/C2; kosmetische Erweiterungen ersetzen keine belegte Steuerungswirkung.
+A1/A2 sind anschließend in 0.3.2 umgesetzt: atomare typisierte Dienstaktionen sowie Request-IDs und snapshotgebundene Abschlüsse. Die ursprüngliche Review bleibt als Befund für 0.3.1 erhalten. Nächster Umsetzungsschritt ist A3/A4. B1 kann lesend parallel laufen. Danach C1/C2; kosmetische Erweiterungen ersetzen keine belegte Steuerungswirkung.

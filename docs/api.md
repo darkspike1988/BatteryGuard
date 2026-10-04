@@ -38,6 +38,8 @@ curl --fail-with-body \
 
 ## Aktionen
 
+Ab B-Guard 0.3.2 benötigen Steueraktionen den Hintergrunddienst 0.3.2. Der Dienst wendet den Befehl atomar auf die aktuelle Konfiguration an; alte Dienste können ihn nicht still als unveränderten Feldvergleich bestätigen. Ein neuer Volllade- oder Reiseauftrag erhält eine eindeutige ID, damit der Abschluss eines älteren Auftrags ihn nicht entfernt.
+
 Sende ein JSON-Objekt an `POST /api/v1/actions`, mit `Content-Type: application/json`. Das Feld `action` ist eine Zeichenkette; die Parameter stehen daneben im selben Objekt.
 
 | `action` | Weitere Felder | Wirkung |

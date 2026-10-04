@@ -1,8 +1,8 @@
 # B-Guard Roadmap
 
-Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.1
+Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.2
 
-Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind offen; neue Funktionen sind geplant, nicht bereits implementiert.
+Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 
 Die Reihenfolge richtet sich nach konkreten Review-Befunden. Die folgenden Funktionen sind in 0.3.0 umgesetzt; offene Abnahmen und externe Voraussetzungen stehen separat.
 
@@ -57,3 +57,11 @@ Keine garantierten Lebensdauer- oder Verschleißprognosen, keine Telemetrie und 
 - Separat freigegebene Aktionen verwenden dieselben validierten Regeln wie die Oberfläche.
 - Tests für Authentifizierung, Token-Erneuerung, Anfragen, Konflikte, Speicherfehler und echten HTTP-Verkehr.
 - [Dokumentation und Beispiele](docs/api.md). Die App muss laufen; keine LAN-Freigabe.
+
+## Atomare Aktionen und sichere Abschlüsse · umgesetzt in 0.3.2
+
+- Typisierte Aktionen mit IPC-Protokoll 2 werden erst im Dienst unter der Dateisperre auf den aktuellen Zustand angewandt. Feldänderungen und lesende Abfragen bleiben Protokoll 1. Alte Dienste können neue Aktionen nicht als erfolgreiche No-op bestätigen.
+- Volllade- und Reiseaufträge erhalten eindeutige IDs. Der Abschluss eines alten Ticks löscht nur dieselbe unveränderte Anforderung, auch bei erneuten Aufträgen mit identischem Zeitstempel.
+- Regressionen prüfen aktuellen Servicezustand, echte isolierte Socket-Kommunikation, Altprotokolle, Berechtigungen, neue Deadlines und erneute Reiseaufträge.
+- Umsetzung durch Codex nach zwei agy-Aufträgen mit `gemini-3.8-flash-high` / high: beide endeten per Timeout ohne Codeänderungen. Keine ungeprüften Agentenänderungen übernommen.
+- Validierung: 90 Tests in 13 Suiten erfolgreich. Hintergrunddienst 0.3.2 erforderlich. Bestehende Einstellungen bleiben erhalten.

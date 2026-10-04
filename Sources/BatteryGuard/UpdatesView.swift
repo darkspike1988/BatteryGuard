@@ -7,6 +7,12 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.2", title: "Zuverlässige Ladebefehle", changes: [
+            "API-Aktionen werden atomar auf den neuesten gespeicherten Zustand angewandt.",
+            "Ein alter Volllade-Abschluss kann neu gestartetes Vollladen oder einen neuen Reiseplan nicht mehr löschen.",
+            "Eindeutige Anforderungs-IDs schützen auch erneute Befehle innerhalb derselben Sekunde.",
+            "Hintergrunddienst 0.3.2 erforderlich; alte Dienste lehnen neue API-Befehle eindeutig ab."
+        ]),
         .init(version: "0.3.1", title: "Lokale Automatisierung", changes: [
             "Optionale REST API: Status, gespeicherte Einstellungen und Verlauf als JSON oder CSV auslesen.",
             "Profile, Schutzpausen, Vollladen und Reiseplanung per separat freigegebenen Steuerbefehlen.",

@@ -7,29 +7,47 @@ public struct BGConfigRequest: Codable, Sendable {
     public let baseline: BGConfig
     public let desired: BGConfig
     public let queryOnly: Bool?
+    public let action: BGChargingActionRequest?
 
     public init(baseline: BGConfig, desired: BGConfig, queryOnly: Bool = false) {
         protocolVersion = 1
         self.baseline = baseline.sanitized()
         self.desired = desired.sanitized()
         self.queryOnly = queryOnly
+        action = nil
     }
+
+    /// Commands use v2 so older services must reject them, never merge a no-op.
+    public init(action: BGChargingActionRequest) {
+        protocolVersion = 2
+        baseline = BGConfig()
+        desired = BGConfig()
+        queryOnly = false
+        self.action = action
+    }
+}
+
+public enum BGConfigActionFailure: String, Codable, Sendable {
+    case invalidAction, unsupportedMode
 }
 
 public struct BGConfigResponse: Codable, Sendable {
     public let protocolVersion: Int
     public let config: BGConfig?
     public let error: String?
+    public let actionFailure: BGConfigActionFailure?
 
-    public init(config: BGConfig) {
-        protocolVersion = 1
+    public init(config: BGConfig, protocolVersion: Int = 1) {
+        self.protocolVersion = protocolVersion
         self.config = config.sanitized()
         error = nil
+        actionFailure = nil
     }
-    public init(error: String) {
-        protocolVersion = 1
+    public init(error: String, actionFailure: BGConfigActionFailure? = nil, protocolVersion: Int = 1) {
+        self.protocolVersion = protocolVersion
         config = nil
         self.error = error
+        self.actionFailure = actionFailure
     }
 }
 
@@ -165,6 +183,10 @@ public enum BGConfigClient {
         try exchange(BGConfigRequest(baseline: baseline, desired: desired))
     }
 
+    public static func performAction(_ action: BGChargingActionRequest) throws -> BGConfig {
+        try exchange(BGConfigRequest(action: action))
+    }
+
     /// Explicit endpoint/UID parameters are for isolated socket tests; production uses root only.
     public static func exchange(_ request: BGConfigRequest,
                                 socketPath: String = BGConfigWire.socketPath,
@@ -191,8 +213,14 @@ public enum BGConfigClient {
         guard try BGConfigWire.peerUID(descriptor) == expectedServerUID else { throw BGConfigIPCError.unauthorized }
         try BGConfigWire.send(request, to: descriptor, until: deadline)
         let response = try BGConfigWire.receive(BGConfigResponse.self, from: descriptor, until: deadline)
-        guard response.protocolVersion == 1 else { throw BGConfigIPCError.invalidMessage }
-        if let error = response.error { throw BGConfigIPCError.rejected(error) }
+        guard response.protocolVersion == request.protocolVersion else { throw BGConfigIPCError.invalidMessage }
+        if let error = response.error {
+            switch response.actionFailure {
+            case .invalidAction: throw BGChargingActionError.invalidRequest(error)
+            case .unsupportedMode: throw BGChargingActionError.unsupportedMode
+            case nil: throw BGConfigIPCError.rejected(error)
+            }
+        }
         guard let config = response.config else { throw BGConfigIPCError.invalidMessage }
         return config.sanitized()
     }

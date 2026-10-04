@@ -110,10 +110,11 @@ struct AppActionsTests {
         status.isDaemonActive = true
         status.status.daemonVersion = "0.1.0"
         #expect(!status.supportsChargingPlans)
-        status.status.daemonVersion = "0.2.0"
-        #expect(status.supportsChargingPlans)
+        status.status.daemonVersion = "0.3.0"
+        #expect(!status.supportsChargingPlans)
         #expect(status.daemonNeedsUpdate)
         status.status.daemonVersion = AppVersion.requiredDaemon
+        #expect(status.supportsChargingPlans)
         #expect(!status.daemonNeedsUpdate)
         status.isDaemonActive = false
         #expect(!status.supportsChargingPlans)

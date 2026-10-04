@@ -128,9 +128,7 @@ final class ConfigStore: Sendable {
     func performAPIAction(_ request: BGChargingActionRequest, at now: Date = Date()) throws -> BGConfig {
         guard !hasPendingSave else { throw AppActionError.unsavedChanges }
         guard persistenceEnabled else { throw AppActionError.saveFailed("Vorschau kann keine Einstellungen speichern.") }
-        let saved = try BGConfigFile.update(at: configURL) { latest in
-            latest = try request.applying(to: latest, at: now)
-        }
+        let saved = try BGConfigFile.performAction(request, at: configURL, now: now)
         let wasInitialLoad = isInitialLoad
         isInitialLoad = true
         config = saved

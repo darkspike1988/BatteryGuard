@@ -63,9 +63,11 @@ public extension BGConfig {
         if let deadline = fullChargeUntil, now >= deadline {
             c.fullChargeUntil = nil
             c.chargeToFullOnce = false
+            c.fullChargeRequestID = nil
         }
         if let ready = travelReadyAt, now >= ready.addingTimeInterval(Self.travelGraceTime) {
             c.travelReadyAt = nil
+            c.travelRequestID = nil
         }
         return c
     }

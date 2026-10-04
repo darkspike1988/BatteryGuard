@@ -49,6 +49,10 @@ public struct BGConfig: Codable, Equatable, Sendable {
     /// Manuelles Vollladen endet spätestens zu diesem Zeitpunkt.
     public var fullChargeUntil: Date? = nil
 
+    /// Stable identities distinguish renewed requests even within one JSON timestamp second.
+    public var fullChargeRequestID: UUID? = nil
+    public var travelRequestID: UUID? = nil
+
     public init() {}
 
     // Tolerantes Decoding: fehlende Schlüssel (ältere Dateien) → Defaults.
@@ -70,15 +74,19 @@ public struct BGConfig: Codable, Equatable, Sendable {
         pauseUntil = try c.decodeIfPresent(Date.self, forKey: .pauseUntil)
         travelReadyAt = try c.decodeIfPresent(Date.self, forKey: .travelReadyAt)
         fullChargeUntil = try c.decodeIfPresent(Date.self, forKey: .fullChargeUntil)
+        fullChargeRequestID = try c.decodeIfPresent(UUID.self, forKey: .fullChargeRequestID)
+        travelRequestID = try c.decodeIfPresent(UUID.self, forKey: .travelRequestID)
     }
 
-    /// Daemon MUSS jede gelesene Config durch diese Funktion schicken (Config-Datei ist world-writable).
+    /// Daemon MUSS jede gelesene Config durch diese Funktion schicken (Konfiguration ist root-eigen, Änderungen sind authentifiziert).
     public func sanitized() -> BGConfig {
         var c = self
         c.lowerLimit = min(max(c.lowerLimit, 5), 95)
         c.upperLimit = min(max(c.upperLimit, 20), 100)
         if c.upperLimit <= c.lowerLimit { c.lowerLimit = max(5, c.upperLimit - 5) }
         c.heatProtectionCelsius = (c.heatProtectionCelsius == 0) ? 0 : min(max(c.heatProtectionCelsius, 30), 50)
+        if !c.chargeToFullOnce { c.fullChargeRequestID = nil }
+        if c.travelReadyAt == nil { c.travelRequestID = nil }
         return c
     }
 }

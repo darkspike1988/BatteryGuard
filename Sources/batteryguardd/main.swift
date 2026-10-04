@@ -101,13 +101,11 @@ final class DaemonRunner: @unchecked Sendable {
         }
     }
 
-    func resetChargeToFullOnceInConfig() {
+    func resetChargeToFullOnceInConfig(snapshot: BGConfig, at now: Date) {
         guard !dryRun else { return }
         do {
             try BGConfigFile.update(at: URL(fileURLWithPath: BGPaths.config)) { cfg in
-                cfg.chargeToFullOnce = false
-                cfg.fullChargeUntil = nil
-                if cfg.isTravelCharging(at: Date()) { cfg.travelReadyAt = nil }
+                cfg = BGChargeCompletion.applying(snapshot: snapshot, to: cfg, at: now)
             }
             log("Volllade-Anforderung zurückgesetzt.")
         } catch {
@@ -133,7 +131,7 @@ final class DaemonRunner: @unchecked Sendable {
         )
 
         if decision.resetChargeToFullOnce {
-            resetChargeToFullOnceInConfig()
+            resetChargeToFullOnceInConfig(snapshot: storedConfig, at: now)
         }
 
         var status = BGStatus()
@@ -152,7 +150,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.3.0"
+        status.daemonVersion = "0.3.2"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported

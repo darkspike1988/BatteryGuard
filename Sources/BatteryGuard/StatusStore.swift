@@ -9,7 +9,7 @@ final class StatusStore: Sendable {
     var isDaemonActive: Bool = false
     
     var supportsChargingPlans: Bool {
-        isDaemonActive && status.daemonVersion.compare("0.2.0", options: .numeric) != .orderedAscending
+        isDaemonActive && status.daemonVersion.compare(AppVersion.requiredDaemon, options: .numeric) != .orderedAscending
     }
 
     var daemonNeedsUpdate: Bool {

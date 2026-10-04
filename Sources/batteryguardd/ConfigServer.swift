@@ -126,9 +126,16 @@ final class ConfigServer: @unchecked Sendable {
             do {
                 // Recheck console identity after receipt, including fast user switching.
                 let saved = try Self.apply(request, peerUID: uid, consoleUID: Self.consoleUID())
-                response = BGConfigResponse(config: saved)
+                response = BGConfigResponse(config: saved, protocolVersion: request.protocolVersion)
+            } catch let error as BGChargingActionError {
+                let failure: BGConfigActionFailure
+                switch error {
+                case .unsupportedMode: failure = .unsupportedMode
+                case .invalidRequest: failure = .invalidAction
+                }
+                response = BGConfigResponse(error: error.localizedDescription, actionFailure: failure, protocolVersion: request.protocolVersion)
             } catch {
-                response = BGConfigResponse(error: "Die Einstellungen konnten nicht gespeichert werden. " + error.localizedDescription)
+                response = BGConfigResponse(error: "Die Einstellungen konnten nicht gespeichert werden. " + error.localizedDescription, protocolVersion: request.protocolVersion)
             }
             try BGConfigWire.send(response, to: descriptor, until: deadline)
         } catch { /* Disconnect malformed, oversized or stalled requests. */ }
@@ -149,7 +156,13 @@ final class ConfigServer: @unchecked Sendable {
         guard BGConfigPeerPolicy.allows(peerUID: peerUID, consoleUID: consoleUID) else {
             throw BGConfigIPCError.unauthorized
         }
-        guard request.protocolVersion == 1 else { throw BGConfigIPCError.invalidMessage }
+        guard (request.protocolVersion == 1 && request.action == nil)
+            || (request.protocolVersion == 2 && request.action != nil && request.queryOnly != true) else {
+            throw BGConfigIPCError.invalidMessage
+        }
+        if let action = request.action {
+            return try BGConfigFile.performAction(action, at: configURL)
+        }
         if request.queryOnly == true { return try BGConfigFile.read(at: configURL) }
         return try BGConfigFile.update(at: configURL) { latest in
             latest = request.desired.mergingEdits(since: request.baseline, into: latest)

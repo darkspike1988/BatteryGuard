@@ -138,6 +138,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             next.pauseUntil = nil
             next.chargeToFullOnce = true
             next.fullChargeUntil = now.addingTimeInterval(8 * 3600)
+            next.fullChargeRequestID = UUID()
         case .cancelFullCharge:
             next.chargeToFullOnce = false
             next.fullChargeUntil = nil
@@ -146,6 +147,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             next.enabled = true
             next.pauseUntil = nil
             next.travelReadyAt = readyAt
+            next.travelRequestID = UUID()
             next.chargeToFullOnce = false
             next.fullChargeUntil = nil
         case .cancelTravel: next.travelReadyAt = nil

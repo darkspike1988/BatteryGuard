@@ -40,6 +40,16 @@ public enum BGConfigFile {
         try withFile(at: url, writing: false) { try decode($0) }
     }
 
+    /// Commands are applied under the service writer lock against current state.
+    public static func performAction(_ request: BGChargingActionRequest, at url: URL, now: Date? = nil) throws -> BGConfig {
+        if geteuid() != 0 && url.path == BGPaths.config {
+            return try BGConfigClient.performAction(request)
+        }
+        return try update(at: url) { latest in
+            latest = try request.applying(to: latest, at: now ?? Date())
+        }
+    }
+
     @discardableResult
     public static func update(at url: URL, mutation: (inout BGConfig) throws -> Void) throws -> BGConfig {
         if geteuid() != 0 && url.path == BGPaths.config {
@@ -78,11 +88,16 @@ public extension BGConfig {
         if magsafeLed != baseline.magsafeLed { result.magsafeLed = magsafeLed }
         if mode != baseline.mode { result.mode = mode }
         if pauseUntil != baseline.pauseUntil { result.pauseUntil = pauseUntil }
-        if travelReadyAt != baseline.travelReadyAt { result.travelReadyAt = travelReadyAt }
+        if travelReadyAt != baseline.travelReadyAt || travelRequestID != baseline.travelRequestID {
+            result.travelReadyAt = travelReadyAt
+            result.travelRequestID = travelRequestID
+        }
         // These fields are one logical request, so never merge them independently.
-        if chargeToFullOnce != baseline.chargeToFullOnce || fullChargeUntil != baseline.fullChargeUntil {
+        if chargeToFullOnce != baseline.chargeToFullOnce || fullChargeUntil != baseline.fullChargeUntil
+            || fullChargeRequestID != baseline.fullChargeRequestID {
             result.chargeToFullOnce = chargeToFullOnce
             result.fullChargeUntil = fullChargeUntil
+            result.fullChargeRequestID = fullChargeRequestID
         }
         return result.sanitized()
     }
