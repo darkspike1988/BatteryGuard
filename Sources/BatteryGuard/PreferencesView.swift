@@ -21,6 +21,7 @@ struct PreferencesView: View {
     @AppStorage(LowBatteryWarningPolicy.userDefaultsKey) private var lowBatteryThreshold = LowBatteryWarningPolicy.defaultThreshold
     @AppStorage("bg.notifyLimit") private var notifyLimit = false
     @AppStorage("bg.notifyHeat") private var notifyHeat = true
+    @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
 
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
@@ -116,16 +117,29 @@ struct PreferencesView: View {
             } header: { Text("App") }
 
             Section {
+                Picker("Symbolstil", selection: $menuBarIconStyle) {
+                    ForEach(MenuBarIconStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
                 Picker("Menüleistenanzeige", selection: $menuBarDisplay) {
                     ForEach(MenuBarDisplayMode.allCases) { mode in
                         Text(mode.title).tag(mode)
                     }
                 }
-                Text("Wähle, was neben dem B-Guard-Ladering angezeigt wird. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung.")
+                Text("Wähle das Menüleistensymbol und die Zusatzanzeige. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Temperatur im Menüfenster", isOn: $menuShowTemperature)
                 Toggle("Akku-Leistung im Menüfenster", isOn: $menuShowPower)
                 Toggle("Akkugesundheit im Menüfenster", isOn: $menuShowHealth)
+                Button("Darstellung zurücksetzen") {
+                    // AppStorage bindings respect an injected preview store.
+                    menuBarIconStyle = .ring
+                    menuBarDisplay = .percent
+                    menuShowTemperature = false
+                    menuShowPower = false
+                    menuShowHealth = false
+                }
             } header: { Text("Menüleiste") }
 
             if let api { APISettingsView(api: api) }

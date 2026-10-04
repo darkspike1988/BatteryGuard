@@ -7,6 +7,12 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.4", title: "Dein Symbolstil", changes: [
+            "Monochrome Symbolstile: Ladering, Batterie oder Schild.",
+            "Darstellung zurücksetzen, ohne Ladeprofil, Mitteilungen, API oder Autostart zu verändern.",
+            "Netzteilversorgung, tatsächliches Laden und Entladen in der Statusanzeige unterscheiden.",
+            "Hintergrunddienst 0.3.2 weiterhin ausreichend."
+        ]),
         .init(version: "0.3.3", title: "Deine Menüleiste", changes: [
             "Menüleistenanzeige wählen: Symbol, Prozent, Akkutemperatur oder Akku-Leistung.",
             "Temperatur, Akku-Leistung und Gesundheit optional direkt im Menüfenster anzeigen.",

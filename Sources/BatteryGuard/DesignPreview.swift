@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import BatteryGuardShared
 
 /// Entwicklerrendering aus den echten Views. Keine Bildschirmaufnahme und kein
 /// Zugriff auf Konfiguration, SMC oder Verlauf des Benutzers.
@@ -76,6 +77,17 @@ enum DesignPreview {
                     .defaultAppStorage(labelPreferences).environment(\.colorScheme, theme),
                     size: NSSize(width: 160, height: 36),
                     to: directory.appendingPathComponent("label-\(mode.rawValue).png"))
+            }
+            for style in MenuBarIconStyle.allCases {
+                for state in [BGChargeState.charging, .holding, .onBattery, .disabled, .unsupported] {
+                    var sample = status.status
+                    sample.state = state
+                    sample.pluggedIn = state != .onBattery
+                    sample.isChargingHardware = state == .charging
+                    try renderView(MenuBarIconView(style: style, status: sample, isDaemonActive: true)
+                        .environment(\.colorScheme, theme), size: NSSize(width: 48, height: 36),
+                        to: directory.appendingPathComponent("icon-\(style.rawValue)-\(state.rawValue).png"))
+                }
             }
             print("Preview rendered: \(directory.path)")
             exit(0)

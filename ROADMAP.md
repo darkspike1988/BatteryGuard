@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.3
+Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.4
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 
@@ -172,3 +172,12 @@ Keine garantierten Lebensdauer- oder Verschleißprognosen, keine Telemetrie und 
 - Nur Appupdate; vorhandener Dienst 0.3.2 bleibt ausreichend. Nächste größere Arbeitspakete: native Kurzbefehle, eigene gespeicherte Profile und wiederkehrende Zeitpläne. Hardwareabhängige Kalibrierung und Deckelentladung bleiben bis zu einer belegten Abnahme geplant.
 
 Validierung: 109 Tests (100 Swift Testing und 9 XCTest) erfolgreich; Release-Build und Bundle-Signaturprüfung erfolgreich.
+
+## Kontingentplan und kleines P5-Paket · 0.3.4
+
+[Kontingentplan](docs/CONTINGENT_PLAN.md): Aufgabenverteilung Gemini/Claude/Codex, Umfang, Abnahme und externe Hürden anhand der vom Nutzer gemeldeten Restprozente.
+
+- Symbolstile Ladering/Batterie/Schild und Zurücksetzen der Darstellung umgesetzt; Ladeprofile, Mitteilungen, API und Autostart werden vom Reset nicht verändert.
+- Gemini programmierte, Claude prüfte unabhängig; Codex korrigierte Statuswahrheit und Reset-Isolation. Tatsächliches Laden wird nicht aus Netzteilanschluss allein abgeleitet.
+- P5 ist damit weiterhin teilweise umgesetzt: zusätzliche Karten, Reihenfolge und LED-Modi bleiben offen. Power Flow bleibt der nächste fachliche Schwerpunkt; keine neue Eingangsmessung mit dieser Version.
+- Vorhandener Hintergrunddienst 0.3.2 reicht aus.

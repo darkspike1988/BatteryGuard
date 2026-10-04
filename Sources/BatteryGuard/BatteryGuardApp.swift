@@ -124,38 +124,16 @@ struct MenuBarLabelView: View {
     let status: BGStatus
     let isDaemonActive: Bool
     var updateAvailable = false
+    @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage(MenuBarDisplayMode.appStorageKey) private var menuBarDisplay: MenuBarDisplayMode = .percent
     
     var body: some View {
         HStack(spacing: 5) {
-            // Einzigartiger, runder Ladering statt des Apple-Standard-Batterie-Icons
-            ZStack {
-                Circle()
-                    .stroke(Color.primary.opacity(0.2), lineWidth: 2)
-                
-                let fraction = CGFloat(min(max(status.percent, 0), 100)) / 100.0
-                Circle()
-                    .trim(from: 0, to: fraction)
-                    .stroke(Color.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                
-                // Icon im Inneren des Rings
-                if !isDaemonActive {
-                    Image(systemName: "exclamationmark").font(.system(size: 7, weight: .bold))
-                } else if status.state == .holding {
-                    Image(systemName: "pause.fill")
-                        .font(.system(size: 6, weight: .bold))
-                } else if status.pluggedIn {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 7, weight: .bold))
-                } else {
-                    // Im Akkubetrieb zeigen wir ein kleines Schild als "Guard"-Logo
-                    Image(systemName: "shield.fill")
-                        .font(.system(size: 6, weight: .regular))
-                }
-            }
-            .frame(width: 14, height: 14)
-            .padding(.trailing, 1)
+            MenuBarIconView(
+                style: menuBarIconStyle,
+                status: status,
+                isDaemonActive: isDaemonActive
+            ).accessibilityHidden(true)
             
             if updateAvailable {
                 Image(systemName: "arrow.down.circle.fill").font(.system(size: 9))
@@ -171,6 +149,6 @@ struct MenuBarLabelView: View {
         }
         .help(MenuBarDisplayFormatter.tooltip(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(MenuBarDisplayFormatter.voiceOverText(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive) + (updateAvailable ? ". Neue B-Guard-Version verfügbar." : ""))
+        .accessibilityLabel(MenuBarAppearance.symbolDescriptor(style: menuBarIconStyle, status: status, isDaemonActive: isDaemonActive).accessibilityDescription + ". " + MenuBarDisplayFormatter.voiceOverText(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive) + (updateAvailable ? ". Neue B-Guard-Version verfügbar." : ""))
     }
 }
