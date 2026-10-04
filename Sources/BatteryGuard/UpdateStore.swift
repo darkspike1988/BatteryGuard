@@ -6,8 +6,8 @@ import UserNotifications
 
 /// App-only releases do not require reinstalling an unchanged root service.
 enum AppVersion {
-    static let current = "0.2.3"
-    static let requiredDaemon = "0.2.2"
+    static let current = "0.3.0"
+    static let requiredDaemon = "0.3.0"
     static var installed: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? current
     }
@@ -74,6 +74,16 @@ enum UpdateError: LocalizedError {
     }
 }
 
+final class UpdateDownloadProgress: NSObject, URLSessionDownloadDelegate, Sendable {
+    let report: @Sendable (Int64) -> Void
+    init(report: @escaping @Sendable (Int64) -> Void) { self.report = report }
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
+                    totalBytesExpectedToWrite: Int64) { report(totalBytesWritten) }
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didFinishDownloadingTo location: URL) {}
+}
+
 @MainActor
 @Observable
 final class UpdateStore {
@@ -84,6 +94,11 @@ final class UpdateStore {
     var isError = false
     var checkedAt: Date?
     var downloadedURL: URL?
+    private(set) var downloadBytes: Int64 = 0
+    private(set) var downloadTotal: Int64 = 0
+    private var downloadSession: URLSession?
+    private var downloadID: UUID?
+    private var downloadCancelled = false
     var automaticChecksEnabled: Bool {
         didSet {
             preferences.set(automaticChecksEnabled, forKey: "bg.autoUpdateChecks")
@@ -95,13 +110,18 @@ final class UpdateStore {
     private var isMonitoring = false
     private let installedVersion: String
     private let fetch: @Sendable () async throws -> Data
+    private let downloadFile: @Sendable (URL, URLSession, UpdateDownloadProgress) async throws -> (URL, URLResponse)
 
     init(installedVersion: String = AppVersion.installed, preferences: UserDefaults = .standard,
-         fetch: @escaping @Sendable () async throws -> Data = UpdateStore.fetchLatest) {
+         fetch: @escaping @Sendable () async throws -> Data = UpdateStore.fetchLatest,
+         downloadFile: @escaping @Sendable (URL, URLSession, UpdateDownloadProgress) async throws -> (URL, URLResponse) = { url, session, delegate in
+             try await session.download(from: url, delegate: delegate)
+         }) {
         self.installedVersion = installedVersion
         self.preferences = preferences
         self.automaticChecksEnabled = preferences.object(forKey: "bg.autoUpdateChecks") as? Bool ?? true
         self.fetch = fetch
+        self.downloadFile = downloadFile
         if let data = preferences.data(forKey: "bg.cachedRelease"),
            let cached = try? JSONDecoder().decode(GitHubRelease.self, from: data),
            !cached.draft, !cached.prerelease, ReleaseVersion(cached.tag_name) != nil {
@@ -215,14 +235,29 @@ final class UpdateStore {
             isError = true; message = UpdateError.invalidDownload.localizedDescription; return
         }
         isDownloading = true
+        downloadedURL = nil
+        downloadBytes = 0
+        downloadTotal = Int64(asset.size)
+        downloadCancelled = false
+        let id = UUID()
+        downloadID = id
         isError = false
         message = "Update wird geladen und geprüft …"
-        defer { isDownloading = false }
+        defer { isDownloading = false; downloadSession = nil; downloadID = nil }
         let session = URLSession(configuration: .ephemeral)
+        downloadSession = session
         defer { session.invalidateAndCancel() }
+        let progress = UpdateDownloadProgress { [weak self] bytes in
+            Task { @MainActor in
+                guard let self, self.downloadID == id, !self.downloadCancelled else { return }
+                self.downloadBytes = min(max(0, bytes), self.downloadTotal)
+            }
+        }
         do {
-            let (temporary, response) = try await session.download(from: asset.browser_download_url)
+            let (temporary, response) = try await downloadFile(asset.browser_download_url, session, progress)
             defer { try? FileManager.default.removeItem(at: temporary) }
+            try Task.checkCancellation()
+            guard !downloadCancelled else { throw CancellationError() }
             guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
                 throw UpdateError.invalidDownload
             }
@@ -230,6 +265,7 @@ final class UpdateStore {
             guard size == asset.size else { throw UpdateError.checksum }
             let data = try Data(contentsOf: temporary, options: .mappedIfSafe)
             try Self.verify(data, asset: asset)
+            downloadBytes = downloadTotal
             let directory = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let destination = directory.appendingPathComponent("B-Guard-\(release.version)-\(UUID().uuidString.prefix(8)).dmg")
@@ -241,8 +277,20 @@ final class UpdateStore {
                 message = "Download geprüft. Öffne die DMG im Downloads-Ordner und ersetze B-Guard in Programme."
             }
         } catch {
-            isError = true
-            message = "Update konnte nicht geladen werden. " + error.localizedDescription
+            if downloadCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled {
+                isError = false
+                message = "Download abgebrochen."
+            } else {
+                isError = true
+                message = "Update konnte nicht geladen werden. " + error.localizedDescription
+            }
         }
+    }
+
+    func cancelDownload() {
+        guard isDownloading else { return }
+        downloadCancelled = true
+        downloadSession?.invalidateAndCancel()
+        message = "Download wird abgebrochen …"
     }
 }

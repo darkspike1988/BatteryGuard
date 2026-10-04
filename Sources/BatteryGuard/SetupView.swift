@@ -25,6 +25,7 @@ struct SetupView: View {
             }
             HStack {
                 Button(services.message != nil && !services.isError ? "Fertig" : "Später", action: close)
+                    .disabled(services.isBusy)
                 Spacer()
                 if !needsCopy && (services.message == nil || services.isError) {
                     Button(services.isBusy ? "Wird eingerichtet …" : "B-Guard einrichten") {
@@ -36,5 +37,6 @@ struct SetupView: View {
         }
         .padding(32).frame(width: 480)
         .fixedSize(horizontal: false, vertical: true)
+        .interactiveDismissDisabled(services.isBusy)
     }
 }

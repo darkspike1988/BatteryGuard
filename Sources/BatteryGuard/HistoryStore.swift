@@ -2,28 +2,41 @@ import Foundation
 import Observation
 import BatteryGuardShared
 
-private actor HistoryRepository {
+actor HistoryRepository {
     let url: URL
     private var samples: [BGHistorySample]?
+    private(set) var recoveryNotice: String?
 
     init(url: URL) { self.url = url }
 
-    func load() throws -> [BGHistorySample] {
+    func load(now: Date = Date()) throws -> [BGHistorySample] {
         if let samples { return samples }
         guard FileManager.default.fileExists(atPath: url.path) else {
             samples = []
             return []
         }
-        let loaded = try BGJSON.decoder().decode([BGHistorySample].self, from: Data(contentsOf: url))
-        let cutoff = Date().addingTimeInterval(-BGHistory.retention)
-        let recent = Array(loaded.filter { $0.timestamp >= cutoff }.sorted { $0.timestamp < $1.timestamp }.suffix(10_081))
+        // Lesefehler (z. B. fehlende Rechte) dürfen keine vermeintliche Reparatur auslösen.
+        let data = try Data(contentsOf: url)
+        let loaded: [BGHistorySample]
+        do {
+            loaded = try BGJSON.decoder().decode([BGHistorySample].self, from: data)
+        } catch is DecodingError {
+            let backup = url.deletingLastPathComponent()
+                .appendingPathComponent("history-recovery-\(UUID().uuidString).json")
+            // Erst sichern. Scheitert das Verschieben, bleibt die Originaldatei unangetastet.
+            try FileManager.default.moveItem(at: url, to: backup)
+            recoveryNotice = "Beschädigter Verlauf wurde in \(backup.lastPathComponent) gesichert. Neue Messungen werden wieder aufgezeichnet."
+            samples = []
+            return []
+        }
+        let recent = BGHistory.recentSamples(loaded, now: now)
         samples = recent
         return recent
     }
 
-    func record(_ status: BGStatus) throws -> [BGHistorySample] {
-        let previous = try load()
-        let next = BGHistory.recording(status, in: previous, now: Date())
+    func record(_ status: BGStatus, now: Date = Date()) throws -> [BGHistorySample] {
+        let previous = try load(now: now)
+        let next = BGHistory.recording(status, in: previous, now: now)
         guard next != previous else { return previous }
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
                                                attributes: [.posixPermissions: 0o700])
@@ -52,7 +65,10 @@ final class HistoryStore {
             samples = emptyPreview ? [] : Self.previewSamples()
         } else {
             Task { [weak self, repository] in
-                do { self?.samples = try await repository.load() }
+                do {
+                    self?.samples = try await repository.load()
+                    self?.errorMessage = await repository.recoveryNotice
+                }
                 catch { self?.errorMessage = "Verlauf konnte nicht geladen werden: \(error.localizedDescription)" }
             }
         }
@@ -60,12 +76,13 @@ final class HistoryStore {
 
     func record(_ status: BGStatus) {
         guard !isPreview else { return }
-        if let last = samples.last, status.updatedAt.timeIntervalSince(last.timestamp) < BGHistory.sampleInterval { return }
+        if let last = samples.last, last.timestamp <= Date().addingTimeInterval(5),
+           status.updatedAt.timeIntervalSince(last.timestamp) < BGHistory.sampleInterval { return }
         Task { [weak self, repository] in
             do {
                 let updated = try await repository.record(status)
                 if self?.samples != updated { self?.samples = updated }
-                self?.errorMessage = nil
+                self?.errorMessage = await repository.recoveryNotice
             } catch {
                 self?.errorMessage = "Verlauf konnte nicht gespeichert werden: \(error.localizedDescription)"
             }

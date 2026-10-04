@@ -42,11 +42,21 @@ public enum BGConfigFile {
 
     @discardableResult
     public static func update(at url: URL, mutation: (inout BGConfig) throws -> Void) throws -> BGConfig {
-        try withFile(at: url, writing: true) { handle in
+        if geteuid() != 0 && url.path == BGPaths.config {
+            let baseline = try read(at: url)
+            var desired = baseline
+            try mutation(&desired)
+            return try BGConfigClient.update(baseline: baseline, desired: desired)
+        }
+        return try withFile(at: url, writing: true) { handle in
             var config = try decode(handle)
+            let previous = config
             try mutation(&config)
             config = config.sanitized()
             let data = try BGJSON.encoder().encode(config)
+            if geteuid() == 0 && url.path == BGPaths.config {
+                try BGConfigRecovery.backup(config: previous)
+            }
             try handle.seek(toOffset: 0)
             try handle.write(contentsOf: data)
             try handle.truncate(atOffset: UInt64(data.count))

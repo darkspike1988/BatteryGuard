@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UserNotifications
 import BatteryGuardShared
 
 struct PreferencesView: View {
@@ -10,6 +11,11 @@ struct PreferencesView: View {
     @Bindable private var presence = AppPresence.shared
     @Environment(\.openWindow) private var openWindow
     @State private var confirmUninstall = false
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var notificationAuthorization: UNAuthorizationStatus?
+    @State private var notificationAlertsEnabled = false
+    @State private var requestingNotifications = false
+    @State private var notificationError: String?
     @AppStorage("bg.notifyLow") private var notifyLow = true
     @AppStorage("bg.notifyLimit") private var notifyLimit = false
     @AppStorage("bg.notifyHeat") private var notifyHeat = true
@@ -36,9 +42,9 @@ struct PreferencesView: View {
                 } else {
                     Toggle("Ladeschutz aktiv", isOn: $configStore.config.enabled)
                     Stepper("Laden ab \(configStore.config.lowerLimit) %", value: $configStore.config.lowerLimit,
-                            in: 5...max(5, configStore.config.upperLimit - 5))
+                            in: 5...min(95, configStore.config.upperLimit - 1))
                     Stepper("Stoppen bei \(configStore.config.upperLimit) %", value: $configStore.config.upperLimit,
-                            in: max(20, configStore.config.lowerLimit + 5)...100)
+                            in: max(20, configStore.config.lowerLimit + 1)...100)
                     Text("Im Pendelmodus verbindet sich das Netzteil bei Maximum minus 5 % wieder. Die untere Grenze bleibt die Sicherheitsgrenze des Hitzeschutzes.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -65,7 +71,18 @@ struct PreferencesView: View {
                 Toggle("Bei niedrigem Akkustand", isOn: $notifyLow)
                 Toggle("Beim Erreichen des Ladelimits", isOn: $notifyLimit)
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
-                Button("Mitteilungen erlauben") { NotificationManager.shared.requestAuthorization() }
+                LabeledContent("macOS-Freigabe", value: notificationPermissionDescription)
+                if notificationAuthorization == .notDetermined {
+                    Button(requestingNotifications ? "Freigabe wird angefragt …" : "Mitteilungen erlauben") {
+                        Task { await requestNotificationPermission() }
+                    }.disabled(requestingNotifications)
+                }
+                if notificationAuthorization == .denied || (notificationAuthorization == .authorized && !notificationAlertsEnabled) {
+                    Button("Mitteilungseinstellungen öffnen") {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
+                    }
+                }
+                if let notificationError { Text(notificationError).font(.caption).foregroundStyle(.orange) }
                 Text("Mitteilungen werden nur aus aktuellen Messwerten erzeugt. Die Freigabe verwaltest du auch in den macOS-Systemeinstellungen.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Mitteilungen") }
@@ -81,6 +98,9 @@ struct PreferencesView: View {
 
             Section {
                 LabeledContent("Status", value: statusStore.isDaemonActive ? "Verbunden" : "Nicht erreichbar")
+                if let notice = statusStore.status.configurationNotice {
+                    Label(notice, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
+                }
                 LabeledContent("Dienstversion", value: statusStore.isDaemonActive ? statusStore.status.daemonVersion : "—")
                 if statusStore.isDaemonActive {
                     LabeledContent("Ladezyklen", value: statusStore.status.cycleCount.map(String.init) ?? "—")
@@ -126,11 +146,45 @@ struct PreferencesView: View {
             } header: { Text("B-Guard") }
         }
         .formStyle(.grouped)
+        .task { await refreshNotificationPermission() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await refreshNotificationPermission() } }
+        }
         .confirmationDialog("Hintergrunddienst entfernen?", isPresented: $confirmUninstall, titleVisibility: .visible) {
             Button("Dienst entfernen", role: .destructive) { services.uninstall() }
             Button("Abbrechen", role: .cancel) {}
         } message: {
             Text("Die Ladesteuerung wird zurückgesetzt. macOS übernimmt wieder. Dein lokaler Verlauf bleibt erhalten.")
         }
+    }
+
+    private var notificationPermissionDescription: String {
+        guard Bundle.main.bundleIdentifier != nil else { return "Nur in der installierten App verfügbar" }
+        switch notificationAuthorization {
+        case .authorized: return notificationAlertsEnabled ? "Erlaubt" : "Erlaubt · Hinweise ausgeschaltet"
+        case .denied: return "Nicht erlaubt"
+        case .notDetermined: return "Noch nicht angefragt"
+        case .provisional: return "Still erlaubt"
+        case nil: return "Wird geprüft …"
+        @unknown default: return "Unbekannt"
+        }
+    }
+
+    @MainActor private func refreshNotificationPermission() async {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationAuthorization = settings.authorizationStatus
+        notificationAlertsEnabled = settings.alertSetting == .enabled
+    }
+
+    @MainActor private func requestNotificationPermission() async {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        requestingNotifications = true
+        defer { requestingNotifications = false }
+        do {
+            _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            notificationError = nil
+        } catch { notificationError = "Freigabe konnte nicht angefragt werden: " + error.localizedDescription }
+        await refreshNotificationPermission()
     }
 }

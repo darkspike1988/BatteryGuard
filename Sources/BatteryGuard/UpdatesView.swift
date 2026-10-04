@@ -7,6 +7,13 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.0", title: "Zuverlässiger im Alltag", changes: [
+            "Zukünftige Reisepläne bleiben beim Beenden manuellen Vollladens erhalten; einheitliche Ladegrenzen und klarere Monitor-Anzeige.",
+            "Beschädigten Verlauf sichern und weiter aufzeichnen; Uhrzeitkorrekturen blockieren keine neuen Messpunkte.",
+            "Hitzeschutz mit 2 °C Abkühlung vor Wiederfreigabe und stabiler Akkureserve; Monitoränderungen unmittelbar prüfen.",
+            "Hardwarezustand regelmäßig nachlesen; Einstellungen über authentifizierte lokale Dienstkommunikation speichern.",
+            "Updatefortschritt und Abbrechen, sichtbare Mitteilungsfreigabe und zugängliche Verlaufsauswahl."
+        ]),
         .init(version: "0.2.3", title: "Updates & Neuigkeiten", changes: [
             "Automatische Updateprüfung höchstens täglich über GitHub, abschaltbar und ohne Konto.",
             "DMG direkt laden, per SHA-256 prüfen und öffnen.",
@@ -43,8 +50,18 @@ struct UpdatesView: View {
                 BGPanel {
                     VStack(alignment: .leading, spacing: 14) {
                         LabeledContent("Installierte App", value: updates.currentVersion)
+                        LabeledContent("Erforderlicher Dienst für diese App", value: AppVersion.requiredDaemon)
                         if let release = updates.release {
                             LabeledContent("Aktuelle Veröffentlichung", value: release.version)
+                        }
+                        if updates.isDownloading {
+                            ProgressView(value: Double(updates.downloadBytes), total: Double(max(1, updates.downloadTotal)))
+                            HStack {
+                                Text("\(ByteCountFormatter.string(fromByteCount: updates.downloadBytes, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: updates.downloadTotal, countStyle: .file))")
+                                    .font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                                Spacer()
+                                Button("Download abbrechen") { updates.cancelDownload() }
+                            }
                         }
                         HStack {
                             Button(updates.isChecking ? "Wird geprüft …" : "Nach Updates suchen") {

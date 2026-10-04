@@ -94,6 +94,21 @@ struct HistoryView: View {
                             }.frame(height: 260)
                         } else {
                             chart
+                            Text(chartSummary).font(.caption).foregroundStyle(.secondary)
+                                .accessibilityLabel("Zusammenfassung: " + chartSummary)
+                            HStack {
+                                Button { selectAdjacentPoint(offset: -1) } label: {
+                                    Label("Vorheriger Messpunkt", systemImage: "chevron.left")
+                                }
+                                .keyboardShortcut(.leftArrow, modifiers: [.option])
+                                .disabled(points.isEmpty || selectedPoint?.id == points.first?.id)
+                                Spacer()
+                                Button { selectAdjacentPoint(offset: 1) } label: {
+                                    Label("Nächster Messpunkt", systemImage: "chevron.right")
+                                }
+                                .keyboardShortcut(.rightArrow, modifiers: [.option])
+                                .disabled(points.isEmpty || selectedPoint?.id == points.last?.id)
+                            }.buttonStyle(.bordered).font(.caption)
                             if let point = selectedPoint {
                                 HStack {
                                     Text(point.time.formatted(date: .abbreviated, time: .shortened)).foregroundStyle(.secondary)
@@ -101,7 +116,7 @@ struct HistoryView: View {
                                     Text(String(format: "%.1f %@", point.value, metric.unit)).monospacedDigit()
                                 }.font(.caption)
                             } else {
-                                Text("Bewege den Zeiger über die Kurve, um einen Messpunkt zu sehen.").font(.caption).foregroundStyle(.secondary)
+                                Text("Wähle einen Messpunkt über die Kurve, die Buttons oder ⌥← / ⌥→.").font(.caption).foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -115,6 +130,31 @@ struct HistoryView: View {
                 }
             }.padding(28).frame(maxWidth: 880)
         }
+        .onChange(of: metric) { _, _ in selectedTime = nil }
+        .onChange(of: hours) { _, _ in selectedTime = nil }
+    }
+
+    private var chartSummary: String {
+        let samples = points
+        guard let first = samples.first, let last = samples.last,
+              let minimum = samples.map(\.value).min(), let maximum = samples.map(\.value).max() else {
+            return "Keine Messwerte verfügbar."
+        }
+        let from = first.time.formatted(date: .abbreviated, time: .shortened)
+        let until = last.time.formatted(date: .abbreviated, time: .shortened)
+        let range = String(format: "Minimum %.1f %@ · Maximum %.1f %@", minimum, metric.unit, maximum, metric.unit)
+        return "\(samples.count) Messpunkte von \(from) bis \(until). \(range)."
+    }
+
+    private func selectAdjacentPoint(offset: Int) {
+        let samples = points
+        guard !samples.isEmpty else { return }
+        guard let current = selectedPoint,
+              let index = samples.firstIndex(where: { $0.id == current.id }) else {
+            selectedTime = offset < 0 ? samples.last?.time : samples.first?.time
+            return
+        }
+        selectedTime = samples[min(max(index + offset, 0), samples.count - 1)].time
     }
 
     private var chart: some View {

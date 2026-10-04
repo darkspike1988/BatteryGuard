@@ -2,6 +2,7 @@ import Foundation
 import BatteryGuardShared
 import IOKit.ps
 import IOKit.pwr_mgt
+import CoreGraphics
 
 final class DaemonRunner: @unchecked Sendable {
     private let controller: BatteryController
@@ -12,6 +13,8 @@ final class DaemonRunner: @unchecked Sendable {
     private var powerConnection: io_connect_t = 0
     private var powerPort: IONotificationPortRef?
     private var powerNotifier: io_object_t = 0
+    private let configServer = ConfigServer()
+    private var configurationNotice: String?
 
     public init(controller: BatteryController = BatteryController(), dryRun: Bool = false, isOnce: Bool = false) {
         self.controller = controller
@@ -57,8 +60,8 @@ final class DaemonRunner: @unchecked Sendable {
             if let data = try? BGJSON.encoder().encode(defaultConfig) {
                 do {
                     try data.write(to: URL(fileURLWithPath: BGPaths.config), options: .atomic)
-                    chmod(BGPaths.config, 0o666)
-                    log("Standardkonfiguration \(BGPaths.config) angelegt (0666).")
+                    chmod(BGPaths.config, 0o644)
+                    log("Standardkonfiguration \(BGPaths.config) angelegt (0644).")
                 } catch {
                     if !isOnce {
                         logStderr("Hinweis: Konnte Konfigurationsdatei \(BGPaths.config) nicht schreiben: \(error.localizedDescription)")
@@ -69,12 +72,20 @@ final class DaemonRunner: @unchecked Sendable {
     }
 
     func loadConfig() -> BGConfig {
-        guard let decoded = try? BGConfigFile.read(at: URL(fileURLWithPath: BGPaths.config)) else {
+        do { return try BGConfigFile.read(at: URL(fileURLWithPath: BGPaths.config)) }
+        catch is DecodingError {
+            if !dryRun {
+                do {
+                    let recovery = try BGConfigRecovery.prepare()
+                    configurationNotice = recovery.message
+                    if let message = recovery.message { log(message) }
+                    return try BGConfigFile.read(at: URL(fileURLWithPath: BGPaths.config))
+                } catch { logStderr("Einstellungen konnten nicht wiederhergestellt werden: \(error.localizedDescription)") }
+            }
+        } catch { logStderr("Einstellungen nicht lesbar: \(error.localizedDescription)") }
             var fallback = BGConfig()
             fallback.enabled = false
             return fallback.sanitized()
-        }
-        return decoded.sanitized()
     }
 
     func writeStatus(_ status: BGStatus) {
@@ -141,8 +152,9 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.2.2"
+        status.daemonVersion = "0.3.0"
         status.updatedAt = Date()
+        status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
             ? "Schutz pausiert bis " + (storedConfig.pauseUntil?.formatted(date: .omitted, time: .shortened) ?? "")
             : decision.message
@@ -153,6 +165,8 @@ final class DaemonRunner: @unchecked Sendable {
 
     func runOnce() {
         ensureEnvironment()
+
+
         detectedSMCKeys = controller.smc.detectSupportedKeys()
         let status = tick()
 
@@ -194,9 +208,42 @@ final class DaemonRunner: @unchecked Sendable {
         }
     }
 
+    private func registerDisplayNotifications() {
+        let callback: CGDisplayReconfigurationCallBack = { _, flags, context in
+            guard !flags.contains(.beginConfigurationFlag), let context else { return }
+            let runner = Unmanaged<DaemonRunner>.fromOpaque(context).takeUnretainedValue()
+            // CoreGraphics may call from another thread. Serialize with power events
+            // and timer ticks, and query displays after reconfiguration has completed.
+            DispatchQueue.main.async { [weak runner] in
+                guard let runner else { return }
+                runner.log("Monitor-Konfiguration geändert – prüfe Netzteil-/Deckelschutz.")
+                runner.tick()
+            }
+        }
+        let result = CGDisplayRegisterReconfigurationCallback(callback, Unmanaged.passUnretained(self).toOpaque())
+        if result == .success {
+            log("Monitor-Benachrichtigungen registriert.")
+        } else {
+            logStderr("Monitor-Benachrichtigungen nicht verfügbar; regelmäßige Prüfung bleibt aktiv.")
+        }
+    }
+
     func startDaemon() {
         log("batteryguardd gestartet (dryRun: \(dryRun)).")
         ensureEnvironment()
+
+        if !dryRun {
+            do {
+                let recovery = try BGConfigRecovery.prepare()
+                configurationNotice = recovery.message
+                if let message = recovery.message { log(message) }
+                try configServer.start()
+                log("Sicherer Einstellungsdienst registriert.")
+            } catch {
+                configurationNotice = "Einstellungsdienst nicht verfügbar. Bitte den Dienst aktualisieren oder neu einrichten."
+                logStderr(configurationNotice! + " " + error.localizedDescription)
+            }
+        }
 
         detectedSMCKeys = controller.smc.detectSupportedKeys()
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
@@ -211,6 +258,7 @@ final class DaemonRunner: @unchecked Sendable {
         sigtermSource.setEventHandler { [weak self] in
             guard let self = self else { exit(0) }
             self.log("SIGTERM empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
+            self.configServer.stop()
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
@@ -221,6 +269,7 @@ final class DaemonRunner: @unchecked Sendable {
         sigintSource.setEventHandler { [weak self] in
             guard let self = self else { exit(0) }
             self.log("SIGINT empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
+            self.configServer.stop()
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
@@ -228,6 +277,7 @@ final class DaemonRunner: @unchecked Sendable {
         sigintSource.resume()
 
         registerSleepWakeNotifications()
+        registerDisplayNotifications()
 
         // Initialer Tick
         tick()
@@ -262,7 +312,16 @@ final class DaemonRunner: @unchecked Sendable {
 
 let args = ProcessInfo.processInfo.arguments
 
-if args.contains("--dump-keys") {
+if args.contains("--check-config-service") {
+    do {
+        _ = try BGConfigClient.read()
+        print("Sicherer Einstellungsdienst erreichbar; Benutzerprüfung erfolgreich.")
+        exit(0)
+    } catch {
+        fputs("\(error.localizedDescription)\n", stderr)
+        exit(1)
+    }
+} else if args.contains("--dump-keys") {
     // Diagnose: alle (oder per Präfix gefilterte) SMC-Keys ausgeben, nur lesend.
     let prefixes = args.drop(while: { $0 != "--dump-keys" }).dropFirst().filter { !$0.hasPrefix("--") }
     let smc = SMCClient.shared
@@ -290,6 +349,10 @@ if args.contains("--dump-keys") {
     exit(0)
 } else {
     let dryRun = args.contains("--dry-run")
+    guard dryRun || geteuid() == 0 else {
+        fputs("Der Hintergrunddienst benötigt Root-Rechte. Für lesende Diagnose --once verwenden.\n", stderr)
+        exit(1)
+    }
     let runner = DaemonRunner(dryRun: dryRun, isOnce: false)
     runner.startDaemon()
 }

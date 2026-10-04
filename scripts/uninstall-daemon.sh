@@ -50,6 +50,7 @@ fi
 # 3. LaunchDaemon beenden und entladen
 echo "--> Beende und entlade LaunchDaemon $SERVICE_LABEL..."
 launchctl bootout "system/${SERVICE_LABEL}" 2>/dev/null || launchctl bootout system "$PLIST_PATH" 2>/dev/null || true
+if [[ -S "$TARGET_DIR/config.sock" ]]; then rm -f "$TARGET_DIR/config.sock"; fi
 
 # 4. LaunchDaemon-Plist entfernen
 if [[ -f "$PLIST_PATH" ]]; then

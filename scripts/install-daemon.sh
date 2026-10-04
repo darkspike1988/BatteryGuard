@@ -59,6 +59,16 @@ fi
 
 echo "--> Verwende Quell-Binary: $DAEMON_SRC"
 
+# Refuse unsafe paths before stopping the current service or changing ownership.
+if [[ -L "$TARGET_DIR" ]] || [[ -e "$TARGET_DIR" && ! -d "$TARGET_DIR" ]]; then
+    echo "Fehler: Konfigurationsverzeichnis ist kein reguläres Verzeichnis." >&2
+    exit 1
+fi
+if [[ -L "$TARGET_DIR/config.json" ]] || [[ -e "$TARGET_DIR/config.json" && ! -f "$TARGET_DIR/config.json" ]]; then
+    echo "Fehler: Konfiguration ist keine reguläre Datei." >&2
+    exit 1
+fi
+
 # Vor dem Ersetzen stoppen: Der alte Dienst darf nicht mit der neuen Binary neu starten.
 launchctl bootout "system/${SERVICE_LABEL}" 2>/dev/null || launchctl bootout system "$PLIST_PATH" 2>/dev/null || true
 
@@ -78,8 +88,12 @@ mkdir -p "$TARGET_DIR"
 chown root:wheel "$TARGET_DIR"
 chmod 0755 "$TARGET_DIR"
 
-# Initiale Konfiguration mit Standardwerten anlegen (0666), falls noch nicht vorhanden
+# Root owns settings; authenticated IPC applies user changes.
 CONFIG_FILE="$TARGET_DIR/config.json"
+if [[ -L "$CONFIG_FILE" ]] || [[ -e "$CONFIG_FILE" && ! -f "$CONFIG_FILE" ]]; then
+    echo "Fehler: Konfiguration ist keine reguläre Datei." >&2
+    exit 1
+fi
 if [[ ! -f "$CONFIG_FILE" ]]; then
     echo "--> Erstelle Standard-Konfiguration in $CONFIG_FILE..."
     cat << 'EOF' > "$CONFIG_FILE"
@@ -93,7 +107,15 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
 }
 EOF
 fi
-chmod 0666 "$CONFIG_FILE"
+# A fresh inode also revokes writable descriptors held from the legacy 0666 file.
+# The old daemon has stopped; the new service has not started yet.
+CONFIG_STAGE=$(mktemp "$TARGET_DIR/.config-migration.XXXXXX")
+trap 'rm -f "$CONFIG_STAGE"' EXIT
+cat "$CONFIG_FILE" > "$CONFIG_STAGE"
+chown root:wheel "$CONFIG_STAGE"
+chmod 0644 "$CONFIG_STAGE"
+mv -f "$CONFIG_STAGE" "$CONFIG_FILE"
+trap - EXIT
 
 # 5. LaunchDaemon-Plist schreiben
 echo "--> Schreibe LaunchDaemon-Konfiguration nach $PLIST_PATH..."

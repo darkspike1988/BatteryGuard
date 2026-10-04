@@ -27,6 +27,27 @@ public struct ControllerDecision: Sendable, Equatable {
 }
 
 public enum ControllerLogic {
+    public static let heatRecoveryMarginCelsius = 2.0
+
+    private static func needsHeatProtection(config: BGConfig, battery: BatteryInfo,
+                                            previousDecision: ControllerDecision?) -> Bool {
+        guard config.heatProtectionCelsius > 0 else { return false }
+        let wasActive = previousDecision?.heatProtectionActive == true
+        guard let temperature = battery.temperatureCelsius, temperature.isFinite else {
+            // A temporarily missing sensor reading is not evidence of cooling.
+            return wasActive
+        }
+        let threshold = Double(config.heatProtectionCelsius)
+        return wasActive ? temperature > threshold - heatRecoveryMarginCelsius : temperature > threshold
+    }
+
+    private static func heatMessage(battery: BatteryInfo) -> String {
+        guard let temperature = battery.temperatureCelsius, temperature.isFinite else {
+            return "Hitzeschutz bleibt aktiv – Temperatur momentan nicht verfügbar"
+        }
+        return "Hitzeschutz aktiv: \(String(format: "%.1f", temperature))°C – Freigabe nach Abkühlung"
+    }
+
     /// Reine, testbare Regellogik-Funktion ohne Seiteneffekte
     public static func evaluate(
         config: BGConfig,
@@ -109,15 +130,13 @@ public enum ControllerLogic {
         }
 
         // 5. Hitzeschutz: temperatur > heatProtectionCelsius → Laden aus
-        if config.heatProtectionCelsius > 0,
-           let temp = battery.temperatureCelsius,
-           temp > Double(config.heatProtectionCelsius) {
+        if needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision) {
             return ControllerDecision(
                 state: .holding,
                 chargingEnabled: false,
                 adapterConnected: true,
                 resetChargeToFullOnce: false,
-                message: "Hitzeschutz aktiv: \(String(format: "%.1f", temp))°C > \(config.heatProtectionCelsius)°C",
+                message: heatMessage(battery: battery),
                 heatProtectionActive: true
             )
         }
@@ -222,12 +241,21 @@ public enum ControllerLogic {
             return normal(.disabled, "Batterieschutz deaktiviert", config.chargeToFullOnce && battery.percent >= 100)
         }
         // Hitzeschutz: lieber vom Akku laufen als heiß weiter laden
-        if config.heatProtectionCelsius > 0,
-           let temp = battery.temperatureCelsius,
-           temp > Double(config.heatProtectionCelsius), battery.percent > config.lowerLimit {
+        if needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision) {
+            // Once the reserve is reached, keep AC connected until cooling. Otherwise
+            // charging one percent would immediately disconnect it again while still hot.
+            let reserveReached = battery.percent <= config.lowerLimit
+                || (previousDecision?.heatProtectionActive == true && previousDecision?.adapterConnected == true)
+            if reserveReached {
+                return ControllerDecision(
+                    state: .charging, chargingEnabled: true, adapterConnected: true,
+                    message: "Akkureserve erreicht: Netzteil bleibt bis zur Abkühlung verbunden. Ohne separate Ladesperre kann Hitzeschutz das Laden nicht stoppen.",
+                    heatProtectionActive: true
+                )
+            }
             return ControllerDecision(
                 state: .discharging, chargingEnabled: false, adapterConnected: false,
-                message: "Hitzeschutz aktiv: \(String(format: "%.1f", temp))°C > \(config.heatProtectionCelsius)°C",
+                message: heatMessage(battery: battery),
                 heatProtectionActive: true
             )
         }
@@ -268,6 +296,7 @@ public final class BatteryController: @unchecked Sendable {
     private var lastAppliedCharging: Bool?
     private var lastAppliedAdapter: Bool?
     private var lastAppliedMagSafeLED: SMCClient.MagSafeColor?
+    private var lastHardwareCheckUptime: TimeInterval?
     private let lock = NSLock()
 
     public init(smc: SMCClient = .shared) {
@@ -282,6 +311,26 @@ public final class BatteryController: @unchecked Sendable {
     ) -> ControllerDecision {
         lock.lock()
         defer { lock.unlock() }
+
+        let uptime = ProcessInfo.processInfo.systemUptime
+        if !dryRun && (lastHardwareCheckUptime.map { uptime - $0 >= 60 } ?? true) {
+            lastHardwareCheckUptime = uptime
+            if smc.hasChargeControl, let expected = lastAppliedCharging {
+                let result = smc.verifyChargingEnabled(expected)
+                if result != .matches {
+                    // Keep the logical decision: hardware drift must not reset hysteresis.
+                    lastAppliedCharging = nil
+                    logger?("SMC: Lade-Readback \(result == .drift ? "weicht ab" : "nicht verifizierbar") – Zielzustand wird erneut geprüft.")
+                }
+            }
+            if smc.hasDischargeControl, let expected = lastAppliedAdapter {
+                let result = smc.verifyAdapterConnected(expected)
+                if result != .matches {
+                    lastAppliedAdapter = nil
+                    logger?("SMC: Netzteil-Readback \(result == .drift ? "weicht ab" : "nicht verifizierbar") – Zielzustand wird erneut geprüft.")
+                }
+            }
+        }
 
         let decision = ControllerLogic.evaluate(
             config: config,
@@ -369,6 +418,7 @@ public final class BatteryController: @unchecked Sendable {
         lastAppliedCharging = nil
         lastAppliedAdapter = nil
         lastAppliedMagSafeLED = nil
+        lastHardwareCheckUptime = nil
     }
 
     public func restoreNormal(logger: ((String) -> Void)? = nil) {

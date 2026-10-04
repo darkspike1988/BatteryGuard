@@ -42,7 +42,7 @@ struct PopoverContentView: View {
                 HStack {
                     Text("Ladeprofil").font(.callout.weight(.medium))
                     Spacer()
-                    Text(configStore.config.mode == .native ? "macOS" : "\(configStore.config.upperLimit) % Limit")
+                    Text(configStore.config.mode == .native || statusStore.status.usesNativeDesktopFallback ? "macOS" : "\(configStore.config.upperLimit) % Limit")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Menu {
@@ -82,7 +82,6 @@ struct PopoverContentView: View {
                 Button {
                     if configStore.config.effective(at: Date()).chargeToFullOnce {
                         configStore.cancelFullCharge()
-                        configStore.config.travelReadyAt = nil
                     } else { configStore.startFullCharge() }
                 } label: {
                     Label(configStore.config.effective(at: Date()).chargeToFullOnce ? "Vollladen beenden" : "Einmal voll laden", systemImage: "bolt")
@@ -103,7 +102,7 @@ struct PopoverContentView: View {
             }
             HStack {
                 Button(configStore.config.enabled && configStore.config.mode != .native
-                       && !configStore.config.isPaused(at: Date()) ? "Schutz pausieren" : "Schutz starten") {
+                       && !configStore.config.isPaused(at: Date()) ? "Schutz ausschalten" : "Schutz einschalten") {
                     let running = configStore.config.enabled && configStore.config.mode != .native
                         && !configStore.config.isPaused(at: Date())
                     configStore.setProtectionEnabled(!running)

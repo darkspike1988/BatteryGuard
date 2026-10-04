@@ -28,16 +28,22 @@ public enum BGHistory {
     public static let sampleInterval: TimeInterval = 60
 
     public static func recording(_ status: BGStatus, in samples: [BGHistorySample], now: Date) -> [BGHistorySample] {
-        // Keine veralteten, zukünftigen oder doppelten Messungen aufzeichnen.
+        // Bereinigen, bevor ein alter Zeitstempel nach einer Uhrkorrektur neue Messungen blockiert.
+        var result = recentSamples(samples, now: now)
         let age = now.timeIntervalSince(status.updatedAt)
-        guard age >= -5, age <= 60 else { return samples }
-        if let last = samples.last, status.updatedAt.timeIntervalSince(last.timestamp) < sampleInterval {
-            return samples
+        guard age >= -5, age <= 60 else { return result }
+        if let last = result.last, status.updatedAt.timeIntervalSince(last.timestamp) < sampleInterval {
+            return result
         }
-        let cutoff = now.addingTimeInterval(-retention)
-        var result = samples.filter { $0.timestamp >= cutoff }
         result.append(BGHistorySample(status: status))
         return Array(result.suffix(10_081))
+    }
+
+    public static func recentSamples(_ samples: [BGHistorySample], now: Date) -> [BGHistorySample] {
+        let cutoff = now.addingTimeInterval(-retention)
+        let futureLimit = now.addingTimeInterval(5)
+        return Array(samples.filter { $0.timestamp >= cutoff && $0.timestamp <= futureLimit }
+            .sorted { $0.timestamp < $1.timestamp }.suffix(10_081))
     }
 
     public static func csv(_ samples: [BGHistorySample]) -> String {

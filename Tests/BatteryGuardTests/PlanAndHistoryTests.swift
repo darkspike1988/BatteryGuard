@@ -73,6 +73,16 @@ struct PlanAndHistoryTests {
         #expect(legacy.pauseUntil == nil && legacy.travelReadyAt == nil && legacy.fullChargeUntil == nil)
     }
 
+    @Test func unknownExplicitModeFallsBackToObservation() throws {
+        let unknown = try BGJSON.decoder().decode(BGConfig.self, from: Data(#"{"mode":"future-active-mode"}"#.utf8))
+        #expect(unknown.mode == .native)
+        let legacy = try BGJSON.decoder().decode(BGConfig.self, from: Data("{}".utf8))
+        #expect(legacy.mode == .auto)
+        #expect(throws: (any Error).self) {
+            try BGJSON.decoder().decode(BGConfig.self, from: Data(#"{"mode":123}"#.utf8))
+        }
+    }
+
     @Test func historyRejectsStaleFutureAndDuplicates() {
         var s = BGStatus(); s.updatedAt = now
         let once = BGHistory.recording(s, in: [], now: now)

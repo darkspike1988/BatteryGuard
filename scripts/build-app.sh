@@ -83,9 +83,9 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.3</string>
+    <string>0.3.0</string>
     <key>CFBundleVersion</key>
-    <string>0.2.3</string>
+    <string>0.3.0</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>
@@ -102,9 +102,16 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
 </plist>
 EOF
 
-# Ad-hoc Codesigning
-echo "==> Signiere App-Bundle ad-hoc..."
-codesign --force --deep --sign - "$APP_BUNDLE"
+# Sign nested executable first; optional Developer ID path for notarized releases.
+SIGN_IDENTITY="${BGUARD_SIGN_IDENTITY:--}"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+    codesign --force --sign - "$RESOURCES_DIR/batteryguardd"
+    codesign --force --sign - "$APP_BUNDLE"
+else
+    codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$RESOURCES_DIR/batteryguardd"
+    codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP_BUNDLE"
+fi
+codesign --verify --deep --strict "$APP_BUNDLE"
 
 # Optionales Distributionsarchiv erstellen
 ZIP_FILE="$DIST_DIR/B-Guard.zip"

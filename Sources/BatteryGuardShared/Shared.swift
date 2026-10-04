@@ -1,10 +1,10 @@
 import Foundation
 
 /// Gemeinsamer Vertrag zwischen Menüleisten-App (User) und Daemon (root).
-/// Kommunikation läuft über zwei JSON-Dateien – kein XPC/Signing nötig.
+/// Status und Konfiguration sind lesbar; Änderungen laufen über authentifizierte lokale IPC.
 public enum BGPaths {
     public static let directory = "/Library/Application Support/BatteryGuard"
-    /// Von der App geschrieben (0666), vom Daemon gelesen + validiert.
+    /// Root-eigen (0644); Änderungen nur durch den Einstellungsdienst.
     public static let config = directory + "/config.json"
     /// Vom Daemon geschrieben (0644), von der App gelesen.
     public static let status = directory + "/status.json"
@@ -62,7 +62,11 @@ public struct BGConfig: Codable, Equatable, Sendable {
         heatProtectionCelsius = try c.decodeIfPresent(Int.self, forKey: .heatProtectionCelsius) ?? d.heatProtectionCelsius
         chargeToFullOnce = try c.decodeIfPresent(Bool.self, forKey: .chargeToFullOnce) ?? d.chargeToFullOnce
         magsafeLed = try c.decodeIfPresent(Bool.self, forKey: .magsafeLed) ?? d.magsafeLed
-        mode = (try? c.decodeIfPresent(BGMode.self, forKey: .mode)) ?? d.mode
+        // Missing legacy values retain their default. Explicit unknown modes must
+        // never silently enable active adapter switching.
+        if let rawMode = try c.decodeIfPresent(String.self, forKey: .mode) {
+            mode = BGMode(rawValue: rawMode) ?? .native
+        } else { mode = d.mode }
         pauseUntil = try c.decodeIfPresent(Date.self, forKey: .pauseUntil)
         travelReadyAt = try c.decodeIfPresent(Date.self, forKey: .travelReadyAt)
         fullChargeUntil = try c.decodeIfPresent(Date.self, forKey: .fullChargeUntil)
@@ -90,6 +94,7 @@ public enum BGChargeState: String, Codable, Sendable {
 }
 
 public struct BGStatus: Codable, Equatable, Sendable {
+    public var configurationNotice: String? = nil
     /// Nur lesend erkannter nativer macOS-SMC-Grenzwert, falls verfügbar.
     public var nativeChargeLimit: Int? = nil
     public var percent: Int = 0

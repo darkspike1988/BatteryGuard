@@ -79,4 +79,59 @@ struct UpdateTests {
         #expect(!store.updateAvailable)
         #expect(!store.isChecking)
     }
+
+    @Test func cancellationDiscardsCompletedTemporaryFileWithoutOpeningIt() async throws {
+        let data = try fixture()
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        try Data("abc".utf8).write(to: temporary)
+        let gate = DownloadGate()
+        let store = UpdateStore(installedVersion: "0.2.3", preferences: preferences(), fetch: { data },
+            downloadFile: { url, _, delegate in
+                delegate.report(2)
+                await gate.wait()
+                return (temporary, HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            })
+        await store.check()
+        let task = Task { await store.downloadAndOpen() }
+        while !(await gate.started) { await Task.yield() }
+        #expect(store.isDownloading)
+        store.cancelDownload()
+        await gate.release()
+        await task.value
+        #expect(!store.isDownloading)
+        #expect(!store.isError)
+        #expect(store.message == "Download abgebrochen.")
+        #expect(store.downloadedURL == nil)
+        #expect(!FileManager.default.fileExists(atPath: temporary.path))
+    }
+
+    @Test func checksumFailureDiscardsTemporaryDownload() async throws {
+        let data = try fixture()
+        let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        try Data("abc".utf8).write(to: temporary)
+        let store = UpdateStore(installedVersion: "0.2.3", preferences: preferences(), fetch: { data },
+            downloadFile: { url, _, _ in
+                (temporary, HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            })
+        await store.check()
+        await store.downloadAndOpen()
+        #expect(store.isError)
+        #expect(store.downloadedURL == nil)
+        #expect(!store.isDownloading)
+        #expect(!FileManager.default.fileExists(atPath: temporary.path))
+    }
+}
+
+private actor DownloadGate {
+    private(set) var started = false
+    private var continuation: CheckedContinuation<Void, Never>?
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            started = true
+        }
+    }
+    func release() { continuation?.resume(); continuation = nil }
 }

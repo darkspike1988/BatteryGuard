@@ -20,6 +20,12 @@ enum DesignPreview {
             status.status.nativeChargeLimit = 80
             status.status.state = .disabled
         }
+        if args.contains("--desktop") {
+            config.activateProfile(.desk)
+            status.status.nativeChargeLimit = 80
+            status.status.state = .disabled
+            status.status.message = "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit."
+        }
         if args.contains("--offline") { status.isDaemonActive = false }
         if args.contains("--travel") { config.scheduleTravel(readyAt: Date().addingTimeInterval(12 * 3600)) }
         if args.contains("--warm") {
@@ -36,10 +42,10 @@ enum DesignPreview {
             let updatePreferences = UserDefaults(suiteName: "BGuardPreview.\(UUID().uuidString)")!
             let updater = UpdateStore(preferences: updatePreferences)
             if args.contains("--update-available") {
-                let json = #"{"tag_name":"v0.3.0","body":"Ladeprofile verbessert.\nSchlaf-/Aufwachverhalten robuster.\nNeue Möglichkeiten für deinen Alltag.","draft":false,"prerelease":false,"assets":[]}"#
+                let json = #"{"tag_name":"v0.4.0","body":"Ladeprofile verbessert.\nSchlaf-/Aufwachverhalten robuster.\nNeue Möglichkeiten für deinen Alltag.","draft":false,"prerelease":false,"assets":[]}"#
                 updater.release = try JSONDecoder().decode(GitHubRelease.self, from: Data(json.utf8))
                 updater.checkedAt = Date()
-                updater.message = "B-Guard 0.3.0 ist verfügbar."
+                updater.message = "B-Guard 0.4.0 ist verfügbar."
             }
             try renderView(DashboardView(statusStore: status, configStore: config, historyStore: history, services: services, updates: updater)
                 .environment(\.colorScheme, theme), size: NSSize(width: args.contains("--small") ? 780 : 980, height: args.contains("--small") ? 600 : 1060),

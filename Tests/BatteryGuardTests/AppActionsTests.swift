@@ -113,10 +113,46 @@ struct AppActionsTests {
         status.status.daemonVersion = "0.2.0"
         #expect(status.supportsChargingPlans)
         #expect(status.daemonNeedsUpdate)
-        status.status.daemonVersion = "0.2.2"
+        status.status.daemonVersion = AppVersion.requiredDaemon
         #expect(!status.daemonNeedsUpdate)
         status.isDaemonActive = false
         #expect(!status.supportsChargingPlans)
+    }
+
+    @Test func cancellingFullChargePreservesFutureTravelAndRemovesActiveTravel() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let now = Date()
+        let future = now.addingTimeInterval(12 * 3600)
+        store.scheduleTravel(readyAt: future)
+        store.startFullCharge()
+        store.cancelFullCharge(at: now)
+        #expect(!store.config.chargeToFullOnce)
+        #expect(store.config.fullChargeUntil == nil)
+        #expect(store.config.travelReadyAt == future)
+        store.flushPendingSave()
+        let persistedFuture = try #require(BGConfigFile.read(at: directory.appendingPathComponent("config.json")).travelReadyAt)
+        #expect(abs(persistedFuture.timeIntervalSince(future)) < 1)
+
+        store.scheduleTravel(readyAt: now.addingTimeInterval(3600))
+        #expect(store.config.effective(at: now).chargeToFullOnce)
+        store.cancelFullCharge(at: now)
+        #expect(store.config.travelReadyAt == nil)
+        #expect(!store.config.effective(at: now).chargeToFullOnce)
+        store.flushPendingSave()
+        #expect(try BGConfigFile.read(at: directory.appendingPathComponent("config.json")).travelReadyAt == nil)
+    }
+
+    @Test func desktopFallbackRecognizesActualDaemonDecision() {
+        var status = BGStatus()
+        status.state = .disabled
+        status.message = "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit."
+        #expect(status.usesNativeDesktopFallback)
+        status.state = .unsupported
+        #expect(!status.usesNativeDesktopFallback)
+        status.state = .disabled
+        status.message = "Batterieschutz deaktiviert"
+        #expect(!status.usesNativeDesktopFallback)
     }
 
     @Test func previewActionsNeverWrite() throws {

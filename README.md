@@ -1,4 +1,4 @@
-# B-Guard 0.2.3
+# B-Guard 0.3.0
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
@@ -18,7 +18,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Auswertung:** Beobachtete Zeit, Zeit ab 90 % und Zeit ab 40 °C sowie höchste gemessene Temperatur. Keine erfundenen Verschleiß- oder Lebensdauerprognosen.
 - **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
 - **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren B-Guard-Zielen und verweist auf die Systemeinstellungen.
-- **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick.
+- **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
 - **Mitteilungen:** Niedriger Akkustand, erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 
 ## Oberfläche
@@ -49,9 +49,11 @@ Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht a
 2. DMG öffnen und **B-Guard auf „Programme“ ziehen**.
 3. B-Guard aus Programme öffnen und **„B-Guard einrichten“** wählen. macOS fragt einmal nach einem Administratorpasswort für den Hintergrunddienst.
 
-Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz starten/pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz pausieren“ gibt das Laden frei, bis der Schutz wieder gestartet wird.
+Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz ein-/ausschalten, zeitlich pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz ausschalten“ gibt das Laden bis zur erneuten Aktivierung frei. Zeitliche Pausen enden automatisch.
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
+
+**Umstieg auf 0.3.0:** Nach dem Ersetzen der App den Hintergrunddienst in den Einstellungen aktualisieren. Bis dahin können neue Einstellungen nicht gespeichert werden; der bisherige Dienst führt seinen gespeicherten Stand weiter aus. Das Dienstupdate bewahrt bestehende Einstellungen und setzt die neuen Dateirechte.
 
 **Updates:** App beenden, neue App nach Programme ziehen und ersetzen, wieder öffnen. Den Hintergrunddienst bei einem angezeigten Versionshinweis in den Einstellungen aktualisieren. Konfiguration und Verlauf bleiben erhalten. Updates & Neuigkeiten erreichst du direkt aus der Menüleiste oder den Einstellungen.
 
@@ -73,18 +75,22 @@ Erstellt App, ZIP, DMG und SHA-256-Prüfsumme unter `dist/`. Die DMG enthält di
 .build/debug/BatteryGuard --render-preview /tmp/B-GuardDark --dark
 ```
 
-Weitere Renderingzustände: `--native`, `--offline`, `--travel`, `--warm`, `--empty-history`, `--small`.
+Weitere Renderingzustände: `--desktop`, `--native`, `--offline`, `--travel`, `--warm`, `--empty-history`, `--small`.
 
 ## Daten und Betrieb
 
-- Konfiguration und Dienststatus: `/Library/Application Support/BatteryGuard/`
+- Konfiguration und Dienststatus: `/Library/Application Support/BatteryGuard/` (root-eigen, 0644). Änderungen übernimmt der lokale Einstellungsdienst nach Benutzerprüfung.
 - Benutzerverlauf: `~/Library/Application Support/BatteryGuard/history.json` (0600, Verzeichnis 0700)
 - Keine Cloud für Akkuwerte, kein Konto, keine Telemetrie. Automatische Updateprüfungen kontaktieren GitHub höchstens täglich; abschaltbar. Manuelle Prüfungen und Downloads kontaktieren ebenfalls GitHub.
 - Der Root-Dienst bleibt beim Beenden der App aktiv, einschließlich Zeitplänen. Die Verlaufsaufzeichnung endet.
 - Autostart und Dock-Sichtbarkeit lassen sich in den Einstellungen ändern.
 - SMC-Steuerung verwendet undokumentierte Hardware-Schlüssel. Unbekannte oder abgelehnte Schreibvorgänge werden als Fehler angezeigt.
 
-App und Dienst lesen und ändern die Konfiguration unter einer gemeinsamen Dateisperre; lokale Änderungen werden feldweise mit aktuellen Dienständerungen zusammengeführt. Vor dem Systemschlaf wird die Steuerung freigegeben, nach dem Aufwachen neu geprüft. Authentifizierte IPC bleibt ein Verbesserungsfeld; siehe [Review](docs/review-2026-10-03.md). Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
+App und Dienst lesen die Konfiguration unter einer gemeinsamen Dateisperre. Änderungen laufen über einen lokalen Unix-Socket: Der Dienst prüft die tatsächliche Prozess-UID und akzeptiert nur root oder den aktuellen macOS-Konsolenbenutzer. Die App prüft ihrerseits, dass der Dienst root ist. Lokale Änderungen werden feldweise mit aktuellen Dienständerungen zusammengeführt; andere lokale Benutzer erhalten keine Schreibfreigabe. Beim schnellen Benutzerwechsel kann die zuvor aktive Sitzung keine Änderungen mehr speichern.
+
+Der Dienst sichert gültige Einstellungen vor Änderungen. Bei beschädigtem JSON bleiben die Originalbytes in einer Sicherungsdatei erhalten; ein gültiger vorheriger Stand oder Standardwerte werden mit ausgeschaltetem Schutz wiederhergestellt. Prüfe die Einstellungen vor erneuter Aktivierung. Beschädigte Verlaufsdateien werden ebenfalls gesichert, anschließend beginnt die Aufzeichnung neu.
+
+Vor dem Systemschlaf wird die Steuerung freigegeben, nach dem Aufwachen neu geprüft. Monitoränderungen lösen eine sofortige erneute Prüfung aus. Bekannte Hardware-Schalter werden ungefähr jede Minute nachgelesen; nicht verifizierbare Zustände werden nicht als Erfolg gewertet. Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
 
 ## Entfernen
 
@@ -100,3 +106,9 @@ sudo ./scripts/uninstall-daemon.sh
 MIT. Hardware-Erkenntnisse der Community: [actuallymentor/battery](https://github.com/actuallymentor/battery), [charlie0129/batt](https://github.com/charlie0129/batt) und [mhaeuser/Battery-Toolkit](https://github.com/mhaeuser/Battery-Toolkit). Der Anwendungscode ist eine eigenständige Swift-Implementierung.
 
 Designreferenz: [Apple Human Interface Guidelines für macOS](https://developer.apple.com/design/human-interface-guidelines/designing-for-macos/). Native macOS-Funktionen: [Apple Support zum Ladelimit](https://support.apple.com/en-au/102338).
+
+## Signierte Veröffentlichung vorbereiten
+
+`scripts/build-notarized.sh` unterstützt Developer-ID-Signierung mit Hardened Runtime, Notarisierung und angehefteten Tickets für App und DMG. Dafür müssen `BGUARD_SIGN_IDENTITY` und `BGUARD_NOTARY_PROFILE` auf eine vorhandene Developer-ID-Application-Identität und ein zuvor eingerichtetes notarytool-Keychain-Profil verweisen. Zugangsdaten bleiben im Schlüsselbund. Ohne diese Voraussetzungen bleibt `build-dmg.sh` bei der ad-hoc signierten Community-Version.
+
+Der notarisierten Pfad ist vorbereitet, aber mangels Developer-ID-Zertifikat auf diesem Mac noch nicht durchgehend geprüft. [Apple zur Notarisierung](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).

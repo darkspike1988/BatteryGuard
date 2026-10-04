@@ -279,6 +279,51 @@ public final class SMCClient: @unchecked Sendable {
         return keyExists("CHIE") || keyExists("CH0J") || keyExists("CH0I")
     }
 
+    public enum ControlReadback: Equatable, Sendable {
+        case matches, drift, unavailable
+    }
+
+    /// Only decode the exact register layouts already used by our setters.
+    public static func verifyControlRegister(key: String, size: UInt32, bytes: [UInt8],
+                                             expectedEnabled: Bool) -> ControlReadback {
+        let enabled: [UInt8]
+        let disabled: [UInt8]
+        switch key {
+        case "CHTE": enabled = [0, 0, 0, 0]; disabled = [1, 0, 0, 0]
+        case "CH0B", "CH0C": enabled = [0]; disabled = [2]
+        case "CHIE": enabled = [0]; disabled = [8]
+        case "CH0J", "CH0I": enabled = [0]; disabled = [1]
+        default: return .unavailable
+        }
+        guard size == enabled.count, bytes.count == enabled.count,
+              bytes == enabled || bytes == disabled else { return .unavailable }
+        return bytes == (expectedEnabled ? enabled : disabled) ? .matches : .drift
+    }
+
+    private func verifyRegister(_ key: String, expectedEnabled: Bool) -> ControlReadback {
+        guard let value = readKey(key) else { return .unavailable }
+        return Self.verifyControlRegister(key: key, size: value.size, bytes: value.bytes,
+                                          expectedEnabled: expectedEnabled)
+    }
+
+    public func verifyChargingEnabled(_ expected: Bool) -> ControlReadback {
+        if keyExists("CHTE") { return verifyRegister("CHTE", expectedEnabled: expected) }
+        guard keyExists("CH0B") else { return .unavailable }
+        let primary = verifyRegister("CH0B", expectedEnabled: expected)
+        guard keyExists("CH0C") else { return primary }
+        let secondary = verifyRegister("CH0C", expectedEnabled: expected)
+        // Both charge registers must be readable and agree with the applied target.
+        if primary == .unavailable || secondary == .unavailable { return .unavailable }
+        return primary == .matches && secondary == .matches ? .matches : .drift
+    }
+
+    public func verifyAdapterConnected(_ expected: Bool) -> ControlReadback {
+        for key in ["CHIE", "CH0J", "CH0I"] where keyExists(key) {
+            return verifyRegister(key, expectedEnabled: expected)
+        }
+        return .unavailable
+    }
+
     /// Laden ein- oder ausschalten
     /// CHTE (4 Byte): aus = 01 00 00 00, an = 00 00 00 00
     /// CH0B / CH0C (1 Byte): aus = 02, an = 00

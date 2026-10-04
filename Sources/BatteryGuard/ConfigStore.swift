@@ -131,9 +131,12 @@ final class ConfigStore: Sendable {
         config = next
     }
 
-    func cancelFullCharge() {
-        config.chargeToFullOnce = false
-        config.fullChargeUntil = nil
+    func cancelFullCharge(at now: Date = Date()) {
+        var next = config
+        next.chargeToFullOnce = false
+        next.fullChargeUntil = nil
+        if next.isTravelCharging(at: now) { next.travelReadyAt = nil }
+        config = next
     }
 
     func scheduleTravel(readyAt: Date) {

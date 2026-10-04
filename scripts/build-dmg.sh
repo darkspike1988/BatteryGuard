@@ -23,13 +23,18 @@ Kein Terminal und kein separates Installationsskript erforderlich.
 Updates: B-Guard beenden, die App in Programme ersetzen und wieder öffnen.
 Den Hintergrunddienst bei Bedarf in den Einstellungen aktualisieren.
 
+Voraussetzungen: Apple Silicon, macOS 14 oder neuer.
+TEXT
+if [[ "${BGUARD_NOTARIZED:-0}" != "1" ]]; then
+cat >> "$STAGING/Installation.txt" <<'TEXT'
+
 Diese Community-Version ist ad-hoc signiert, aber nicht notarisiert.
 Wenn macOS die App blockiert: nach dem Öffnungsversuch in Systemeinstellungen >
 Datenschutz & Sicherheit „Dennoch öffnen“ auswählen, sofern du dieser Quelle vertraust.
 https://support.apple.com/102445
-
-Voraussetzungen: Apple Silicon, macOS 14 oder neuer.
 TEXT
+fi
+
 OUTPUT="$PROJECT_DIR/dist/B-Guard-$VERSION-arm64.dmg"
 hdiutil create -volname "B-Guard" -srcfolder "$STAGING" -format UDZO -ov "$OUTPUT"
 hdiutil verify "$OUTPUT"

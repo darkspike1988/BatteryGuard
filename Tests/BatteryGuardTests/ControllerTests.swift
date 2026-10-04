@@ -49,6 +49,72 @@ struct ControllerTests {
         #expect(cooled.chargingEnabled)
     }
 
+    @Test func heatProtectionHasCoolingHysteresisInBothModes() {
+        for mode in [BGMode.auto, .pendulum] {
+            var config = BGConfig(); config.mode = mode; config.heatProtectionCelsius = 40
+            let hot = decision(config, percent: 60, temperature: 40.1)
+            #expect(hot.heatProtectionActive)
+            let threshold = decision(config, percent: 60, temperature: 40, previous: hot)
+            #expect(threshold.heatProtectionActive)
+            let almostCool = decision(config, percent: 60, temperature: 38.1, previous: threshold)
+            #expect(almostCool.heatProtectionActive)
+            let cool = decision(config, percent: 60, temperature: 38, previous: almostCool)
+            #expect(!cool.heatProtectionActive)
+            #expect(cool.adapterConnected && cool.chargingEnabled)
+            // Once released, warming below the activation threshold must not reactivate it.
+            #expect(!decision(config, percent: 60, temperature: 39.9, previous: cool).heatProtectionActive)
+        }
+    }
+
+    @Test func pendulumHeatReserveStaysConnectedUntilCooling() {
+        var config = BGConfig(); config.mode = .pendulum; config.heatProtectionCelsius = 40
+        let hot = decision(config, percent: 21, temperature: 45)
+        #expect(!hot.adapterConnected)
+        let reserve = decision(config, percent: 20, temperature: 45, plugged: false, previous: hot)
+        #expect(reserve.adapterConnected && reserve.heatProtectionActive)
+        let recovering = decision(config, percent: 21, temperature: 45, previous: reserve)
+        #expect(recovering.adapterConnected && recovering.heatProtectionActive)
+        #expect(decision(config, percent: 60, temperature: 39, previous: recovering).adapterConnected)
+        let cool = decision(config, percent: 60, temperature: 38, previous: recovering)
+        #expect(cool.adapterConnected && !cool.heatProtectionActive)
+        // A new heat episode above the reserve can disconnect again.
+        #expect(!decision(config, percent: 60, temperature: 45, previous: cool).adapterConnected)
+    }
+
+    @Test func sensorLossDoesNotCancelActiveHeatProtection() {
+        var config = BGConfig(); config.heatProtectionCelsius = 40
+        let hot = decision(config, percent: 60, temperature: 45)
+        var battery = BatteryInfo(); battery.percent = 60; battery.pluggedIn = true
+        let missing = ControllerLogic.evaluate(config: config, battery: battery, previousDecision: hot,
+                                               hasChargeControl: true, hasDischargeControl: true)
+        #expect(missing.heatProtectionActive && !missing.chargingEnabled)
+        config.heatProtectionCelsius = 0
+        #expect(!decision(config, percent: 60, previous: missing).heatProtectionActive)
+        // A missing sensor alone must not start a new thermal episode.
+        config.heatProtectionCelsius = 40
+        #expect(!ControllerLogic.evaluate(config: config, battery: battery, previousDecision: nil,
+                                          hasChargeControl: true, hasDischargeControl: true).heatProtectionActive)
+    }
+
+    @Test func controlRegisterReadbackRecognizesOnlyKnownLayouts() {
+        let layouts: [(String, [UInt8], [UInt8])] = [
+            ("CHTE", [0, 0, 0, 0], [1, 0, 0, 0]),
+            ("CH0B", [0], [2]), ("CH0C", [0], [2]),
+            ("CHIE", [0], [8]), ("CH0J", [0], [1]), ("CH0I", [0], [1])
+        ]
+        for (key, on, off) in layouts {
+            let size = UInt32(on.count)
+            #expect(SMCClient.verifyControlRegister(key: key, size: size, bytes: on, expectedEnabled: true) == .matches)
+            #expect(SMCClient.verifyControlRegister(key: key, size: size, bytes: off, expectedEnabled: false) == .matches)
+            #expect(SMCClient.verifyControlRegister(key: key, size: size, bytes: on, expectedEnabled: false) == .drift)
+            #expect(SMCClient.verifyControlRegister(key: key, size: size, bytes: off, expectedEnabled: true) == .drift)
+            #expect(SMCClient.verifyControlRegister(key: key, size: size + 1, bytes: on, expectedEnabled: true) == .unavailable)
+            #expect(SMCClient.verifyControlRegister(key: key, size: size, bytes: [], expectedEnabled: true) == .unavailable)
+            #expect(SMCClient.verifyControlRegister(key: key, size: size, bytes: Array(repeating: 255, count: on.count), expectedEnabled: true) == .unavailable)
+        }
+        #expect(SMCClient.verifyControlRegister(key: "NEWK", size: 1, bytes: [0], expectedEnabled: true) == .unavailable)
+    }
+
     @Test func disabledAndNativeRestorePower() {
         var config = BGConfig(); config.enabled = false
         let off = ControllerDecision(state: .discharging, chargingEnabled: false, adapterConnected: false)

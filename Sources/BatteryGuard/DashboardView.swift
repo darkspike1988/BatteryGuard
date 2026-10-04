@@ -78,10 +78,10 @@ struct OverviewView: View {
                         BatteryHeroView(status: statusStore.status, config: configStore.config, active: statusStore.isDaemonActive)
                         Spacer(minLength: 0)
                         VStack(alignment: .trailing, spacing: 9) {
-                            Text("LADEZIEL").font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(.secondary)
-                            Text(configStore.config.mode == .native ? statusStore.status.nativeChargeLimit.map { "\($0) %" } ?? "macOS" : "\(configStore.config.upperLimit) %")
+                            Text(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? "MACOS-LIMIT" : "LADEZIEL").font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(.secondary)
+                            Text(configStore.config.mode == .native || (statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback) ? statusStore.status.nativeChargeLimit.map { "\($0) %" } ?? "macOS" : "\(configStore.config.upperLimit) %")
                                 .font(.system(size: 28, weight: .light)).monospacedDigit()
-                            Text(profileName).font(.caption).foregroundStyle(.secondary)
+                            Text(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? "Profilziel: \(configStore.config.upperLimit) %" : profileName).font(.caption).foregroundStyle(.secondary)
                         }.frame(minWidth: 86)
                     }
                 }
@@ -99,6 +99,10 @@ struct OverviewView: View {
                         Label("Aktualisiere den Hintergrunddienst in den Einstellungen, damit die aktuellen Funktionen und Fehlerkorrekturen aktiv sind.", systemImage: "arrow.down.circle")
                             .font(.callout).foregroundStyle(.secondary)
                     }
+                }
+                if statusStore.isDaemonActive, let notice = statusStore.status.configurationNotice {
+                    Label(notice, systemImage: "exclamationmark.triangle")
+                        .font(.callout).foregroundStyle(.orange)
                 }
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
@@ -150,6 +154,9 @@ struct OverviewView: View {
     }
 
     private var insight: String {
+        if statusStore.status.usesNativeDesktopFallback {
+            return "Bei externem Monitor oder geschlossenem Deckel bleibt das Netzteil verbunden. macOS steuert das Laden; das B-Guard-Profilziel wird dabei nicht erzwungen."
+        }
         if let t = statusStore.status.temperatureCelsius, t >= 40 {
             return "Der Akku ist warm. Prüfe Hitzeschutz und Belüftung, bevor du länger lädst."
         }
@@ -221,7 +228,6 @@ struct ChargingActionsView: View {
                     Button {
                         if fullActive {
                             configStore.cancelFullCharge()
-                            if configStore.config.isTravelCharging(at: Date()) { configStore.config.travelReadyAt = nil }
                         } else { configStore.startFullCharge() }
                     } label: {
                         Label(fullActive ? "Vollladen beenden" : "Jetzt auf 100 % laden", systemImage: "bolt")

@@ -25,6 +25,11 @@ struct BGSectionHeading: View {
 }
 
 extension BGStatus {
+    /// Older daemons expose their desktop fallback through this stable decision message.
+    var usesNativeDesktopFallback: Bool {
+        state == .disabled && message?.hasPrefix("Monitor-/Deckelschutz:") == true
+    }
+
     func displayTitle(active: Bool, config: BGConfig) -> String {
         guard active else { return "Keine Verbindung zum Dienst" }
         if state == .unsupported { return "Ladesteuerung nicht verfügbar" }

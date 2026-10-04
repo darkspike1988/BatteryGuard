@@ -87,7 +87,7 @@ final class StatusStore: Sendable {
         s.cycleCount = 142
         s.healthPercent = 96
         s.watts = 0
-        s.daemonVersion = "0.2.0"
+        s.daemonVersion = AppVersion.requiredDaemon
         s.updatedAt = Date()
         s.message = "Dein Akku bleibt im Ladebereich von 75–80 %."
         store.status = s
