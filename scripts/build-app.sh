@@ -83,9 +83,9 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.3.5</string>
+    <string>0.3.6</string>
     <key>CFBundleVersion</key>
-    <string>0.3.5</string>
+    <string>0.3.6</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>
@@ -101,6 +101,8 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
 </dict>
 </plist>
 EOF
+
+"$SCRIPT_DIR/extract-app-intents.sh" "$RESOURCES_DIR"
 
 # Sign nested executable first; optional Developer ID path for notarized releases.
 SIGN_IDENTITY="${BGUARD_SIGN_IDENTITY:--}"

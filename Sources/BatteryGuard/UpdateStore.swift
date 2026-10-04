@@ -6,7 +6,7 @@ import UserNotifications
 
 /// App-only releases do not require reinstalling an unchanged root service.
 enum AppVersion {
-    static let current = "0.3.5"
+    static let current = "0.3.6"
     static let requiredDaemon = "0.3.2"
     static var installed: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? current

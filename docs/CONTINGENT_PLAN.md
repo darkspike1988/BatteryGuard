@@ -81,3 +81,26 @@ Mehr Remote-Delegation: neun begrenzte Aufträge über Antigravity, getrennte Da
 Drei Aufträge (Integration, Dokumentation, API-Tests) meldeten ERROR nach einem Netzwerk-Verbindungsabbruch, obwohl Dateien und Antworten vorhanden waren. Diese wurden einzeln geprüft statt als erfolgreiche Delegation verbucht. Codex korrigierte den falschen Test-Parameternamen, API-Zeitinjektion, unbekannte API-Werte, CLI-Verfügbarkeit/Fehlerausgabe und kleine Darstellungsfehler. Claudes vermuteter CFNumber-Kompilierfehler war durch erfolgreichen Swift-Build widerlegt; ein zusätzlicher Widget-Timer ist unnötig, weil die vorhandene 2-Sekunden-Abfrage jeden Snapshot ersetzt oder löscht. Pauschale Forschungsbehauptungen zu sämtlichen Apple-OSS-Repositories oder Modell-/OS-Grenzen wurden nicht übernommen.
 
 Abnahme: 143 Tests (134 Swift Testing, 9 XCTest), Release-Build und Bundle-Signatur. Live-Snapshot auf diesem Mac: Netzteil-Nennleistung 65 W, Eingang 13,144 W, Akku 0 W, abgeleitete Mac-Leistung 13,144 W; Hardware-Prozent mangels Rohkapazitätspaar unbekannt. Kein aktiver Ladeeingriff zur Abnahme. Die Werte sind Momentaufnahmen und keine Steckdosenmessung. P1 teilweise umgesetzt; nächste Pakete P2 lesende Kurzbefehle und P5 Kartenkonfiguration, Hardware-/Kalibrierungspakete bleiben separat abnahmepflichtig.
+
+## Fortsetzung mit 26 % Codex / 82 % Gemini / 49 % Claude laut Nutzer · 0.3.6
+
+Die Prozentwerte sind aktuelle Nutzerangaben, keine automatisierte Kontingentabfrage. Schwerpunkt Gemini-Implementierung, gezielter Claude-Review und Codex-Integration. Acht CLI-Aufträge einschließlich abgebrochener Forschung und Review-Fortsetzung; keine pauschale Kosten- oder Roadmap-Zusage.
+
+| Auftrag | Status laut CLI | Dauer | Input | Output | Cache Read | Total |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| intents | ERROR | 280 s | 618294 | 25153 | 3205672 | 643447 |
+| cards | SUCCESS | 227 s | 372620 | 41393 | 2247275 | 414013 |
+| packaging | SUCCESS | 35 s | 83048 | 4749 | 138660 | 87797 |
+| review | SUCCESS | 16 s | 53305 | 1760 | 44123 | 55065 |
+| review-followup | SUCCESS | 87 s | 82433 | 6302 | 144951 | 88735 |
+| intents-code | SUCCESS | 97 s | 83097 | 36851 | 183772 | 119948 |
+| docs | SUCCESS | 22 s | 40543 | 5502 | 53047 | 46045 |
+| intents-review | SUCCESS | 20 s | 35485 | 7627 | 24479 | 43112 |
+
+CLI-Ausgaben sind keine Abrechnung. Fortsetzungswerte können kumulativ sein und dürfen nicht blind addiert werden; Thinking-/Cache-Werte ebenso nicht nochmals auf Total addieren. Keine neuen Restprozente ermittelt.
+
+Der erste Intent-Auftrag überschritt Lese-/Toolgrenzen deutlich, verfing sich in Compiler-Recherche und wurde nach 280 Sekunden ohne Code abgebrochen. Der separat gelieferte Packaging-Vorschlag war nicht lauffähig: Schemaform, Compilerflags und Ausgabepfad mussten mit einem lokalen Probeprojekt geprüft werden. Der Ersatzauftrag lieferte ausschließlich Intent-Code und Tests; Codex korrigierte die Array-Schreibweise im AppShortcutsBuilder. Ein erster Claude-Review pausierte mangels ausgeschriebener Quellpfade; mit exakten Pfaden bestätigte er die Kartenlogik und fand die mehrdeutige Zeitdarstellung historischer Daten. Diese wurde korrigiert. Ein zusätzlicher Gemini-Review ersetzte keine Build-Abnahme: der tatsächliche SwiftPM-Modulpfad und Toolchain-Pfad mussten ebenfalls korrigiert werden.
+
+Ergebnis: Kartenreihenfolge, optionale Verlaufskarte, kompakte Ansicht und Reset; zwei experimentelle lesende App Intents. 168 Tests erfolgreich (141 Swift Testing, 27 XCTest). Beide Intent-perform-Aufrufe lieferten gültiges JSON mit available=true auf dem lokalen Mac. Bundle-Metadaten enthalten beide Aktionen und beide automatischen App Shortcuts. Systemweite Kurzbefehle-Erkennung/-Ausführung bleibt ausdrücklich unbestätigt; P2 nicht als abgeschlossen markiert. Vollständiges Xcode 27 ist für den geprüften Entwickler-Build nötig, nicht für Nutzer der DMG. Bestehender Dienst 0.3.2 ausreichend.
+
+Nächster kleiner Auftrag: Systemabnahme der Kurzbefehle; anschließend P3 Top Up bis Abstecken zuerst als separat getestetes Zustandsmodell, danach Dienstintegration und unabhängiger Review. Große Hardware-/Kalibrierungspakete bleiben außerhalb einer rein softwarebasierten Abnahme.

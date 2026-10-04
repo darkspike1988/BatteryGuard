@@ -23,9 +23,11 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
 - **Mitteilungen:** Niedriger Akkustand mit eigener Warnschwelle (5–50 %, Standard 20 %), erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 
+Experimentelle lesende macOS-Kurzbefehle für Status und Energiefluss sind vorbereitet. Die systemweite Abnahme steht aus: [Anleitung und Grenzen](docs/shortcuts.md).
+
 ## Oberfläche
 
-Die Menüleistenanzeige lässt sich auf Symbol, Prozent, Temperatur oder Akku-Leistung einstellen. Als Symbol stehen Ladering, Batterie und Schild zur Auswahl; die Darstellung lässt sich separat zurücksetzen. Temperatur, Akku-Leistung, Gesundheit und ab 0.3.5 eine Energiefluss-Karte (standardmäßig aus) sind im Menüfenster optional zuschaltbar und vom Zurücksetzen der Darstellung umfasst. Das Menüleistenfenster bietet Status, Profile und schnelle Aktionen. Das Hauptfenster gliedert sich in Übersicht, Verlauf und Einstellungen. Systemtypografie, Systemfarben, Standard-Bedienelemente und Hell-/Dunkelmodus bilden die Grundlage.
+Die Menüleistenanzeige lässt sich auf Symbol, Prozent, Temperatur oder Akku-Leistung einstellen. Als Symbol stehen Ladering, Batterie und Schild zur Auswahl; die Darstellung lässt sich separat zurücksetzen. Temperatur, Akku-Leistung, Gesundheit und ab 0.3.5 eine Energiefluss-Karte (standardmäßig aus) sind im Menüfenster optional zuschaltbar und vom Zurücksetzen der Darstellung umfasst. Ab 0.3.6 lassen sich die Karten sortieren, kompakter darstellen und um die letzte Verlaufsmessung ergänzen. Das Menüleistenfenster bietet Status, Profile und schnelle Aktionen. Das Hauptfenster gliedert sich in Übersicht, Verlauf und Einstellungen. Systemtypografie, Systemfarben, Standard-Bedienelemente und Hell-/Dunkelmodus bilden die Grundlage.
 
 ![Übersicht, gerenderte Vorschau mit Beispieldaten](docs/previews/light/overview.png)
 
@@ -55,7 +57,7 @@ Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste biet
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
 
-**Update auf 0.3.5:** Für die Energieflussanzeige genügt das App-Update. Der vorhandene Hintergrunddienst 0.3.2 läuft unverändert weiter und erfordert keine Aktualisierung.
+**Update auf 0.3.6:** Für die Energieflussanzeige genügt das App-Update. Der vorhandene Hintergrunddienst 0.3.2 läuft unverändert weiter und erfordert keine Aktualisierung.
 
 **Update auf 0.3.3:** Ein vorhandener Hintergrunddienst 0.3.2 kann weiterlaufen. Die neuen Menü- und Warnoptionen benötigen keine Administratorfreigabe.
 
@@ -70,7 +72,7 @@ swift test
 ./scripts/build-dmg.sh
 ```
 
-Erstellt App, ZIP, DMG und SHA-256-Prüfsumme unter `dist/`. Die DMG enthält die App, einen Programme-Link und eine kurze Anleitung. Alternativ installiert `./scripts/install-app.sh` die lokal gebaute App; der Dienst lässt sich aus den Einstellungen einrichten.
+Der geprüfte Bundle-Build mit App-Intents-Metadaten benötigt vollständiges Xcode 27. Die fertige App benötigt beim Nutzer kein Xcode. Erstellt App, ZIP, DMG und SHA-256-Prüfsumme unter `dist/`. Die DMG enthält die App, einen Programme-Link und eine kurze Anleitung. Alternativ installiert `./scripts/install-app.sh` die lokal gebaute App; der Dienst lässt sich aus den Einstellungen einrichten.
 
 ```sh
 # Nur lesende Diagnose; keine Systemdateien oder SMC-Werte ändern

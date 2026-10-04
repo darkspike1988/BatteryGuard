@@ -11,6 +11,9 @@ struct PopoverContentView: View {
     @AppStorage("bg.menuShowPower") private var showPower = false
     @AppStorage("bg.menuShowHealth") private var showHealth = false
     @AppStorage("bg.menuShowPowerFlow") private var showPowerFlow = false
+    @AppStorage("bg.menuCardOrder") private var cardOrder = MenuCardLayout.defaultRawOrder
+    @AppStorage("bg.menuShowHistory") private var showHistory = false
+    @AppStorage("bg.menuCardsCompact") private var cardsCompact = false
     @State private var editingLimits = false
     @Environment(\.openWindow) private var openWindow
 
@@ -20,7 +23,7 @@ struct PopoverContentView: View {
 
     var body: some View {
         ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: cardsCompact ? 14 : 20) {
             HStack {
                 Label("B-Guard", systemImage: "shield.lefthalf.filled").font(.callout.weight(.semibold))
                 Spacer()
@@ -42,22 +45,9 @@ struct PopoverContentView: View {
             }
             BatteryHeroView(status: statusStore.status, config: configStore.config,
                             active: statusStore.isDaemonActive, compact: true)
-            if showTemperature || showPower || showHealth {
-                HStack(alignment: .top, spacing: 8) {
-                    if showTemperature {
-                        menuMetric("Temperatur", value: MenuBarDisplayFormatter.formatTemperature(statusStore.status.temperatureCelsius, isDaemonActive: statusStore.isDaemonActive))
-                    }
-                    if showPower {
-                        menuMetric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(statusStore.status.watts, isDaemonActive: statusStore.isDaemonActive))
-                            .help("Lade-/Entladefluss, nicht der gesamte Mac-Verbrauch. 0 W ist möglich, wenn das Netzteil den Mac versorgt.")
-                    }
-                    if showHealth {
-                        menuMetric("Gesundheit", value: statusStore.isDaemonActive ? statusStore.status.healthPercent.map { "\($0) %" } ?? "– %" : "– %")
-                    }
-                }
-            }
-            if showPowerFlow {
-                PowerFlowView(sample: statusStore.powerFlow, compact: true)
+            let orderedCards = MenuCardLayout.validate(rawOrder: cardOrder)
+            ForEach(orderedCards) { card in
+                renderCard(card)
             }
             Divider()
             VStack(alignment: .leading, spacing: 10) {
@@ -154,16 +144,77 @@ struct PopoverContentView: View {
                     .buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
             }
         }
-        .padding(22)
+        .padding(cardsCompact ? 16 : 22)
         }.frame(width: 370).frame(maxHeight: 700)
         .fixedSize(horizontal: false, vertical: true)
         .background(Color(nsColor: .windowBackgroundColor))
         .onDisappear { configStore.flushPendingSave() }
     }
+
+    @ViewBuilder
+    private func renderCard(_ card: MenuCardType) -> some View {
+        switch card {
+        case .metrics:
+            if showTemperature || showPower || showHealth {
+                HStack(alignment: .top, spacing: cardsCompact ? 6 : 8) {
+                    if showTemperature {
+                        menuMetric("Temperatur", value: MenuBarDisplayFormatter.formatTemperature(statusStore.status.temperatureCelsius, isDaemonActive: statusStore.isDaemonActive))
+                    }
+                    if showPower {
+                        menuMetric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(statusStore.status.watts, isDaemonActive: statusStore.isDaemonActive))
+                            .help("Lade-/Entladefluss, nicht der gesamte Mac-Verbrauch. 0 W ist möglich, wenn das Netzteil den Mac versorgt.")
+                    }
+                    if showHealth {
+                        menuMetric("Gesundheit", value: statusStore.isDaemonActive ? statusStore.status.healthPercent.map { "\($0) %" } ?? "– %" : "– %")
+                    }
+                }
+            }
+        case .powerFlow:
+            if showPowerFlow {
+                PowerFlowView(sample: statusStore.powerFlow, compact: true)
+            }
+        case .history:
+            if showHistory {
+                historyCard
+            }
+        }
+    }
+
+    private var historyCard: some View {
+        VStack(alignment: .leading, spacing: cardsCompact ? 4 : 8) {
+            HStack {
+                Label("Verlauf", systemImage: "clock")
+                    .font(cardsCompact ? .caption.weight(.medium) : .callout.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if let last = historyStore.samples.last {
+                    Text("Zuletzt " + last.timestamp.formatted(date: Calendar.current.isDateInToday(last.timestamp) ? .omitted : .abbreviated, time: .shortened))
+                        .font(cardsCompact ? .caption2 : .caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if let last = historyStore.samples.last {
+                HStack(alignment: .top, spacing: cardsCompact ? 6 : 8) {
+                    menuMetric("Letzter Stand", value: "\(last.percent) %")
+                    if let watts = last.watts {
+                        menuMetric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(watts, isDaemonActive: true))
+                    }
+                    if let temp = last.temperature {
+                        menuMetric("Temperatur", value: MenuBarDisplayFormatter.formatTemperature(temp, isDaemonActive: true))
+                    }
+                }
+            } else {
+                Text("Keine Verlaufsdaten verfügbar")
+                    .font(cardsCompact ? .caption2 : .caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     private func menuMetric(_ title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.callout.weight(.medium)).monospacedDigit()
+        VStack(alignment: .leading, spacing: cardsCompact ? 2 : 5) {
+            Text(title).font(cardsCompact ? .caption2 : .caption).foregroundStyle(.secondary)
+            Text(value).font((cardsCompact ? Font.subheadline : Font.callout).weight(.medium)).monospacedDigit()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

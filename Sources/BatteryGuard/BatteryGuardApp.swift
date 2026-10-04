@@ -33,6 +33,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        if ProcessInfo.processInfo.arguments.contains("--read-shortcut-status") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-power") {
+            Task {
+                do {
+                    if ProcessInfo.processInfo.arguments.contains("--read-shortcut-status") {
+                        let result = try await ReadBatteryStatusIntent().perform()
+                        guard let json = result.value else { exit(1) }
+                        print(json)
+                    } else {
+                        let result = try await ReadPowerFlowIntent().perform()
+                        guard let json = result.value else { exit(1) }
+                        print(json)
+                    }
+                    exit(0)
+                } catch {
+                    FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))
+                    exit(1)
+                }
+            }
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("--read-power-flow") {
             if let sample = PowerFlowReader.read(), sample.isFresh(),
                sample.inputWatts != nil || sample.batteryWatts != nil {
@@ -97,7 +117,8 @@ struct BatteryGuardApp: App {
     @State private var api: LocalAPIStore
     
     init() {
-        let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates") || ProcessInfo.processInfo.arguments.contains("--read-power-flow")
+        let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates") || ProcessInfo.processInfo.arguments.contains("--read-power-flow") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-status") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-power")
+        if !preview { BGuardShortcutsProvider.updateAppShortcutParameters() }
         let config = preview ? ConfigStore.preview : ConfigStore()
         let status = preview ? StatusStore.preview : StatusStore()
         let history = HistoryStore(preview: preview)

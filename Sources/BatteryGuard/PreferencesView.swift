@@ -28,6 +28,9 @@ struct PreferencesView: View {
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
     @AppStorage("bg.menuShowHealth") private var menuShowHealth = false
     @AppStorage("bg.menuShowPowerFlow") private var menuShowPowerFlow = false
+    @AppStorage("bg.menuCardOrder") private var menuCardOrder = MenuCardLayout.defaultRawOrder
+    @AppStorage("bg.menuShowHistory") private var menuShowHistory = false
+    @AppStorage("bg.menuCardsCompact") private var menuCardsCompact = false
 
     private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct }
 
@@ -134,6 +137,38 @@ struct PreferencesView: View {
                 Toggle("Akku-Leistung im Menüfenster", isOn: $menuShowPower)
                 Toggle("Akkugesundheit im Menüfenster", isOn: $menuShowHealth)
                 Toggle("Energiefluss im Menüfenster", isOn: $menuShowPowerFlow)
+                Toggle("Verlauf im Menüfenster", isOn: $menuShowHistory)
+                Toggle("Kompakte Kartendarstellung", isOn: $menuCardsCompact)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Karten-Reihenfolge").font(.subheadline.weight(.medium))
+                    let cards = MenuCardLayout.validate(rawOrder: menuCardOrder)
+                    ForEach(Array(cards.enumerated()), id: \.element) { _, card in
+                        HStack {
+                            Text(card.displayName)
+                            Spacer()
+                            Button {
+                                menuCardOrder = MenuCardLayout.moveUp(card: card, in: menuCardOrder)
+                            } label: {
+                                Image(systemName: "arrow.up")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(!MenuCardLayout.canMoveUp(card: card, in: cards))
+                            .accessibilityLabel("\(card.displayName) nach oben verschieben")
+
+                            Button {
+                                menuCardOrder = MenuCardLayout.moveDown(card: card, in: menuCardOrder)
+                            } label: {
+                                Image(systemName: "arrow.down")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(!MenuCardLayout.canMoveDown(card: card, in: cards))
+                            .accessibilityLabel("\(card.displayName) nach unten verschieben")
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+
                 Button("Darstellung zurücksetzen") {
                     // AppStorage bindings respect an injected preview store.
                     menuBarIconStyle = .ring
@@ -142,6 +177,9 @@ struct PreferencesView: View {
                     menuShowPower = false
                     menuShowHealth = false
                     menuShowPowerFlow = false
+                    menuCardOrder = MenuCardLayout.defaultRawOrder
+                    menuShowHistory = false
+                    menuCardsCompact = false
                 }
             } header: { Text("Menüleiste") }
 

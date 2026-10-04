@@ -32,6 +32,9 @@ public enum MenuBarAppearanceKeys {
     public static let showPower = "bg.menuShowPower"
     public static let showHealth = "bg.menuShowHealth"
     public static let showPowerFlow = "bg.menuShowPowerFlow"
+    public static let menuCardOrder = "bg.menuCardOrder"
+    public static let showHistory = "bg.menuShowHistory"
+    public static let menuCardsCompact = "bg.menuCardsCompact"
 }
 
 /// Reine, statisch getypte Beschreibung des Menüleistensymbols.
@@ -133,6 +136,9 @@ public enum MenuBarAppearance {
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPower)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showHealth)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPowerFlow)
+        userDefaults.set(MenuCardLayout.defaultRawOrder, forKey: MenuBarAppearanceKeys.menuCardOrder)
+        userDefaults.set(false, forKey: MenuBarAppearanceKeys.showHistory)
+        userDefaults.set(false, forKey: MenuBarAppearanceKeys.menuCardsCompact)
     }
 }
 

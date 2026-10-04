@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.5
+Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.6
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 
@@ -199,3 +199,9 @@ Validierung: 109 Tests (100 Swift Testing und 9 XCTest) erfolgreich; Release-Bui
 - **Quellen & Grenzen:** Unabhängig verifizierte Community-Quellen ([robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [power-flow-lite](https://github.com/isliliming/power-flow-lite)), die praktische Einheiten dokumentieren (kein offizieller Apple-Vertrag). Undokumentierte IOKit-Schlüssel variieren nach Hardware und macOS. Frische von 10 s (`collected-at`) garantiert keine Sensoraktualisierung durch die Firmware; keine Steckdosenmessgerät-Genauigkeit.
 - **Oberfläche & Schnittstellen:** Optionale Menüleistenkarte (standardmäßig aus), integriert in das Zurücksetzen der Darstellung. Authentifizierter Endpunkt `GET /api/v1/power-flow` (bei veralteten Daten `available: false` ohne numerische Werte) und CLI-Befehl `B-Guard.app/Contents/MacOS/BatteryGuard --read-power-flow` (einmaliger JSON-Snapshot ohne Einstellungs- oder Steuerungsänderungen).
 - **Abgrenzung:** P1 ist damit teilweise abgeschlossen. Native Kurzbefehle/Intents (P2) und Kalibrierungsassistent (P6) sind nicht enthalten. 143 Tests bestanden; Release-Build und Bundle-Signatur geprüft. Physische Abnahme bisher auf dem lokalen Mac, keine vollständige Hardware-Matrix.
+
+## Menükarten und lesende Intents · 0.3.6
+
+- P5: Reihenfolge von Messwerten, Energiefluss und Verlauf, optionaler Verlaufsblock, kompakte Darstellung und vollständiger Darstellungs-Reset umgesetzt. Fehler, Ladeaktionen und Beenden bleiben im scrollbaren Menü erreichbar. LED-Modi bleiben offen.
+- P2: Zwei lesende App Intents mit JSON-Ausgabe implementiert. Metadaten mit Xcode 27 im Bundle extrahiert; Provider registriert. Tests und echte lesende `perform()`-Aufrufe erfolgreich. Erkennung und Ausführung durch die systemweite Kurzbefehle-App noch nicht bestätigt, deshalb experimentell und P2 nicht abgeschlossen. Steueraktionen, App Entities und gemeinsame Automatisierungsoberfläche folgen separat.
+- 168 Tests bestanden. Daemon 0.3.2 bleibt ausreichend. Nächste Abnahme: Kurzbefehle-Systemtest; danach P3 „Top Up bis Abstecken“ als eigenes Zustandsmodell mit Simulation und Review.

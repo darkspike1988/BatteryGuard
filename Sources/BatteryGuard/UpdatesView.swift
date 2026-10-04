@@ -7,6 +7,12 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.6", title: "Deine Menükarten", changes: [
+            "Messwerte, Energiefluss und Verlauf in eigener Reihenfolge im Menüfenster anzeigen.",
+            "Kompakte Darstellung wählen; letzte Verlaufsmessung mit eindeutigem Zeitpunkt.",
+            "Experimentelle lesende Kurzbefehle für Akkustatus und Energiefluss als JSON.",
+            "Darstellung separat zurücksetzen. Hintergrunddienst 0.3.2 bleibt ausreichend."
+        ]),
         .init(version: "0.3.5", title: "Energiefluss verstehen", changes: [
             "Netzteil-Eingang, geschätzte Mac-Leistung und Akku-Ladefluss getrennt anzeigen.",
             "Energiefluss als optionale Karte im Menüfenster; fehlende Messwerte bleiben unbekannt.",
