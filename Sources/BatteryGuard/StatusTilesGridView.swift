@@ -38,9 +38,10 @@ struct StatusTilesGridView: View {
             StatusGlassTile(
                 icon: "bolt.fill",
                 iconColor: .yellow,
-                title: "Leistung",
+                title: "Akku-Leistung",
                 value: status.watts != nil ? String(format: "%.1f W", status.watts!) : "–",
-                helpText: "Aktuelle Lade-/Entladeleistung in Watt. (Positiv = Laden, Negativ = Entladen)"
+                helpText: "Stromfluss des Akkus, nicht der gesamte Verbrauch des Mac. Positiv = Laden, negativ = Entladen. Bei 0 W kann das Netzteil den Mac versorgen, ohne den Akku zu laden.",
+                detail: batteryPowerDetail
             )
             StatusGlassTile(
                 icon: "bolt.horizontal.fill",
@@ -75,6 +76,12 @@ struct StatusTilesGridView: View {
         }
     }
     
+    private var batteryPowerDetail: String {
+        guard let watts = status.watts, watts.isFinite else { return "Messwert nicht verfügbar" }
+        if abs(watts) < 0.05 { return "Kein messbarer Akkustrom" }
+        return watts > 0 ? "Fließt in den Akku" : "Fließt aus dem Akku"
+    }
+
     private var timeString: String {
         if let mins = status.timeRemainingMinutes {
             let h = mins / 60
@@ -98,6 +105,7 @@ private struct StatusGlassTile: View {
     let title: String
     let value: String
     let helpText: String
+    var detail: String? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -114,6 +122,10 @@ private struct StatusGlassTile: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .lineLimit(1)
+            if let detail {
+                Text(detail).font(.caption2).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)

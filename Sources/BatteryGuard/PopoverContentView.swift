@@ -7,6 +7,9 @@ struct PopoverContentView: View {
     @Bindable var configStore: ConfigStore
     let historyStore: HistoryStore
     var updates: UpdateStore? = nil
+    @AppStorage("bg.menuShowTemperature") private var showTemperature = false
+    @AppStorage("bg.menuShowPower") private var showPower = false
+    @AppStorage("bg.menuShowHealth") private var showHealth = false
     @State private var editingLimits = false
     @Environment(\.openWindow) private var openWindow
 
@@ -15,6 +18,7 @@ struct PopoverContentView: View {
     }
 
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Label("B-Guard", systemImage: "shield.lefthalf.filled").font(.callout.weight(.semibold))
@@ -37,6 +41,20 @@ struct PopoverContentView: View {
             }
             BatteryHeroView(status: statusStore.status, config: configStore.config,
                             active: statusStore.isDaemonActive, compact: true)
+            if showTemperature || showPower || showHealth {
+                HStack(alignment: .top, spacing: 8) {
+                    if showTemperature {
+                        menuMetric("Temperatur", value: MenuBarDisplayFormatter.formatTemperature(statusStore.status.temperatureCelsius, isDaemonActive: statusStore.isDaemonActive))
+                    }
+                    if showPower {
+                        menuMetric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(statusStore.status.watts, isDaemonActive: statusStore.isDaemonActive))
+                            .help("Lade-/Entladefluss, nicht der gesamte Mac-Verbrauch. 0 W ist möglich, wenn das Netzteil den Mac versorgt.")
+                    }
+                    if showHealth {
+                        menuMetric("Gesundheit", value: statusStore.isDaemonActive ? statusStore.status.healthPercent.map { "\($0) %" } ?? "– %" : "– %")
+                    }
+                }
+            }
             Divider()
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -132,8 +150,19 @@ struct PopoverContentView: View {
                     .buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
             }
         }
-        .padding(22).frame(width: 370)
+        .padding(22)
+        }.frame(width: 370).frame(maxHeight: 700)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Color(nsColor: .windowBackgroundColor))
         .onDisappear { configStore.flushPendingSave() }
     }
+    private func menuMetric(_ title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(value).font(.callout.weight(.medium)).monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
 }

@@ -94,6 +94,49 @@ final class LocalAPIStore {
         return LocalHTTPResponse(status: code, jsonData: data)
     }
 
+    nonisolated static func isValidJSONContentType(_ rawHeader: String?) -> Bool {
+        guard let rawHeader else { return false }
+        let trimmedHeader = rawHeader.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedHeader.isEmpty else { return false }
+
+        let parts = trimmedHeader.split(separator: ";", omittingEmptySubsequences: false)
+        guard parts.count == 1 || parts.count == 2 else { return false }
+
+        let mediaType = parts[0].trimmingCharacters(in: .whitespaces)
+        guard mediaType.caseInsensitiveCompare("application/json") == .orderedSame else {
+            return false
+        }
+
+        if parts.count == 1 {
+            return true
+        }
+
+        let param = parts[1].trimmingCharacters(in: .whitespaces)
+        guard !param.isEmpty else { return false }
+
+        let keyValue = param.split(separator: "=", omittingEmptySubsequences: false)
+        guard keyValue.count == 2 else { return false }
+
+        let key = keyValue[0].trimmingCharacters(in: .whitespaces)
+        guard key.caseInsensitiveCompare("charset") == .orderedSame else { return false }
+
+        let rawValue = keyValue[1].trimmingCharacters(in: .whitespaces)
+        guard !rawValue.isEmpty else { return false }
+
+        let charsetValue: String
+        if rawValue.hasPrefix("\"") {
+            guard rawValue.count >= 2, rawValue.hasSuffix("\"") else { return false }
+            let inner = rawValue.dropFirst().dropLast()
+            guard !inner.contains("\"") else { return false }
+            charsetValue = String(inner)
+        } else {
+            guard !rawValue.contains("\"") else { return false }
+            charsetValue = rawValue
+        }
+
+        return charsetValue.caseInsensitiveCompare("utf-8") == .orderedSame
+    }
+
     private func json<T: Encodable>(_ value: T) throws -> LocalHTTPResponse {
         LocalHTTPResponse(status: 200, jsonData: try BGJSON.encoder().encode(value))
     }
@@ -160,7 +203,7 @@ final class LocalAPIStore {
                 guard daemonActive, !status.daemonNeedsUpdate else {
                     return Self.failure(503, "daemon_unavailable", "Aktuellen Hintergrunddienst starten oder aktualisieren.")
                 }
-                guard request.headers["content-type"]?.lowercased() == "application/json" else {
+                guard Self.isValidJSONContentType(request.headers["content-type"]) else {
                     return Self.failure(400, "invalid_content_type", "Content-Type application/json erforderlich.")
                 }
                 let action = try BGJSON.decoder().decode(BGChargingActionRequest.self, from: request.body)

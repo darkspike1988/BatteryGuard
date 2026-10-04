@@ -7,6 +7,14 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.3", title: "Deine Menüleiste", changes: [
+            "Menüleistenanzeige wählen: Symbol, Prozent, Akkutemperatur oder Akku-Leistung.",
+            "Temperatur, Akku-Leistung und Gesundheit optional direkt im Menüfenster anzeigen.",
+            "Niedrigen Akkustand unabhängig vom Ladeprofil melden: einstellbare Warnschwelle von 5 bis 50 %, standardmäßig 20 %.",
+            "0 W verständlich erklärt: Akkustrom und gesamter Mac-Verbrauch sind unterschiedliche Messwerte.",
+            "UTF-8-JSON für REST-Aktionen; übergroße Update-Downloads während des Transfers abbrechen.",
+            "Kein erneutes Dienstupdate nötig, wenn Dienst 0.3.2 bereits installiert ist."
+        ]),
         .init(version: "0.3.2", title: "Zuverlässige Ladebefehle", changes: [
             "API-Aktionen werden atomar auf den neuesten gespeicherten Zustand angewandt.",
             "Ein alter Volllade-Abschluss kann neu gestartetes Vollladen oder einen neuen Reiseplan nicht mehr löschen.",

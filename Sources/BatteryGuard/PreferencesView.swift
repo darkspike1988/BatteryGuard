@@ -18,8 +18,14 @@ struct PreferencesView: View {
     @State private var requestingNotifications = false
     @State private var notificationError: String?
     @AppStorage("bg.notifyLow") private var notifyLow = true
+    @AppStorage(LowBatteryWarningPolicy.userDefaultsKey) private var lowBatteryThreshold = LowBatteryWarningPolicy.defaultThreshold
     @AppStorage("bg.notifyLimit") private var notifyLimit = false
     @AppStorage("bg.notifyHeat") private var notifyHeat = true
+    @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
+
+    @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
+    @AppStorage("bg.menuShowPower") private var menuShowPower = false
+    @AppStorage("bg.menuShowHealth") private var menuShowHealth = false
 
     private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct }
 
@@ -70,6 +76,18 @@ struct PreferencesView: View {
 
             Section {
                 Toggle("Bei niedrigem Akkustand", isOn: $notifyLow)
+                if notifyLow {
+                    Stepper(
+                        "Warnen bei \(LowBatteryWarningPolicy.clampThreshold(lowBatteryThreshold)) %",
+                        value: Binding(
+                            get: { LowBatteryWarningPolicy.clampThreshold(lowBatteryThreshold) },
+                            set: { lowBatteryThreshold = LowBatteryWarningPolicy.clampThreshold($0) }
+                        ),
+                        in: LowBatteryWarningPolicy.validRange
+                    )
+                }
+                Text("Die Warnschwelle ist unabhängig von deinem Ladeprofil. Standard: 20 %.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Beim Erreichen des Ladelimits", isOn: $notifyLimit)
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
                 LabeledContent("macOS-Freigabe", value: notificationPermissionDescription)
@@ -96,6 +114,19 @@ struct PreferencesView: View {
                 }
                 if let error = presence.lastError { Text(error).font(.caption).foregroundStyle(.orange) }
             } header: { Text("App") }
+
+            Section {
+                Picker("Menüleistenanzeige", selection: $menuBarDisplay) {
+                    ForEach(MenuBarDisplayMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                Text("Wähle, was neben dem B-Guard-Ladering angezeigt wird. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Temperatur im Menüfenster", isOn: $menuShowTemperature)
+                Toggle("Akku-Leistung im Menüfenster", isOn: $menuShowPower)
+                Toggle("Akkugesundheit im Menüfenster", isOn: $menuShowHealth)
+            } header: { Text("Menüleiste") }
 
             if let api { APISettingsView(api: api) }
 

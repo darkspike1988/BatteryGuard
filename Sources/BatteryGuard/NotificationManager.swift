@@ -6,7 +6,7 @@ import BatteryGuardShared
 final class NotificationManager: Sendable {
     static let shared = NotificationManager()
     
-    private var didNotifyLowerLimit: Bool = false
+    private var lowBatteryPolicy = LowBatteryWarningPolicy()
     private var didNotifyUpperLimit: Bool = false
     private var didNotifyHeat: Bool = false
     
@@ -20,6 +20,7 @@ final class NotificationManager: Sendable {
         let lowEnabled = preferences.object(forKey: "bg.notifyLow") as? Bool ?? true
         let limitEnabled = preferences.object(forKey: "bg.notifyLimit") as? Bool ?? false
         let heatEnabled = preferences.object(forKey: "bg.notifyHeat") as? Bool ?? true
+        let lowThreshold = LowBatteryWarningPolicy.threshold(from: preferences)
         let config = config.effective(at: Date())
         if let temperature = status.temperatureCelsius {
             let threshold = Double(config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : 40)
@@ -31,22 +32,17 @@ final class NotificationManager: Sendable {
 
         let onBattery = !status.pluggedIn || status.state == .onBattery
         
-        // 1. Bei Akkubetrieb <= lowerLimit: 'Akku bei X % – bitte laden'
-        if onBattery {
-            if status.percent <= config.lowerLimit {
-                if !didNotifyLowerLimit, lowEnabled {
-                    didNotifyLowerLimit = true
-                    send(
-                        title: "B-Guard",
-                        body: "Akku bei \(status.percent) % – bitte laden"
-                    )
-                }
-            } else if status.percent > config.lowerLimit + 2 {
-                didNotifyLowerLimit = false
-            }
-        } else {
-            // Am Netzteil: Akkuwarnung zurücksetzen
-            didNotifyLowerLimit = false
+        // 1. Bei Akkubetrieb <= lowBatteryThreshold: 'Akku bei X % – bitte laden'
+        if lowBatteryPolicy.evaluate(
+            percent: status.percent,
+            onBattery: onBattery,
+            threshold: lowThreshold,
+            enabled: lowEnabled
+        ) {
+            send(
+                title: "B-Guard",
+                body: "Akku bei \(status.percent) % – bitte laden"
+            )
         }
         
         // 2. Beim Erreichen von upperLimit am Netzteil: 'Limit erreicht'

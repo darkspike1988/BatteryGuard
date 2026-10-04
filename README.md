@@ -20,11 +20,11 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
 - **Native Limit-Erkennung:** Liest das auf dem lokalen Mac bestätigte CHLT-Layout. Unbekannte Layouts bleiben unberücksichtigt. Erkennt mögliche Konflikte mit höheren B-Guard-Zielen und verweist auf die Systemeinstellungen.
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
-- **Mitteilungen:** Niedriger Akkustand, erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
+- **Mitteilungen:** Niedriger Akkustand mit eigener Warnschwelle (5–50 %, Standard 20 %), erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 
 ## Oberfläche
 
-Das Menüleistenfenster bietet Status, Profile und schnelle Aktionen. Das Hauptfenster gliedert sich in Übersicht, Verlauf und Einstellungen. Systemtypografie, Systemfarben, Standard-Bedienelemente und Hell-/Dunkelmodus bilden die Grundlage.
+Die Menüleistenanzeige lässt sich auf Symbol, Prozent, Temperatur oder Akku-Leistung einstellen. Temperatur, Akku-Leistung und Gesundheit sind im Menüfenster optional zuschaltbar. Das Menüleistenfenster bietet Status, Profile und schnelle Aktionen. Das Hauptfenster gliedert sich in Übersicht, Verlauf und Einstellungen. Systemtypografie, Systemfarben, Standard-Bedienelemente und Hell-/Dunkelmodus bilden die Grundlage.
 
 ![Übersicht, gerenderte Vorschau mit Beispieldaten](docs/previews/light/overview.png)
 
@@ -53,6 +53,8 @@ Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht a
 Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz ein-/ausschalten, zeitlich pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz ausschalten“ gibt das Laden bis zur erneuten Aktivierung frei. Zeitliche Pausen enden automatisch.
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
+
+**Update auf 0.3.3:** Ein vorhandener Hintergrunddienst 0.3.2 kann weiterlaufen. Die neuen Menü- und Warnoptionen benötigen keine Administratorfreigabe.
 
 **Umstieg auf 0.3.2:** Nach dem Ersetzen der App den Hintergrunddienst in den Einstellungen aktualisieren. Version 0.3.2 benötigt Dienst 0.3.2 für atomare Ladebefehle. Bis zur Aktualisierung werden Steueraktionen nicht freigegeben; der alte Dienst führt seine gespeicherten Einstellungen weiter aus. Das Update bewahrt Konfiguration und Verlauf.
 

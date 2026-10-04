@@ -40,6 +40,9 @@ enum DesignPreview {
         let theme: ColorScheme = args.contains("--dark") ? .dark : .light
         do {
             let updatePreferences = UserDefaults(suiteName: "BGuardPreview.\(UUID().uuidString)")!
+            updatePreferences.set(args.contains("--menu-metrics"), forKey: "bg.menuShowTemperature")
+            updatePreferences.set(args.contains("--menu-metrics"), forKey: "bg.menuShowPower")
+            updatePreferences.set(args.contains("--menu-metrics"), forKey: "bg.menuShowHealth")
             let updater = UpdateStore(preferences: updatePreferences)
             let api = LocalAPIStore(config: config, status: status, history: history, preferences: updatePreferences)
             if args.contains("--update-available") {
@@ -49,23 +52,31 @@ enum DesignPreview {
                 updater.message = "B-Guard 0.4.0 ist verfügbar."
             }
             try renderView(DashboardView(statusStore: status, configStore: config, historyStore: history, services: services, updates: updater, api: api)
-                .environment(\.colorScheme, theme), size: NSSize(width: args.contains("--small") ? 780 : 980, height: args.contains("--small") ? 600 : 1060),
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: args.contains("--small") ? 780 : 980, height: args.contains("--small") ? 600 : 1060),
                            to: directory.appendingPathComponent("overview.png"))
             try renderView(HistoryView(history: history, currentConfig: config.config)
-                .environment(\.colorScheme, theme), size: NSSize(width: 790, height: 760),
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 790, height: 760),
                            to: directory.appendingPathComponent("history.png"))
             try renderView(PopoverContentView(statusStore: status, configStore: config, historyStore: history, updates: updater)
-                .environment(\.colorScheme, theme), size: NSSize(width: 370, height: 575),
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 370, height: 575),
                            to: directory.appendingPathComponent("menu.png"))
             try renderView(PreferencesView(statusStore: status, configStore: config, services: services, updates: updater, api: api)
-                .environment(\.colorScheme, theme), size: NSSize(width: 660, height: 1060),
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 660, height: 1060),
                            to: directory.appendingPathComponent("settings.png"))
-            try renderView(SetupView(close: {}).environment(\.colorScheme, theme),
+            try renderView(SetupView(close: {}).defaultAppStorage(updatePreferences).environment(\.colorScheme, theme),
                            size: NSSize(width: 480, height: 340),
                            to: directory.appendingPathComponent("setup.png"))
-            try renderView(UpdatesView(updates: updater).environment(\.colorScheme, theme),
+            try renderView(UpdatesView(updates: updater).defaultAppStorage(updatePreferences).environment(\.colorScheme, theme),
                            size: NSSize(width: 720, height: 900),
                            to: directory.appendingPathComponent("updates.png"))
+            for mode in MenuBarDisplayMode.allCases {
+                let labelPreferences = UserDefaults(suiteName: "BGuardLabelPreview.\(UUID().uuidString)")!
+                labelPreferences.set(mode.rawValue, forKey: MenuBarDisplayMode.appStorageKey)
+                try renderView(MenuBarLabelView(status: status.status, isDaemonActive: status.isDaemonActive, updateAvailable: updater.updateAvailable)
+                    .defaultAppStorage(labelPreferences).environment(\.colorScheme, theme),
+                    size: NSSize(width: 160, height: 36),
+                    to: directory.appendingPathComponent("label-\(mode.rawValue).png"))
+            }
             print("Preview rendered: \(directory.path)")
             exit(0)
         } catch { fputs("\(error)\n", stderr); exit(1) }

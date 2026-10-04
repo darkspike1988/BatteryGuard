@@ -108,8 +108,12 @@ struct OverviewView: View {
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
                     metric("Gesundheit", value: statusStore.status.healthPercent.map { "\($0) %" }, symbol: "heart")
-                    metric("Akkuleistung", value: statusStore.status.watts.map { String(format: "%.1f W", $0) }, symbol: "bolt")
+                    metric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(statusStore.status.watts, isDaemonActive: statusStore.isDaemonActive), symbol: "bolt")
+                        .help("Lade-/Entladefluss des Akkus. Der gesamte Mac-Verbrauch ist ein anderer Messwert.")
                 }
+                Text(batteryPowerExplanation)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 BGPanel {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
@@ -179,6 +183,20 @@ struct OverviewView: View {
                 }
             }
         }
+    }
+
+    private var batteryPowerExplanation: String {
+        guard statusStore.isDaemonActive, let watts = statusStore.status.watts, watts.isFinite else {
+            return "Akku-Leistung: Messwert nicht verfügbar."
+        }
+        if abs(watts) < 0.05 {
+            return statusStore.status.pluggedIn
+                ? "Kein messbarer Akkustrom. Das Netzteil kann den Mac versorgen, ohne den Akku zu laden. 0 W bedeutet nicht, dass der Mac keinen Strom verbraucht."
+                : "Momentan kein messbarer Akkustrom. Angezeigt wird der Lade-/Entladefluss, nicht der gesamte Mac-Verbrauch."
+        }
+        return watts > 0
+            ? "Akku-Leistung: Energie fließt in den Akku. Der gesamte Mac-Verbrauch wird hier nicht gemessen."
+            : "Akku-Leistung: Energie fließt aus dem Akku. Der gesamte Mac-Verbrauch wird hier nicht gemessen."
     }
 
     private var travelPanel: some View {

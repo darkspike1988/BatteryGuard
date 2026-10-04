@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.2
+Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.3
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 
@@ -65,3 +65,15 @@ Keine garantierten Lebensdauer- oder Verschleißprognosen, keine Telemetrie und 
 - Regressionen prüfen aktuellen Servicezustand, echte isolierte Socket-Kommunikation, Altprotokolle, Berechtigungen, neue Deadlines und erneute Reiseaufträge.
 - Umsetzung durch Codex nach zwei agy-Aufträgen mit `gemini-3.8-flash-high` / high: beide endeten per Timeout ohne Codeänderungen. Keine ungeprüften Agentenänderungen übernommen.
 - Validierung: 90 Tests in 13 Suiten erfolgreich. Hintergrunddienst 0.3.2 erforderlich. Bestehende Einstellungen bleiben erhalten.
+
+## Komfort aus dem Pro-Funktionsvergleich · umgesetzt in 0.3.3
+
+- Konfigurierbare Menüleiste: Symbol, Prozent, Temperatur oder Akku-Leistung mit monochromem Ladering, gespeichertem Modus und VoiceOver-Zusammenfassung.
+- Optional zuschaltbare Messwerte im Menüfenster: Temperatur, Akku-Leistung und Gesundheit. Alle Steueraktionen bleiben erreichbar; lange Menüs sind scrollbar.
+- Unabhängige Warnschwelle für niedrigen Akkustand: 5–50 %, Standard 20 %, mit 2-%-Hysterese. Das Ladeprofil bestimmt die Warnung nicht mehr.
+- Akku-Leistung erklärt realen Lade-/Entladefluss. Auf dem lokalen Mac waren 0 mA bei Netzteilversorgung bestätigt; 0 W ist dort kein fehlender Messwert und kein gesamter Systemverbrauch.
+- Teil von A3: UTF-8-JSON mit charset-Parameter akzeptieren; Update-Download vor Abschluss bei überschrittener veröffentlichter Größe abbrechen. Abnahme für acht langsame Verbindungen, neunte Verbindung und Deadline bleibt offen.
+- Vier begrenzte Programmieraufträge an agy mit `gemini-3.8-flash-high`, effort high und Streaming-Ausgabe waren erfolgreich. Codex prüfte und korrigierte Einheitenheuristiken, Swift-6-Testzustand und Headerbehandlung; optionale Menüwerte und Erklärung ergänzt.
+- Nur Appupdate; vorhandener Dienst 0.3.2 bleibt ausreichend. Nächste größere Arbeitspakete: native Kurzbefehle, eigene gespeicherte Profile und wiederkehrende Zeitpläne. Hardwareabhängige Kalibrierung und Deckelentladung bleiben bis zu einer belegten Abnahme geplant.
+
+Validierung: 109 Tests (100 Swift Testing und 9 XCTest) erfolgreich; Release-Build und Bundle-Signaturprüfung erfolgreich.

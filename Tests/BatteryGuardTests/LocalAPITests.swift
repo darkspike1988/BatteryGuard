@@ -199,4 +199,123 @@ struct LocalAPITests {
         #expect(f.api.running)
         #expect(!f.api.isError)
     }
+
+    @Test func actionsContentTypeValidationAcceptsUTF8VariantsAndRejectsInvalidTypes() throws {
+        let f = try fixture(); defer { f.cleanUp() }
+        f.api.allowsControl = true
+        let validPayload = #"{"action":"profile","profile":"desk"}"#
+
+        let acceptedContentTypes = [
+            "application/json",
+            "APPLICATION/JSON",
+            "Application/Json",
+            "application/json; charset=utf-8",
+            "application/json; charset=UTF-8",
+            "application/json; charset=Utf-8",
+            "application/json;charset=utf-8",
+            "application/json; charset=\"utf-8\"",
+            "application/json; charset=\"UTF-8\"",
+            "application/json;charset=\"utf-8\"",
+            "application/json ; charset = utf-8",
+            "application/json ; charset = \"utf-8\"",
+            " application/json; charset=utf-8 ",
+            "Application/Json; Charset=\"utf-8\""
+        ]
+
+        for contentType in acceptedContentTypes {
+            let request = f.request(
+                "/api/v1/actions",
+                method: "POST",
+                json: validPayload,
+                overrides: ["content-type": contentType]
+            )
+            let response = f.api.respond(to: request)
+            #expect(response.status == 200, "Content-Type '\(contentType)' sollte akzeptiert werden.")
+        }
+
+        let initialConfig = f.config.config
+
+        let rejectedContentTypes = [
+            // Fremde Medientypen
+            "text/plain",
+            "application/xml",
+            "text/json",
+            "text/html",
+            "application/x-www-form-urlencoded",
+            "multipart/form-data",
+            "image/png",
+            "text/plain; charset=utf-8",
+
+            // Fremde / ungültige Charsets
+            "application/json; charset=latin1",
+            "application/json; charset=latin-1",
+            "application/json; charset=\"latin1\"",
+            "application/json; charset=iso-8859-1",
+            "application/json; charset=utf-16",
+            "application/json; charset=us-ascii",
+            "application/json; charset=utf8",
+
+            // Doppelte Parameter
+            "application/json; charset=utf-8; charset=utf-8",
+            "application/json; charset=utf-8; charset=UTF-8",
+            "application/json; charset=\"utf-8\"; charset=\"utf-8\"",
+
+            // Unbekannte Parameter
+            "application/json; foo=bar",
+            "application/json; boundary=something",
+            "application/json; charset=utf-8; foo=bar",
+            "application/json; foo=bar; charset=utf-8",
+            "application/json; profile=desk",
+
+            "application/json; charset=\" utf-8 \"",
+
+            // Kaputte Parameter
+            "application/json;",
+            "application/json; ",
+            "application/json; charset=utf-8;",
+            "application/json;;charset=utf-8",
+            "application/json; ; charset=utf-8",
+            "application/json; charset",
+            "application/json; charset=",
+            "application/json; charset= ",
+            "application/json; =utf-8",
+            "application/json; =",
+            "application/json; charset=\"utf-8",
+            "application/json; charset=utf-8\"",
+            "application/json; charset=\"\"",
+            "application/json; charset=\"   \"",
+            "application/json; charset=\"\"utf-8\"\"",
+            "application/json; charset=\"utf-8\"extra",
+            "application/json; charset=utf-8=extra",
+            "; charset=utf-8",
+            "charset=utf-8",
+            ""
+        ]
+
+        for contentType in rejectedContentTypes {
+            let request = f.request(
+                "/api/v1/actions",
+                method: "POST",
+                json: validPayload,
+                overrides: ["content-type": contentType]
+            )
+            let response = f.api.respond(to: request)
+            #expect(response.status == 400, "Content-Type '\(contentType)' sollte abgelehnt werden.")
+            let body = (try? JSONSerialization.jsonObject(with: response.jsonData)) as? [String: Any]
+            #expect(body?["error"] as? String == "invalid_content_type")
+        }
+
+        let missingContentTypeRequest = LocalHTTPRequest(
+            method: "POST",
+            target: "/api/v1/actions",
+            headers: ["host": "127.0.0.1:\(f.api.port)", "authorization": "Bearer " + f.token],
+            body: Data(validPayload.utf8)
+        )
+        let missingResponse = f.api.respond(to: missingContentTypeRequest)
+        #expect(missingResponse.status == 400)
+        let missingBody = (try? JSONSerialization.jsonObject(with: missingResponse.jsonData)) as? [String: Any]
+        #expect(missingBody?["error"] as? String == "invalid_content_type")
+
+        #expect(f.config.config.upperLimit == initialConfig.upperLimit)
+    }
 }

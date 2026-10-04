@@ -6,7 +6,7 @@ import UserNotifications
 
 /// App-only releases do not require reinstalling an unchanged root service.
 enum AppVersion {
-    static let current = "0.3.2"
+    static let current = "0.3.3"
     static let requiredDaemon = "0.3.2"
     static var installed: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? current
@@ -61,8 +61,8 @@ struct GitHubRelease: Decodable, Sendable {
     }
 }
 
-enum UpdateError: LocalizedError {
-    case server(Int), invalidRelease, invalidDownload, checksum
+enum UpdateError: LocalizedError, Equatable {
+    case server(Int), invalidRelease, invalidDownload, checksum, downloadSizeExceeded
     var errorDescription: String? {
         switch self {
         case .server(403), .server(429): "GitHub begrenzt gerade die Anfragen. Bitte später erneut versuchen."
@@ -70,16 +70,47 @@ enum UpdateError: LocalizedError {
         case .invalidRelease: "Die veröffentlichte Version konnte nicht zuverlässig erkannt werden."
         case .invalidDownload: "Kein verifizierbarer DMG-Download vorhanden. Bitte die GitHub-Veröffentlichung prüfen."
         case .checksum: "Die Prüfsumme stimmt nicht. Der Download wurde verworfen und nicht geöffnet."
+        case .downloadSizeExceeded: "Der Download überschreitet die erwartete Dateigröße."
         }
     }
 }
 
-final class UpdateDownloadProgress: NSObject, URLSessionDownloadDelegate, Sendable {
+final class UpdateDownloadProgress: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    let assetSize: Int64?
     let report: @Sendable (Int64) -> Void
-    init(report: @escaping @Sendable (Int64) -> Void) { self.report = report }
+    private let lock = NSLock()
+    private var _hasSizeExceeded = false
+
+    var hasSizeExceeded: Bool {
+        lock.withLock { _hasSizeExceeded }
+    }
+
+    init(assetSize: Int64? = nil, report: @escaping @Sendable (Int64) -> Void = { _ in }) {
+        self.assetSize = assetSize
+        self.report = report
+        super.init()
+    }
+
+    convenience init(assetSize: Int, report: @escaping @Sendable (Int64) -> Void = { _ in }) {
+        self.init(assetSize: Int64(assetSize), report: report)
+    }
+
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
-                    totalBytesExpectedToWrite: Int64) { report(totalBytesWritten) }
+                    totalBytesExpectedToWrite: Int64) {
+        if let assetSize {
+            let isExpectedKnown = totalBytesExpectedToWrite != NSURLSessionTransferSizeUnknown && totalBytesExpectedToWrite >= 0
+            let exceedsExpected = isExpectedKnown && totalBytesExpectedToWrite > assetSize
+            let exceedsWritten = totalBytesWritten > assetSize
+            if exceedsWritten || exceedsExpected {
+                lock.withLock { _hasSizeExceeded = true }
+                downloadTask.cancel()
+                return
+            }
+        }
+        report(totalBytesWritten)
+    }
+
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didFinishDownloadingTo location: URL) {}
 }
@@ -247,7 +278,7 @@ final class UpdateStore {
         let session = URLSession(configuration: .ephemeral)
         downloadSession = session
         defer { session.invalidateAndCancel() }
-        let progress = UpdateDownloadProgress { [weak self] bytes in
+        let progress = UpdateDownloadProgress(assetSize: Int64(asset.size)) { [weak self] bytes in
             Task { @MainActor in
                 guard let self, self.downloadID == id, !self.downloadCancelled else { return }
                 self.downloadBytes = min(max(0, bytes), self.downloadTotal)
@@ -258,6 +289,7 @@ final class UpdateStore {
             defer { try? FileManager.default.removeItem(at: temporary) }
             try Task.checkCancellation()
             guard !downloadCancelled else { throw CancellationError() }
+            guard !progress.hasSizeExceeded else { throw UpdateError.downloadSizeExceeded }
             guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
                 throw UpdateError.invalidDownload
             }
@@ -277,7 +309,13 @@ final class UpdateStore {
                 message = "Download geprüft. Öffne die DMG im Downloads-Ordner und ersetze B-Guard in Programme."
             }
         } catch {
-            if downloadCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled {
+            if downloadCancelled {
+                isError = false
+                message = "Download abgebrochen."
+            } else if progress.hasSizeExceeded {
+                isError = true
+                message = "Update konnte nicht geladen werden. " + UpdateError.downloadSizeExceeded.localizedDescription
+            } else if error is CancellationError || (error as? URLError)?.code == .cancelled {
                 isError = false
                 message = "Download abgebrochen."
             } else {

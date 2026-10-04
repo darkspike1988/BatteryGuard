@@ -124,6 +124,7 @@ struct MenuBarLabelView: View {
     let status: BGStatus
     let isDaemonActive: Bool
     var updateAvailable = false
+    @AppStorage(MenuBarDisplayMode.appStorageKey) private var menuBarDisplay: MenuBarDisplayMode = .percent
     
     var body: some View {
         HStack(spacing: 5) {
@@ -160,9 +161,16 @@ struct MenuBarLabelView: View {
                 Image(systemName: "arrow.down.circle.fill").font(.system(size: 9))
                     .foregroundStyle(Color.accentColor).help("Neue B-Guard-Version verfügbar")
             }
-            Text(isDaemonActive ? "\(status.percent) %" : "– %")
-                .monospacedDigit()
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+
+            let displayText = MenuBarDisplayFormatter.text(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive)
+            if !displayText.isEmpty {
+                Text(displayText)
+                    .monospacedDigit()
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+            }
         }
+        .help(MenuBarDisplayFormatter.tooltip(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(MenuBarDisplayFormatter.voiceOverText(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive) + (updateAvailable ? ". Neue B-Guard-Version verfügbar." : ""))
     }
 }
