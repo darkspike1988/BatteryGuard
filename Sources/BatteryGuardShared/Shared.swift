@@ -132,6 +132,8 @@ public enum BGChargeState: String, Codable, Sendable {
 }
 
 public struct BGStatus: Codable, Equatable, Sendable {
+    /// Additive, normalized diagnostic values. Missing for legacy daemons.
+    public var measurements: BGBatteryMeasurements? = nil
     public var configurationNotice: String? = nil
     /// Nur lesend erkannter nativer macOS-SMC-Grenzwert, falls verfügbar.
     public var nativeChargeLimit: Int? = nil

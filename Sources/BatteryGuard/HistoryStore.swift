@@ -52,6 +52,15 @@ actor HistoryRepository {
 @MainActor
 @Observable
 final class HistoryStore {
+    var longTermCapacityEnabled: Bool {
+        didSet {
+            guard !isPreview else { return }
+            UserDefaults.standard.set(longTermCapacityEnabled, forKey: "BGuard.longTermCapacityEnabled")
+        }
+    }
+    private(set) var capacityDays: [BGCapacityDay] = []
+    private(set) var capacityError: String?
+    private let capacityRepository: CapacityTrendRepository
     private(set) var samples: [BGHistorySample] = []
     private(set) var errorMessage: String?
     private let repository: HistoryRepository
@@ -60,10 +69,16 @@ final class HistoryStore {
     init(preview: Bool = false, emptyPreview: Bool = false) {
         isPreview = preview
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        capacityRepository = CapacityTrendRepository(url: base.appendingPathComponent("BatteryGuard/capacity-days.json"))
+        longTermCapacityEnabled = preview ? false : UserDefaults.standard.bool(forKey: "BGuard.longTermCapacityEnabled")
         repository = HistoryRepository(url: base.appendingPathComponent("BatteryGuard/history.json"))
         if preview {
             samples = emptyPreview ? [] : Self.previewSamples()
         } else {
+            Task { [weak self, capacityRepository] in
+                do { self?.capacityDays = try await capacityRepository.load() }
+                catch { self?.capacityError = "Kapazitätsverlauf konnte nicht geladen werden. Die Datei bleibt unverändert." }
+            }
             Task { [weak self, repository] in
                 do {
                     self?.samples = try await repository.load()
@@ -78,6 +93,14 @@ final class HistoryStore {
         guard !isPreview else { return }
         if let last = samples.last, last.timestamp <= Date().addingTimeInterval(5),
            status.updatedAt.timeIntervalSince(last.timestamp) < BGHistory.sampleInterval { return }
+        if longTermCapacityEnabled {
+            Task { [weak self, capacityRepository] in
+                do {
+                    self?.capacityDays = try await capacityRepository.record(status)
+                    self?.capacityError = nil
+                } catch { self?.capacityError = "Kapazitätsverlauf konnte nicht gespeichert werden. Bestehende Daten bleiben erhalten." }
+            }
+        }
         Task { [weak self, repository] in
             do {
                 let updated = try await repository.record(status)

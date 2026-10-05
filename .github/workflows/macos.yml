@@ -34,6 +34,17 @@ jobs:
           codesign --verify --deep --strict dist/B-Guard.app
           plutil -lint dist/B-Guard.app/Contents/Info.plist
           test -s dist/B-Guard.app/Contents/Resources/Metadata.appintents/extract.actionsdata
+      - name: Diagnostic view previews
+        run: |
+          dist/B-Guard.app/Contents/MacOS/BatteryGuard --render-preview "$RUNNER_TEMP/BGuard-preview-light"
+          dist/B-Guard.app/Contents/MacOS/BatteryGuard --render-preview "$RUNNER_TEMP/BGuard-preview-dark" --dark
+      - name: Diagnostic preview artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: B-Guard-diagnostic-previews
+          path: |
+            ${{ runner.temp }}/BGuard-preview-light/diagnostics.png
+            ${{ runner.temp }}/BGuard-preview-dark/diagnostics.png
       - name: DMG
         run: scripts/build-dmg.sh --skip-build
       - name: DMG artifacts

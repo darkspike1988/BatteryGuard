@@ -2,10 +2,10 @@ import SwiftUI
 import BatteryGuardShared
 
 private enum DashboardPage: String, CaseIterable, Identifiable {
-    case overview = "Übersicht", history = "Verlauf", settings = "Einstellungen"
+    case overview = "Übersicht", history = "Verlauf", diagnostics = "Diagnose", settings = "Einstellungen"
     var id: String { rawValue }
     var symbol: String {
-        switch self { case .overview: "square.grid.2x2"; case .history: "chart.xyaxis.line"; case .settings: "slider.horizontal.3" }
+        switch self { case .overview: "square.grid.2x2"; case .history: "chart.xyaxis.line"; case .diagnostics: "stethoscope"; case .settings: "slider.horizontal.3" }
     }
 }
 
@@ -46,6 +46,8 @@ struct DashboardView: View {
                     OverviewView(statusStore: statusStore, configStore: configStore, history: historyStore, updates: updates)
                 case .history:
                     HistoryView(history: historyStore, currentConfig: configStore.config)
+                case .diagnostics:
+                    DiagnosticsView(statusStore: statusStore, history: historyStore)
                 case .settings:
                     PreferencesView(statusStore: statusStore, configStore: configStore, services: services, updates: updates, api: api)
                 }
@@ -107,7 +109,8 @@ struct OverviewView: View {
                 }
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
-                    metric("Gesundheit", value: statusStore.status.healthPercent.map { "\($0) %" }, symbol: "heart")
+                    metric("Kapazitätsquote", value: statusStore.status.capacityRatioText(), symbol: "battery.100")
+                        .help("Berechnetes Verhältnis der gemeldeten Maximal- zur Designkapazität. Kein allgemeiner Gesundheitswert und nicht automatisch Apples Maximale Kapazität.")
                     metric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(statusStore.status.watts, isDaemonActive: statusStore.isDaemonActive), symbol: "bolt")
                         .help("Lade-/Entladefluss des Akkus. Der gesamte Mac-Verbrauch ist ein anderer Messwert.")
                 }

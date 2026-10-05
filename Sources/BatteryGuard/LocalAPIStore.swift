@@ -157,7 +157,7 @@ final class LocalAPIStore {
             return Self.failure(400, "invalid_path", "Ungültiger API-Pfad.")
         }
         let path = components.path
-        let reads = ["/api/v1/status", "/api/v1/config", "/api/v1/history", "/api/v1/history.csv", "/api/v1/capabilities", "/api/v1/power-flow", "/api/v1/profiles"]
+        let reads = ["/api/v1/status", "/api/v1/config", "/api/v1/history", "/api/v1/history.csv", "/api/v1/capabilities", "/api/v1/power-flow", "/api/v1/profiles", "/api/v1/diagnostics"]
         guard reads.contains(path) || path == "/api/v1/actions" else { return Self.failure(404, "not_found", "Endpunkt nicht vorhanden.") }
         guard request.method == (path == "/api/v1/actions" ? "POST" : "GET") else {
             return Self.failure(405, "method_not_allowed", "Methode für diesen Endpunkt nicht erlaubt.")
@@ -184,6 +184,10 @@ final class LocalAPIStore {
             guard components.query == nil else { return Self.failure(400, "invalid_query", "Dieser Endpunkt akzeptiert keine Query-Parameter.") }
             if path != "/api/v1/actions", !request.body.isEmpty { return Self.failure(400, "unexpected_body", "GET-Anfragen benötigen keinen Body.") }
             switch path {
+            case "/api/v1/diagnostics":
+                return try json(BGDiagnosticReport(appVersion: AppVersion.installed,
+                    daemonVersion: status.status.daemonVersion, battery: status.status,
+                    system: status.systemDiagnostics, capacityDays: history.capacityDays, at: now))
             case "/api/v1/status":
                 struct Result: Encodable { let daemonActive: Bool; let status: BGStatus }
                 return try json(Result(daemonActive: daemonActive, status: status.status))

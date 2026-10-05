@@ -7,6 +7,14 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.4.0", title: "Messwerte nachvollziehen", changes: [
+            "Diagnoseseite für Akku, Systemthermik, CPU, RAM-Kategorien, Swap und Volumekapazität.",
+            "Quellen, Einheiten und Datenqualität; fehlende und veraltete Werte bleiben unbekannt.",
+            "Kapazitätsquote statt einer allgemeinen Gesundheitsnote. Werte über 100 % bleiben sichtbar.",
+            "Freiwillige lokale Kapazitäts-Tageswerte bis zu zwölf Monate, standardmäßig aus.",
+            "Geführte Prüffragen, bereinigter Messbericht und authentifizierter REST-Leseendpunkt /api/v1/diagnostics.",
+            "Hintergrunddienst 0.4.0 erforderlich. Neue Systemquellen benötigen noch praktische Geräte- und Performance-Abnahme."
+        ]),
         .init(version: "0.3.7", title: "Eigene Profile und Zeitpläne", changes: [
             "Benannte Profile mit Bearbeiten, Importvorschau, Sicherung und Export.",
             "Wiederkehrende Aufgaben im Hintergrunddienst mit Zeitzone, Sommerzeit, manueller Übersteuerung und Verlauf.",

@@ -171,6 +171,7 @@ final class DaemonRunner: @unchecked Sendable {
         }
 
         var status = BGStatus()
+        status.measurements = battery.measurements
         status.nativeChargeLimit = controller.smc.readNativeChargeLimit()
         status.percent = battery.percent
         status.percentAvailable = battery.percentAvailable
@@ -189,7 +190,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.3.7"
+        status.daemonVersion = "0.4.0"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported

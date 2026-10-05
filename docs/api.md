@@ -17,6 +17,7 @@ Jede Anfrage benötigt den Header `Authorization: Bearer <Token>`. Das Token bes
 | `GET /api/v1/history.csv?hours=24` | Dieselben Messpunkte als CSV. |
 | `GET /api/v1/capabilities` | API-Version, App-Version, benötigte Dienstversion, `controlAllowed` und verfügbare Fähigkeiten. |
 | `GET /api/v1/power-flow` | Authentifizierter Energiefluss-Snapshot aus `AppleSmartBattery`. |
+| `GET /api/v1/diagnostics` | Bereinigter Messbericht mit Quellen, normalisierten Einheiten, Datenqualität und versionierten Hinweisen (Entwicklung 0.4.0). |
 
 Der Verlauf verwendet ohne Parameter die letzten 24 Stunden. `hours` muss eine ganze Zahl von 1 bis 168 sein. Messlücken bleiben erhalten; die API erfindet keine Werte für Schlafzeiten oder eine geschlossene App. Eine erfolgreiche Statusabfrage bedeutet nicht automatisch, dass der Dienst erreichbar ist: Prüfe `daemonActive`, bevor du Messwerte als aktuell verwendest.
 

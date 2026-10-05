@@ -64,6 +64,9 @@ enum DesignPreview {
             try renderView(HistoryView(history: history, currentConfig: config.config)
                 .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 790, height: 760),
                            to: directory.appendingPathComponent("history.png"))
+            try renderView(DiagnosticsView(statusStore: status, history: history)
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 840, height: 1600),
+                           to: directory.appendingPathComponent("diagnostics.png"))
             try renderView(PopoverContentView(statusStore: status, configStore: config, historyStore: history, updates: updater)
                 .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 370, height: 575),
                            to: directory.appendingPathComponent("menu.png"))
