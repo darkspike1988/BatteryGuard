@@ -129,7 +129,7 @@ struct BatteryHeaderCardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     // Prozent in SF Rounded mit monospaced Ziffern
-                    Text(isDaemonActive ? "\(status.percent) %" : "– %")
+                    Text(isDaemonActive && status.hasBatteryPercent ? "\(status.percent) %" : "– %")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .contentTransition(.numericText())

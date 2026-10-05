@@ -28,6 +28,7 @@ public enum BGHistory {
     public static let sampleInterval: TimeInterval = 60
 
     public static func recording(_ status: BGStatus, in samples: [BGHistorySample], now: Date) -> [BGHistorySample] {
+        guard status.hasBatteryPercent else { return recentSamples(samples, now: now) }
         // Bereinigen, bevor ein alter Zeitstempel nach einer Uhrkorrektur neue Messungen blockiert.
         var result = recentSamples(samples, now: now)
         let age = now.timeIntervalSince(status.updatedAt)

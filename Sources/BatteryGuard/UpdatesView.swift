@@ -7,6 +7,14 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.7", title: "Eigene Profile und Zeitpläne", changes: [
+            "Benannte Profile mit Bearbeiten, Importvorschau, Sicherung und Export.",
+            "Wiederkehrende Aufgaben im Hintergrunddienst mit Zeitzone, Sommerzeit, manueller Übersteuerung und Verlauf.",
+            "Top Up bis Abstecken bei separater Ladesteuerung; neue Halte-, Entlade- und Kalibrierungsaktionen bleiben bis zur Hardware-Abnahme gesperrt.",
+            "Experimentelle steuernde Kurzbefehle, nächste Aufgabe im Menü und kombinierte Messanzeigen.",
+            "Optional bis zum Limit wachhalten, höchstens zwei Stunden; Diagnoseexport ohne persönliche Daten.",
+            "Hitzeschutz und konkurrierende Aufträge korrigiert. Hintergrunddienst 0.3.7 erforderlich. System- und Hardware-Abnahmen bleiben offen."
+        ]),
         .init(version: "0.3.6", title: "Deine Menükarten", changes: [
             "Messwerte, Energiefluss und Verlauf in eigener Reihenfolge im Menüfenster anzeigen.",
             "Kompakte Darstellung wählen; letzte Verlaufsmessung mit eindeutigem Zeitpunkt.",

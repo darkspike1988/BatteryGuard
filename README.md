@@ -1,4 +1,4 @@
-# B-Guard 0.3.2
+# B-Guard 0.3.7
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
@@ -23,7 +23,9 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
 - **Mitteilungen:** Niedriger Akkustand mit eigener Warnschwelle (5–50 %, Standard 20 %), erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 
-Experimentelle lesende macOS-Kurzbefehle für Status und Energiefluss sind vorbereitet. Die systemweite Abnahme steht aus: [Anleitung und Grenzen](docs/shortcuts.md).
+Eigene benannte Profile mit Import/Export und wiederkehrende Zeitpläne sind ab 0.3.7 umgesetzt. Die Regeln laufen im Hintergrunddienst; manuelle Ladeaktionen haben Vorrang. Top Up benötigt separate Ladesteuerung. Einmalentladung, Halten und Kalibrierung bleiben bis zur physischen Hardware-Abnahme gesperrt.
+
+Experimentelle lesende und steuernde macOS-Kurzbefehle sind vorbereitet. Die systemweite Abnahme steht aus: [Anleitung und Grenzen](docs/shortcuts.md).
 
 ## Oberfläche
 
@@ -57,7 +59,7 @@ Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste biet
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
 
-**Update auf 0.3.6:** Für die Energieflussanzeige genügt das App-Update. Der vorhandene Hintergrunddienst 0.3.2 läuft unverändert weiter und erfordert keine Aktualisierung.
+**Update auf 0.3.7:** App und Hintergrunddienst müssen aktualisiert werden. Nach dem Ersetzen der App den Dienst in den Einstellungen über den macOS-Administratordialog aktualisieren. Bestehende Konfiguration und Verlauf bleiben erhalten.
 
 **Update auf 0.3.3:** Ein vorhandener Hintergrunddienst 0.3.2 kann weiterlaufen. Die neuen Menü- und Warnoptionen benötigen keine Administratorfreigabe.
 

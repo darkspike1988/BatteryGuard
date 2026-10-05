@@ -40,6 +40,6 @@ import json, sys
 with open(sys.argv[1]) as metadata_file:
     metadata = json.load(metadata_file)
 required = {'ReadBatteryStatusIntent', 'ReadPowerFlowIntent'}
-assert required <= set(metadata.get('actions', {})), 'Missing battery App Intents metadata'
+assert (required | {'PerformChargingActionIntent', 'ReadChargingConfigurationIntent', 'ApplySavedProfileIntent'}) <= set(metadata.get('actions', {})), 'Missing battery App Intents metadata'
 assert required <= {s['actionIdentifier'] for s in metadata.get('autoShortcuts', [])}, 'Missing App Shortcuts metadata'
 PYMETA

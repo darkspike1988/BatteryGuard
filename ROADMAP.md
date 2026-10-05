@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 4. Oktober 2026 · Umsetzungsstand: 0.3.6
+Stand: 5. Oktober 2026 · Umsetzungsstand: 0.3.7
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 
@@ -205,3 +205,24 @@ Validierung: 109 Tests (100 Swift Testing und 9 XCTest) erfolgreich; Release-Bui
 - P5: Reihenfolge von Messwerten, Energiefluss und Verlauf, optionaler Verlaufsblock, kompakte Darstellung und vollständiger Darstellungs-Reset umgesetzt. Fehler, Ladeaktionen und Beenden bleiben im scrollbaren Menü erreichbar. LED-Modi bleiben offen.
 - P2: Zwei lesende App Intents mit JSON-Ausgabe implementiert. Metadaten mit Xcode 27 im Bundle extrahiert; Provider registriert. Tests und echte lesende `perform()`-Aufrufe erfolgreich. Erkennung und Ausführung durch die systemweite Kurzbefehle-App noch nicht bestätigt, deshalb experimentell und P2 nicht abgeschlossen. Steueraktionen, App Entities und gemeinsame Automatisierungsoberfläche folgen separat.
 - 168 Tests bestanden. Daemon 0.3.2 bleibt ausreichend. Nächste Abnahme: Kurzbefehle-Systemtest; danach P3 „Top Up bis Abstecken“ als eigenes Zustandsmodell mit Simulation und Review.
+
+## Nachtarbeit · 0.3.7 · 5. Oktober 2026
+
+Der vollständige Umfang bleibt erhalten. **Software umgesetzt** ist ausdrücklich nicht gleichbedeutend mit **System-/Hardware-Abnahme bestanden**.
+
+| Paket | Softwarestand | Verbleibende Abnahme / Voraussetzung |
+| --- | --- | --- |
+| P1 | Energiefluss wie 0.3.5; fehlende Prozent-/Stromquellen jetzt explizit gekennzeichnet | Weitere reale Lade-/Entladezustände, schwaches Netzteil und Modelle; Rohkapazitätspaar auf diesem Mac fehlt |
+| P2 | Lese- und Schreibintents, gespeicherte Profil-Entities, gemeinsame atomare Aktionen; Metadaten im Bundle | Echte Suche/Ausführung durch Kurzbefehle. Öffentlicher XCTest-Harness scheiterte vor Teststart an Automation-Initialisierung; kein Intent-Erfolg behauptet |
+| P3 | Top Up bis Abstecken, IDs/Fristen/Abbruch; Hold/Entladezustandsmodell, Dienstaktionen und REST/Intents | Top Up verlangt separate Ladesteuerung. Neue Hold-/Einmalentladeaktionen bleiben ohne physisch bestätigten Backend gesperrt |
+| P4 | Benannte Profile mit CRUD/Importvorschau/Export/Sicherung; alle sieben Wiederholungen im Dienst, Übersteuerung und begrenzter Verlauf | Dienst 0.3.7 lokal über Administratordialog installieren; tatsächliche Ausführung mit geschlossener App und Sleep/Wake beobachten |
+| P5 | Kartenreihenfolge/kompakt/Reset plus nächste Aufgabe; kombinierte Anzeigen | Native Tastatur/VoiceOver-Bedienung und vollständige Kombinationen; neue MagSafe-LED-Modi und „Aus im Schlaf“ benötigen nachgewiesene Hardware, insbesondere kein geratener Blinkwert |
+| H1 | Bestehender Monitor-/Deckelschutz; optionale explizite Wachhaltung mit maximal zwei Stunden, Abbruch-/Fehlerfreigabe | Vollständige physische Matrix für Sailing, Deckel, Schlaf und zwei Benutzerkonten. Keine automatische Schlafsperre im Schreibtischmodus |
+| P6 | Persistente Kalibrierungsphasen, Wiederaufnahme, IDs, Abbruch, Reserve, Wärme-/Sensorpausen und Rückkehr simuliert | Start im echten Dienst gesperrt, bis Backend und ausdrücklich gestartete physische Testfolge bestätigt sind; keine Zeitplankalibrierung freigegeben |
+| Qualität | REST-Verbindungsgrenzen real geprüft; Diagnoseexport mit festem Schema; macOS-CI hinzugefügt | CI-Ergebnis nach Push prüfen. Developer-ID-Zertifikat fehlt; Notarisierung bleibt extern offen |
+
+Für Energiemodi dokumentiert Apple die Systemeinstellungen als unterstützten Weg. B-Guard bietet weiterhin den Weg zu den Batterieeinstellungen; keine ungeprüfte private Schnittstelle zum automatischen Umschalten. Eine sichere Modellprüfung und automatische Modussteuerung bleiben Teil des offenen optionalen P2-Auftrags.
+
+Neue Regressionen betreffen atomare UI-Aktionen, veraltete unabhängige Einstellungen, erneuerte Aufträge, Sensorverfügbarkeit und eine erhaltene Hitzeschutz-Sperre beim Ablauf von Sonderaktionen. Fehlender Ladestand wird nicht als echte 0-%-Messung aufgezeichnet oder gemeldet.
+
+Konkrete Ergebnisse und externe Grenzen: [Nachtbericht](docs/NIGHT_RESULTS.md). Die Version allein schließt keines der oben offenen Abnahmekriterien ab.

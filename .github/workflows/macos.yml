@@ -1,0 +1,43 @@
+name: macOS quality
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Tests
+        run: swift test
+      - name: Shell syntax
+        run: for script in scripts/*.sh; do bash -n "$script" || exit 1; done
+      - name: Release bundle and App Intents metadata
+        run: scripts/build-app.sh
+      - name: Signature and bundle
+        run: |
+          codesign --verify --deep --strict dist/B-Guard.app
+          plutil -lint dist/B-Guard.app/Contents/Info.plist
+          test -s dist/B-Guard.app/Contents/Resources/Metadata.appintents/extract.actionsdata
+      - name: DMG
+        run: scripts/build-dmg.sh --skip-build
+      - name: DMG artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: B-Guard-community-dmg
+          path: |
+            dist/*.dmg
+            dist/*.sha256

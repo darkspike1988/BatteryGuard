@@ -80,7 +80,7 @@ struct BatteryHeroView: View {
             HStack(alignment: .center, spacing: 18) {
                 ZStack {
                     Circle().stroke(Color.primary.opacity(0.07), lineWidth: 5)
-                    Circle().trim(from: 0, to: active ? Double(status.percent) / 100 : 0)
+                    Circle().trim(from: 0, to: active && status.hasBatteryPercent ? Double(status.percent) / 100 : 0)
                         .stroke(status.tint(active: active), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     Image(systemName: active ? (status.isChargingHardware ? "bolt.fill" : "shield.lefthalf.filled") : "exclamationmark")
@@ -91,7 +91,7 @@ struct BatteryHeroView: View {
                 .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text(active ? String(status.percent) : "—")
+                        Text(active && status.hasBatteryPercent ? String(status.percent) : "—")
                             .font(.system(size: compact ? 48 : 64, weight: .light))
                         Text("%").font(.system(size: compact ? 23 : 28, weight: .light)).foregroundStyle(.secondary)
                     }.monospacedDigit()

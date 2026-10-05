@@ -5,7 +5,7 @@ import BatteryGuardShared
 final class MenuBarDisplayTests: XCTestCase {
 
     func testEnumCasesAndRawValues() {
-        XCTAssertEqual(MenuBarDisplayMode.allCases.count, 4)
+        XCTAssertEqual(MenuBarDisplayMode.allCases.count, 6)
         XCTAssertEqual(MenuBarDisplayMode.iconOnly.rawValue, "iconOnly")
         XCTAssertEqual(MenuBarDisplayMode.percent.rawValue, "percent")
         XCTAssertEqual(MenuBarDisplayMode.temperature.rawValue, "temperature")

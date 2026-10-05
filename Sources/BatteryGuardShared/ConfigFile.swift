@@ -99,6 +99,17 @@ public extension BGConfig {
             result.fullChargeUntil = fullChargeUntil
             result.fullChargeRequestID = fullChargeRequestID
         }
+        // Legacy field edits may cancel a known request, but may never create one.
+        // Creation must pass typed service actions and hardware eligibility checks.
+        if specialChargePlan == nil, let old = baseline.specialChargePlan,
+           latest.specialChargePlan?.requestID == old.requestID { result.specialChargePlan = nil }
+        if result.enabled == false || result.mode == .native || result.mode == .direct { result.specialChargePlan = nil }
+        if lowerLimit != baseline.lowerLimit || upperLimit != baseline.upperLimit
+            || enabled != baseline.enabled || mode != baseline.mode
+            || heatProtectionCelsius != baseline.heatProtectionCelsius
+            || activeDischargeAboveUpper != baseline.activeDischargeAboveUpper {
+            result.manualOverrideUntil = Date().addingTimeInterval(2 * 3600)
+        }
         return result.sanitized()
     }
 }

@@ -53,6 +53,15 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var fullChargeRequestID: UUID? = nil
     public var travelRequestID: UUID? = nil
 
+    /// Aktiver P3-Spezialladesplan (Top-Up, Entladen, Halten).
+    public var specialChargePlan: BGSpecialChargePlan? = nil
+
+    public var awakeUntilLimitUntil: Date? = nil
+    public var calibrationPlan: BGCalibrationPlan? = nil
+    public var scheduledTasks: [BGScheduledTask] = []
+    public var scheduleHistory: [BGScheduleRun] = []
+    public var manualOverrideUntil: Date? = nil
+
     public init() {}
 
     // Tolerantes Decoding: fehlende Schlüssel (ältere Dateien) → Defaults.
@@ -76,6 +85,20 @@ public struct BGConfig: Codable, Equatable, Sendable {
         fullChargeUntil = try c.decodeIfPresent(Date.self, forKey: .fullChargeUntil)
         fullChargeRequestID = try c.decodeIfPresent(UUID.self, forKey: .fullChargeRequestID)
         travelRequestID = try c.decodeIfPresent(UUID.self, forKey: .travelRequestID)
+        awakeUntilLimitUntil = try c.decodeIfPresent(Date.self, forKey: .awakeUntilLimitUntil)
+        calibrationPlan = try? c.decodeIfPresent(BGCalibrationPlan.self, forKey: .calibrationPlan)
+        scheduledTasks = try c.decodeIfPresent([BGScheduledTask].self, forKey: .scheduledTasks) ?? []
+        scheduleHistory = try c.decodeIfPresent([BGScheduleRun].self, forKey: .scheduleHistory) ?? []
+        manualOverrideUntil = try c.decodeIfPresent(Date.self, forKey: .manualOverrideUntil)
+        do {
+            if let decoded = try c.decodeIfPresent(BGSpecialChargePlan.self, forKey: .specialChargePlan) {
+                specialChargePlan = decoded.isValid ? decoded : nil
+            } else {
+                specialChargePlan = nil
+            }
+        } catch {
+            specialChargePlan = nil
+        }
     }
 
     /// Daemon MUSS jede gelesene Config durch diese Funktion schicken (Konfiguration ist root-eigen, Änderungen sind authentifiziert).
@@ -87,6 +110,13 @@ public struct BGConfig: Codable, Equatable, Sendable {
         c.heatProtectionCelsius = (c.heatProtectionCelsius == 0) ? 0 : min(max(c.heatProtectionCelsius, 30), 50)
         if !c.chargeToFullOnce { c.fullChargeRequestID = nil }
         if c.travelReadyAt == nil { c.travelRequestID = nil }
+        if let plan = c.specialChargePlan {
+            if !plan.isValid {
+                c.specialChargePlan = nil
+            }
+        }
+        if c.scheduledTasks.count > 50 || Set(c.scheduledTasks.map(\.id)).count != c.scheduledTasks.count { c.scheduledTasks = [] }
+        c.scheduleHistory = Array(c.scheduleHistory.suffix(100))
         return c
     }
 }
@@ -106,6 +136,11 @@ public struct BGStatus: Codable, Equatable, Sendable {
     /// Nur lesend erkannter nativer macOS-SMC-Grenzwert, falls verfügbar.
     public var nativeChargeLimit: Int? = nil
     public var percent: Int = 0
+    public var percentAvailable: Bool? = nil
+    public var externalPowerAvailable: Bool? = nil
+    public var awakeUntilLimitActive: Bool? = nil
+    public var hasBatteryPercent: Bool { percentAvailable != false }
+    public var hasExternalPower: Bool { externalPowerAvailable != false }
     public var pluggedIn: Bool = false
     public var isChargingHardware: Bool = false
     public var state: BGChargeState = .unsupported

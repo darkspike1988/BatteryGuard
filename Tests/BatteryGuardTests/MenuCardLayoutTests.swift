@@ -7,8 +7,8 @@ struct MenuCardLayoutTests {
 
     @Test("Standardreihenfolge und Serialisierung")
     func testDefaultOrderAndSerialization() {
-        #expect(MenuCardLayout.defaultOrder == [.metrics, .powerFlow, .history])
-        #expect(MenuCardLayout.defaultRawOrder == "metrics,powerFlow,history")
+        #expect(MenuCardLayout.defaultOrder == [.metrics, .powerFlow, .history, .nextTask])
+        #expect(MenuCardLayout.defaultRawOrder == "metrics,powerFlow,history,nextTask")
         #expect(MenuCardLayout.defaultShowHistory == false)
         #expect(MenuCardLayout.defaultCompact == false)
 
@@ -37,25 +37,25 @@ struct MenuCardLayoutTests {
     func testValidationDuplicates() {
         // Duplikate werden entfernt, erste Position bleibt erhalten, fehlende werden angehängt
         let dup1 = MenuCardLayout.validate(rawOrder: "metrics,metrics,powerFlow")
-        #expect(dup1 == [.metrics, .powerFlow, .history])
+        #expect(dup1 == [.metrics, .powerFlow, .history, .nextTask])
 
         let dup2 = MenuCardLayout.validate(rawOrder: "history,powerFlow,history,metrics,history")
-        #expect(dup2 == [.history, .powerFlow, .metrics])
+        #expect(dup2 == [.history, .powerFlow, .metrics, .nextTask])
 
         let dup3 = MenuCardLayout.validate(rawOrder: "powerFlow,powerFlow,powerFlow")
-        #expect(dup3 == [.powerFlow, .metrics, .history])
+        #expect(dup3 == [.powerFlow, .metrics, .history, .nextTask])
     }
 
     @Test("Validierung filtert unbekannte Einträge und ergänzt fehlende Karten")
     func testValidationUnknownAndMissing() {
         let partial1 = MenuCardLayout.validate(rawOrder: "history")
-        #expect(partial1 == [.history, .metrics, .powerFlow])
+        #expect(partial1 == [.history, .metrics, .powerFlow, .nextTask])
 
         let partial2 = MenuCardLayout.validate(rawOrder: "powerFlow,garbageToken,history")
-        #expect(partial2 == [.powerFlow, .history, .metrics])
+        #expect(partial2 == [.powerFlow, .history, .metrics, .nextTask])
 
         let whitespace = MenuCardLayout.validate(rawOrder: "  powerFlow  ,  history  ")
-        #expect(whitespace == [.powerFlow, .history, .metrics])
+        #expect(whitespace == [.powerFlow, .history, .metrics, .nextTask])
     }
 
     @Test("Begrenztes Nach-Oben-Verschieben (bounded move up)")
@@ -69,19 +69,19 @@ struct MenuCardLayoutTests {
         // Mittleres Element verschiebt sich an Position 0
         #expect(MenuCardLayout.canMoveUp(card: .powerFlow, in: initial) == true)
         let movedMiddle = MenuCardLayout.moveUp(card: .powerFlow, in: initial)
-        #expect(movedMiddle == [.powerFlow, .metrics, .history])
+        #expect(movedMiddle == [.powerFlow, .metrics, .history, .nextTask])
 
         // Unteres Element verschiebt sich an Position 1
         #expect(MenuCardLayout.canMoveUp(card: .history, in: initial) == true)
         let movedBottom = MenuCardLayout.moveUp(card: .history, in: initial)
-        #expect(movedBottom == [.metrics, .history, .powerFlow])
+        #expect(movedBottom == [.metrics, .history, .powerFlow, .nextTask])
 
         // String-basierte Hilfsmethode
         let rawMoved = MenuCardLayout.moveUp(card: .history, in: "metrics,powerFlow,history")
-        #expect(rawMoved == "metrics,history,powerFlow")
+        #expect(rawMoved == "metrics,history,powerFlow,nextTask")
 
         let rawBound = MenuCardLayout.moveUp(card: .metrics, in: "metrics,powerFlow,history")
-        #expect(rawBound == "metrics,powerFlow,history")
+        #expect(rawBound == "metrics,powerFlow,history,nextTask")
     }
 
     @Test("Begrenztes Nach-Unten-Verschieben (bounded move down)")
@@ -89,25 +89,25 @@ struct MenuCardLayoutTests {
         let initial = MenuCardLayout.defaultOrder // [.metrics, .powerFlow, .history]
 
         // Element am unteren Rand kann nicht weiter nach unten verschoben werden
-        #expect(MenuCardLayout.canMoveDown(card: .history, in: initial) == false)
-        #expect(MenuCardLayout.moveDown(card: .history, in: initial) == initial)
+        #expect(MenuCardLayout.canMoveDown(card: .nextTask, in: initial) == false)
+        #expect(MenuCardLayout.moveDown(card: .nextTask, in: initial) == initial)
 
         // Mittleres Element verschiebt sich an Position 2
         #expect(MenuCardLayout.canMoveDown(card: .powerFlow, in: initial) == true)
         let movedMiddle = MenuCardLayout.moveDown(card: .powerFlow, in: initial)
-        #expect(movedMiddle == [.metrics, .history, .powerFlow])
+        #expect(movedMiddle == [.metrics, .history, .powerFlow, .nextTask])
 
         // Oberes Element verschiebt sich an Position 1
         #expect(MenuCardLayout.canMoveDown(card: .metrics, in: initial) == true)
         let movedTop = MenuCardLayout.moveDown(card: .metrics, in: initial)
-        #expect(movedTop == [.powerFlow, .metrics, .history])
+        #expect(movedTop == [.powerFlow, .metrics, .history, .nextTask])
 
         // String-basierte Hilfsmethode
         let rawMoved = MenuCardLayout.moveDown(card: .metrics, in: "metrics,powerFlow,history")
-        #expect(rawMoved == "powerFlow,metrics,history")
+        #expect(rawMoved == "powerFlow,metrics,history,nextTask")
 
-        let rawBound = MenuCardLayout.moveDown(card: .history, in: "metrics,powerFlow,history")
-        #expect(rawBound == "metrics,powerFlow,history")
+        let rawBound = MenuCardLayout.moveDown(card: .nextTask, in: "metrics,powerFlow,history")
+        #expect(rawBound == "metrics,powerFlow,history,nextTask")
     }
 
     @Test("Reset-Helper setzt Darstellung inklusive Reihenfolge, Kompakt und Verlauf zurück und erhält fremde Einstellungen")
@@ -151,7 +151,7 @@ struct MenuCardLayoutTests {
         #expect(defaults.bool(forKey: MenuBarAppearanceKeys.showPower) == false)
         #expect(defaults.bool(forKey: MenuBarAppearanceKeys.showHealth) == false)
         #expect(defaults.bool(forKey: MenuBarAppearanceKeys.showPowerFlow) == false)
-        #expect(defaults.string(forKey: MenuBarAppearanceKeys.menuCardOrder) == "metrics,powerFlow,history")
+        #expect(defaults.string(forKey: MenuBarAppearanceKeys.menuCardOrder) == "metrics,powerFlow,history,nextTask")
         #expect(defaults.bool(forKey: MenuBarAppearanceKeys.showHistory) == false)
         #expect(defaults.bool(forKey: MenuBarAppearanceKeys.menuCardsCompact) == false)
 

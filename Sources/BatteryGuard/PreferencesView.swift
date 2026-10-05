@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UserNotifications
+import UniformTypeIdentifiers
 import BatteryGuardShared
 
 struct PreferencesView: View {
@@ -12,6 +13,7 @@ struct PreferencesView: View {
     @Bindable private var presence = AppPresence.shared
     @Environment(\.openWindow) private var openWindow
     @State private var confirmUninstall = false
+    @State private var diagnosticsError: String?
     @Environment(\.scenePhase) private var scenePhase
     @State private var notificationAuthorization: UNAuthorizationStatus?
     @State private var notificationAlertsEnabled = false
@@ -29,8 +31,25 @@ struct PreferencesView: View {
     @AppStorage("bg.menuShowHealth") private var menuShowHealth = false
     @AppStorage("bg.menuShowPowerFlow") private var menuShowPowerFlow = false
     @AppStorage("bg.menuCardOrder") private var menuCardOrder = MenuCardLayout.defaultRawOrder
+    @AppStorage("bg.menuShowNextTask") private var menuShowNextTask = false
     @AppStorage("bg.menuShowHistory") private var menuShowHistory = false
     @AppStorage("bg.menuCardsCompact") private var menuCardsCompact = false
+
+    private func exportDiagnostics() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "B-Guard-Diagnose.json"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let report = DiagnosticsExport.build(config: configStore.config, status: statusStore.status,
+                daemonActive: statusStore.isDaemonActive, apiEnabled: api?.enabled ?? false,
+                controlAllowed: api?.allowsControl ?? false)
+            try DiagnosticsExport.write(report, to: url)
+            diagnosticsError = nil
+        } catch { diagnosticsError = error.localizedDescription }
+    }
 
     private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct }
 
@@ -78,6 +97,39 @@ struct PreferencesView: View {
                     .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
             } header: { Text("Schutz") }
                 .disabled(!canConfigure)
+
+            Section {
+                SavedProfilesView(configStore: configStore)
+            } header: { Text("Eigene Profile") }
+
+            Section {
+                ScheduledTasksView(configStore: configStore)
+            } header: { Text("Zeitpläne") }
+
+            Section {
+                SpecialChargeActionsView(configStore: configStore, statusStore: statusStore)
+                if let deadline = configStore.config.awakeUntilLimitUntil, deadline > Date() {
+                    Text("Wachhalten angefordert bis spätestens " + deadline.formatted(date: .omitted, time: .shortened)).font(.caption)
+                    Button("Wachhalten beenden") { configStore.performAction(.init(action: .cancelStayAwake)) }
+                } else {
+                    Button("Bis zum Ladelimit wachhalten · höchstens 2 Stunden") { configStore.performAction(.init(action: .stayAwakeUntilLimit, minutes: 120)) }
+                        .disabled(!statusStore.supportsChargingPlans || !statusStore.status.smcKeysDetected.contains(where: { $0 == "CHTE" || $0 == "CH0B" }))
+                }
+                Text("Verhindert nur automatischen Ruhezustand am Netzteil. Display und bewusst ausgelöster Schlaf bleiben möglich. Bei Abstecken, fehlenden Sensoren, erreichtem Ziel, Frist oder Fehler wird Wachhalten gelöst.").font(.caption).foregroundStyle(.secondary)
+                Text("Kalibrierung: 100 % laden → bis 10 % entladen → erneut 100 % laden → eine Stunde halten. Der Assistent bleibt bis zur physischen Hardware-Abnahme gesperrt. Er kann die Ladestandsschätzung verbessern; eine längere Akkulebensdauer wird nicht zugesagt.").font(.caption).foregroundStyle(.secondary)
+                if configStore.config.calibrationPlan != nil {
+                    Button("Kalibrierung abbrechen") {
+                        do { _ = try configStore.performAPIAction(.init(action: .cancelCalibration)) }
+                        catch { diagnosticsError = error.localizedDescription }
+                    }
+                }
+            } header: { Text("Sonderaktionen") }
+
+            Section {
+                Button("Diagnose exportieren …") { exportDiagnostics() }
+                Text("Enthält nur technische Zustände und Fähigkeiten. Keine Tokens, Seriennummern, Profilnamen, persönlichen Pfade oder Reisezeiten.").font(.caption).foregroundStyle(.secondary)
+                if let diagnosticsError { Text(diagnosticsError).font(.caption).foregroundStyle(.orange) }
+            } header: { Text("Diagnose") }
 
             Section {
                 Toggle("Bei niedrigem Akkustand", isOn: $notifyLow)
@@ -138,6 +190,7 @@ struct PreferencesView: View {
                 Toggle("Akkugesundheit im Menüfenster", isOn: $menuShowHealth)
                 Toggle("Energiefluss im Menüfenster", isOn: $menuShowPowerFlow)
                 Toggle("Verlauf im Menüfenster", isOn: $menuShowHistory)
+                Toggle("Nächste Aufgabe im Menüfenster", isOn: $menuShowNextTask)
                 Toggle("Kompakte Kartendarstellung", isOn: $menuCardsCompact)
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -179,6 +232,7 @@ struct PreferencesView: View {
                     menuShowPowerFlow = false
                     menuCardOrder = MenuCardLayout.defaultRawOrder
                     menuShowHistory = false
+                    menuShowNextTask = false
                     menuCardsCompact = false
                 }
             } header: { Text("Menüleiste") }

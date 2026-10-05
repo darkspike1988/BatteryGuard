@@ -7,6 +7,11 @@ public struct ControllerDecision: Sendable, Equatable {
     public var adapterConnected: Bool
     public var resetChargeToFullOnce: Bool
     public var message: String?
+    public var completedCalibrationRequestID: UUID? = nil
+    public var updatedCalibrationPlan: BGCalibrationPlan? = nil
+    public var completedSpecialRequestID: UUID? = nil
+    public var updatedSpecialPlan: BGSpecialChargePlan? = nil
+    public var heatProtectionThresholdCelsius: Int?
     public var heatProtectionActive: Bool
 
     public init(
@@ -15,7 +20,8 @@ public struct ControllerDecision: Sendable, Equatable {
         adapterConnected: Bool,
         resetChargeToFullOnce: Bool = false,
         message: String? = nil,
-        heatProtectionActive: Bool = false
+        heatProtectionActive: Bool = false,
+        heatProtectionThresholdCelsius: Int? = nil
     ) {
         self.state = state
         self.chargingEnabled = chargingEnabled
@@ -23,6 +29,7 @@ public struct ControllerDecision: Sendable, Equatable {
         self.resetChargeToFullOnce = resetChargeToFullOnce
         self.message = message
         self.heatProtectionActive = heatProtectionActive
+        self.heatProtectionThresholdCelsius = heatProtectionThresholdCelsius
     }
 }
 
@@ -31,13 +38,15 @@ public enum ControllerLogic {
 
     private static func needsHeatProtection(config: BGConfig, battery: BatteryInfo,
                                             previousDecision: ControllerDecision?) -> Bool {
-        guard config.heatProtectionCelsius > 0 else { return false }
         let wasActive = previousDecision?.heatProtectionActive == true
+        let configuredThreshold = config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius
+            : (wasActive ? previousDecision?.heatProtectionThresholdCelsius ?? 0 : 0)
+        guard configuredThreshold > 0 else { return false }
         guard let temperature = battery.temperatureCelsius, temperature.isFinite else {
             // A temporarily missing sensor reading is not evidence of cooling.
             return wasActive
         }
-        let threshold = Double(config.heatProtectionCelsius)
+        let threshold = Double(configuredThreshold)
         return wasActive ? temperature > threshold - heatRecoveryMarginCelsius : temperature > threshold
     }
 
@@ -48,6 +57,27 @@ public enum ControllerLogic {
         return "Hitzeschutz aktiv: \(String(format: "%.1f", temperature))°C – Freigabe nach Abkühlung"
     }
 
+    private static func preservingHeat(_ decision: ControllerDecision, config: BGConfig,
+                                       battery: BatteryInfo, previousDecision: ControllerDecision?,
+                                       hasChargeControl: Bool, now: Date) -> ControllerDecision {
+        guard config.enabled, !config.isPaused(at: now), config.mode != .native, config.mode != .direct,
+              (needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision)
+                || (config.heatProtectionCelsius > 0 && (battery.temperatureCelsius.map { $0.isFinite && $0 >= Double(config.heatProtectionCelsius) } ?? false))) else { return decision }
+        var protected = decision
+        protected.heatProtectionActive = true
+        protected.heatProtectionThresholdCelsius = config.heatProtectionCelsius > 0
+            ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
+        protected.adapterConnected = true
+        if hasChargeControl {
+            protected.chargingEnabled = false
+            protected.state = .holding
+            protected.message = heatMessage(battery: battery)
+        } else {
+            protected.message = "Hitzeschutz erforderlich – ohne separate Ladesteuerung kann Laden nicht gesperrt werden"
+        }
+        return protected
+    }
+
     /// Reine, testbare Regellogik-Funktion ohne Seiteneffekte
     public static func evaluate(
         config: BGConfig,
@@ -55,8 +85,113 @@ public enum ControllerLogic {
         previousDecision: ControllerDecision?,
         hasChargeControl: Bool,
         hasDischargeControl: Bool,
-        allowsAdapterDisconnect: Bool = true
+        allowsAdapterDisconnect: Bool = true,
+        specialHardwareVerified: Bool = false,
+        now: Date = Date()
     ) -> ControllerDecision {
+        if let plan = config.calibrationPlan {
+            let adapterDisabled = previousDecision?.adapterConnected == false
+            let power: BGExternalPowerState = !battery.externalPowerAvailable || adapterDisabled
+                ? .unknown : (battery.pluggedIn ? .connected : .disconnected)
+            var heatConfig = config
+            heatConfig.heatProtectionCelsius = config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : 40
+            let heatActive = needsHeatProtection(config: heatConfig, battery: battery, previousDecision: previousDecision)
+                || (battery.temperatureCelsius.map { $0.isFinite && $0 >= Double(heatConfig.heatProtectionCelsius) } ?? false)
+            let verified = specialHardwareVerified && hasChargeControl && hasDischargeControl
+                && allowsAdapterDisconnect && config.enabled && !config.isPaused(at: now)
+                && config.mode != .native && config.mode != .direct
+            let context = BGCalibrationContext(
+                percent: battery.percentAvailable && (0...100).contains(battery.percent) ? battery.percent : nil,
+                externalPower: power,
+                temperatureCelsius: battery.temperatureCelsius.flatMap { $0.isFinite ? $0 : nil },
+                heatThreshold: heatConfig.heatProtectionCelsius, heatActive: heatActive,
+                hardwareVerified: verified, adapterDisabledByUs: adapterDisabled)
+            var decision: ControllerDecision
+            switch plan.evaluate(context: context, at: now) {
+            case .unavailable(let reason):
+                decision = ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                    message: "Kalibrierung nicht verfügbar: " + reason)
+                decision.completedCalibrationRequestID = plan.requestID
+            case .complete(let reason):
+                decision = ControllerDecision(state: .disabled, chargingEnabled: true, adapterConnected: true,
+                    message: "Kalibrierung beendet: " + reason)
+                decision.completedCalibrationRequestID = plan.requestID
+            case .paused(let updated, let reason):
+                decision = ControllerDecision(state: heatActive ? .holding : .disabled,
+                    chargingEnabled: !heatActive, adapterConnected: true,
+                    message: heatActive ? heatMessage(battery: battery) : "Kalibrierung pausiert: " + reason,
+                    heatProtectionActive: heatActive)
+                decision.updatedCalibrationPlan = updated
+            case .active(let updated, let command):
+                switch command {
+                case .charge:
+                    decision = ControllerDecision(state: .charging, chargingEnabled: true, adapterConnected: true,
+                        message: "Kalibrierung: " + updated.phase.rawValue)
+                case .hold:
+                    decision = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: true,
+                        message: "Kalibrierung: 100 % eine Stunde halten")
+                case .discharge:
+                    decision = ControllerDecision(state: .discharging, chargingEnabled: false, adapterConnected: false,
+                        message: "Kalibrierung: auf 10 % entladen")
+                }
+                decision.updatedCalibrationPlan = updated
+            }
+            return preservingHeat(decision, config: heatConfig, battery: battery,
+                previousDecision: previousDecision, hasChargeControl: hasChargeControl, now: now)
+        }
+        if let plan = config.specialChargePlan {
+            var decision: ControllerDecision
+            let adapterDisabled = previousDecision?.adapterConnected == false
+            let power: BGExternalPowerSource = !battery.externalPowerAvailable || adapterDisabled
+                ? .unknown : (battery.pluggedIn ? .connected : .disconnected)
+            let context = BGSpecialPlanEvaluationContext(
+                percent: battery.percentAvailable ? battery.percent : nil,
+                externalPower: power, canBlockCharging: hasChargeControl && specialHardwareVerified,
+                canDisconnectAdapter: hasDischargeControl && specialHardwareVerified,
+                allowsAdapterDisconnect: allowsAdapterDisconnect)
+            let outcome = plan.evaluate(context: context, at: now)
+            let supported = config.enabled && !config.isPaused(at: now) && config.mode != .native && config.mode != .direct
+                && hasChargeControl && (plan.kind != .discharge || (specialHardwareVerified && hasDischargeControl && allowsAdapterDisconnect))
+                && (plan.kind != .hold || specialHardwareVerified)
+            guard supported && outcome.isActive else {
+                decision = ControllerDecision(state: outcome.isComplete ? .disabled : .unsupported,
+                    chargingEnabled: true, adapterConnected: true,
+                    message: supported ? outcome.reason : "Sonderaktion auf dieser Hardware nicht bestätigt – Normalbetrieb wiederhergestellt")
+                decision.completedSpecialRequestID = plan.requestID
+                return preservingHeat(decision, config: config, battery: battery,
+                    previousDecision: previousDecision, hasChargeControl: hasChargeControl, now: now)
+            }
+            if needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision) {
+                decision = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: true,
+                    message: heatMessage(battery: battery), heatProtectionActive: true, heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius)
+            } else if power == .disconnected {
+                decision = ControllerDecision(state: .onBattery, chargingEnabled: true, adapterConnected: true, message: outcome.reason)
+            } else {
+                switch plan.kind {
+                case .topUp:
+                    let charging = battery.percent < 100
+                    decision = ControllerDecision(state: charging ? .charging : .holding,
+                        chargingEnabled: charging, adapterConnected: true, message: outcome.reason)
+                case .hold:
+                    let charging = battery.percent >= plan.targetPercent ? false
+                        : battery.percent < max(5, plan.targetPercent - 2) ? true
+                        : (previousDecision?.heatProtectionActive == true ? true : previousDecision?.chargingEnabled ?? battery.isCharging)
+                    decision = ControllerDecision(state: charging ? .charging : .holding,
+                        chargingEnabled: charging, adapterConnected: true, message: outcome.reason)
+                case .discharge:
+                    decision = ControllerDecision(state: .discharging, chargingEnabled: false,
+                        adapterConnected: false, message: outcome.reason)
+                }
+            }
+            decision.updatedSpecialPlan = outcome.updatedPlan
+            return decision
+        }
+        guard battery.percentAvailable else {
+            return preservingHeat(ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                message: "Ladestand nicht verfügbar – Normalbetrieb wiederhergestellt"), config: config,
+                battery: battery, previousDecision: previousDecision, hasChargeControl: hasChargeControl, now: now)
+        }
+        let config = config.effective(at: now)
         // Das von uns selbst deaktivierte Netzteil meldet sich evtl. als "nicht angesteckt".
         // Dann gilt es weiterhin als angesteckt, sonst würden wir zwischen den Zuständen flattern.
         let adapterDisabledByUs = previousDecision?.adapterConnected == false
@@ -137,7 +272,8 @@ public enum ControllerLogic {
                 adapterConnected: true,
                 resetChargeToFullOnce: false,
                 message: heatMessage(battery: battery),
-                heatProtectionActive: true
+                heatProtectionActive: true,
+                    heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
             )
         }
 
@@ -250,13 +386,15 @@ public enum ControllerLogic {
                 return ControllerDecision(
                     state: .charging, chargingEnabled: true, adapterConnected: true,
                     message: "Akkureserve erreicht: Netzteil bleibt bis zur Abkühlung verbunden. Ohne separate Ladesperre kann Hitzeschutz das Laden nicht stoppen.",
-                    heatProtectionActive: true
+                    heatProtectionActive: true,
+                    heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
                 )
             }
             return ControllerDecision(
                 state: .discharging, chargingEnabled: false, adapterConnected: false,
                 message: heatMessage(battery: battery),
-                heatProtectionActive: true
+                heatProtectionActive: true,
+                    heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
             )
         }
 
@@ -441,5 +579,28 @@ public final class BatteryController: @unchecked Sendable {
         lastAppliedCharging = true
         lastAppliedAdapter = true
         lastAppliedMagSafeLED = .auto
+    }
+}
+
+/// Apply tick results only to the exact request read by that tick.
+public enum SpecialControllerPersistence {
+    public static func apply(snapshot: BGSpecialChargePlan, decision: ControllerDecision, to latest: inout BGConfig) {
+        guard latest.specialChargePlan?.requestID == snapshot.requestID else { return }
+        if decision.completedSpecialRequestID == snapshot.requestID {
+            latest.specialChargePlan = nil
+        } else if let updated = decision.updatedSpecialPlan, updated.requestID == snapshot.requestID {
+            latest.specialChargePlan = updated
+        }
+    }
+}
+
+public enum CalibrationControllerPersistence {
+    public static func apply(snapshot: BGCalibrationPlan, decision: ControllerDecision, to latest: inout BGConfig) {
+        guard latest.calibrationPlan?.requestID == snapshot.requestID else { return }
+        if decision.completedCalibrationRequestID == snapshot.requestID {
+            latest.calibrationPlan = nil
+        } else if let updated = decision.updatedCalibrationPlan, updated.requestID == snapshot.requestID {
+            latest.calibrationPlan = updated
+        }
     }
 }

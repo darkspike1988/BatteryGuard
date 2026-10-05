@@ -74,7 +74,9 @@ public enum BGConfigPeerPolicy {
 /// a peer sending one byte at a time cannot extend it indefinitely.
 public enum BGConfigWire {
     public static let socketPath = BGPaths.directory + "/config.sock"
-    public static let maximumBytes = 65_536
+    // A write contains both snapshots, including up to 50 scheduled tasks and
+    // 100 history entries. Keep framing bounded while admitting valid configs.
+    public static let maximumBytes = 1_048_576
     public static let timeout: TimeInterval = 1
 
     public static func configure(_ descriptor: Int32) throws {

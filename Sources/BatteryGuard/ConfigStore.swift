@@ -114,8 +114,14 @@ final class ConfigStore: Sendable {
     @discardableResult
     func performAction(_ request: BGChargingActionRequest, at now: Date = Date()) -> Bool {
         do {
-            let next = try request.applying(to: config, at: now)
-            if config != next { config = next }
+            if persistenceEnabled {
+                if hasPendingSave { saveConfig() }
+                guard !hasPendingSave else { throw AppActionError.unsavedChanges }
+                _ = try performAPIAction(request, at: now)
+            } else {
+                // Preview actions are pure and never contact the live service.
+                config = try request.applying(to: config, at: now)
+            }
             return true
         } catch {
             hasWriteError = true

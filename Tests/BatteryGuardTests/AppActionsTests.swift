@@ -130,7 +130,7 @@ struct AppActionsTests {
         store.cancelFullCharge(at: now)
         #expect(!store.config.chargeToFullOnce)
         #expect(store.config.fullChargeUntil == nil)
-        #expect(store.config.travelReadyAt == future)
+        #expect(store.config.travelReadyAt.map { abs($0.timeIntervalSince(future)) < 1 } == true)
         store.flushPendingSave()
         let persistedFuture = try #require(BGConfigFile.read(at: directory.appendingPathComponent("config.json")).travelReadyAt)
         #expect(abs(persistedFuture.timeIntervalSince(future)) < 1)

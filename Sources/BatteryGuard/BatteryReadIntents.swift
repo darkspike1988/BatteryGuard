@@ -57,7 +57,7 @@ public enum BatteryReadIntentPayload {
 
         let status = try BGJSON.decoder().decode(BGStatus.self, from: data)
         let age = at.timeIntervalSince(status.updatedAt)
-        let isFresh = (age >= -5.0 && age <= 60.0)
+        let isFresh = (age >= -5.0 && age <= 60.0) && status.hasBatteryPercent
 
         let payload = isFresh
             ? StatusResponse(available: true, status: status)

@@ -25,6 +25,7 @@ public enum BGProfile: String, CaseIterable, Identifiable, Sendable {
         c.lowerLimit = lower
         c.upperLimit = upper
         c.pauseUntil = nil
+        c.specialChargePlan = nil
         return c.sanitized()
     }
     public func matches(_ c: BGConfig) -> Bool {
@@ -53,6 +54,30 @@ public extension BGConfig {
         if let deadline = fullChargeUntil, now >= deadline { c.chargeToFullOnce = false }
         if isTravelCharging(at: now) { c.chargeToFullOnce = true }
         if !c.enabled || c.mode == .native || c.mode == .direct { c.chargeToFullOnce = false }
+
+        if let plan = c.specialChargePlan {
+            if now >= plan.expiresAt || !c.enabled || c.mode == .native || c.mode == .direct {
+                c.specialChargePlan = nil
+            } else {
+                switch plan.kind {
+                case .topUp:
+                    c.upperLimit = 100
+                    c.lowerLimit = 95
+                    c.chargeToFullOnce = true
+                    c.activeDischargeAboveUpper = false
+                case .discharge:
+                    c.chargeToFullOnce = false
+                    c.upperLimit = plan.targetPercent
+                    c.lowerLimit = max(5, plan.targetPercent - 5)
+                    c.activeDischargeAboveUpper = true
+                case .hold:
+                    c.chargeToFullOnce = false
+                    c.activeDischargeAboveUpper = false
+                    c.upperLimit = plan.targetPercent
+                    c.lowerLimit = max(5, plan.targetPercent - 2)
+                }
+            }
+        }
         return c
     }
 
@@ -68,6 +93,9 @@ public extension BGConfig {
         if let ready = travelReadyAt, now >= ready.addingTimeInterval(Self.travelGraceTime) {
             c.travelReadyAt = nil
             c.travelRequestID = nil
+        }
+        if let plan = c.specialChargePlan, now >= plan.expiresAt {
+            c.specialChargePlan = nil
         }
         return c
     }

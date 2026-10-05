@@ -14,6 +14,7 @@ final class DaemonRunner: @unchecked Sendable {
     private var powerPort: IONotificationPortRef?
     private var powerNotifier: io_object_t = 0
     private let configServer = ConfigServer()
+    private let wakeUntilLimit = WakeUntilLimitGuard()
     private var configurationNotice: String?
 
     public init(controller: BatteryController = BatteryController(), dryRun: Bool = false, isOnce: Bool = false) {
@@ -116,9 +117,21 @@ final class DaemonRunner: @unchecked Sendable {
     @discardableResult
     func tick() -> BGStatus {
         guard !sleeping else { return BGStatus() }
+        if !dryRun {
+            do {
+                let url = URL(fileURLWithPath: BGPaths.config)
+                let snapshot = try BGConfigFile.read(at: url)
+                if ScheduleRunner.needsEvaluation(config: snapshot, now: Date()) {
+                    try BGConfigFile.update(at: url) { latest in
+                        latest = ScheduleRunner.evaluate(config: latest, now: Date(),
+                            context: ConfigServer.currentSpecialContext())
+                    }
+                }
+            } catch { logStderr("Zeitplan konnte nicht ausgewertet werden: \(error.localizedDescription)") }
+        }
         let storedConfig = loadConfig()
         let now = Date()
-        let config = storedConfig.effective(at: now)
+        let config = storedConfig
         let battery = BatteryReader.read(smcClient: controller.smc)
 
         let decision = controller.step(
@@ -130,6 +143,29 @@ final class DaemonRunner: @unchecked Sendable {
             }
         )
 
+        if !dryRun {
+            wakeUntilLimit.reconcile(config: config, battery: battery, now: now,
+                controlSupported: controller.smc.hasChargeControl && decision.state != .unsupported)
+        }
+
+        if !dryRun, let snapshot = storedConfig.calibrationPlan,
+           decision.completedCalibrationRequestID != nil || (decision.updatedCalibrationPlan != nil && decision.updatedCalibrationPlan != snapshot) {
+            do {
+                try BGConfigFile.update(at: URL(fileURLWithPath: BGPaths.config)) { latest in
+                    CalibrationControllerPersistence.apply(snapshot: snapshot, decision: decision, to: &latest)
+                }
+            } catch { logStderr("Kalibrierung konnte nicht aktualisiert werden: \(error.localizedDescription)") }
+        }
+
+        if !dryRun, let snapshot = storedConfig.specialChargePlan,
+           decision.completedSpecialRequestID != nil || decision.updatedSpecialPlan != nil {
+            do {
+                try BGConfigFile.update(at: URL(fileURLWithPath: BGPaths.config)) { latest in
+                    SpecialControllerPersistence.apply(snapshot: snapshot, decision: decision, to: &latest)
+                }
+            } catch { logStderr("Sonderaktion konnte nicht aktualisiert werden: \(error.localizedDescription)") }
+        }
+
         if decision.resetChargeToFullOnce {
             resetChargeToFullOnceInConfig(snapshot: storedConfig, at: now)
         }
@@ -137,6 +173,9 @@ final class DaemonRunner: @unchecked Sendable {
         var status = BGStatus()
         status.nativeChargeLimit = controller.smc.readNativeChargeLimit()
         status.percent = battery.percent
+        status.percentAvailable = battery.percentAvailable
+        status.externalPowerAvailable = battery.externalPowerAvailable
+        status.awakeUntilLimitActive = wakeUntilLimit.isActive
         status.pluggedIn = battery.pluggedIn
         status.isChargingHardware = battery.isCharging
         status.state = decision.state
@@ -150,18 +189,23 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.3.2"
+        status.daemonVersion = "0.3.7"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
             ? "Schutz pausiert bis " + (storedConfig.pauseUntil?.formatted(date: .omitted, time: .shortened) ?? "")
             : decision.message
 
+        if let wakeError = wakeUntilLimit.message {
+            status.message = [status.message, wakeError].compactMap { $0 }.joined(separator: " · ")
+        }
+
         writeStatus(status)
         return status
     }
 
     func runOnce() {
+        defer { wakeUntilLimit.release() }
         ensureEnvironment()
 
 
@@ -183,6 +227,7 @@ final class DaemonRunner: @unchecked Sendable {
                 IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
             case 0xe0000280 /* kIOMessageSystemWillSleep */:
                 runner.sleeping = true
+                runner.wakeUntilLimit.release()
                 if !runner.dryRun { runner.controller.restoreNormal(logger: { runner.log($0) }) }
                 runner.log("Schlafmodus: Normalbetrieb wiederhergestellt, Steuerung pausiert.")
                 IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
@@ -257,6 +302,7 @@ final class DaemonRunner: @unchecked Sendable {
             guard let self = self else { exit(0) }
             self.log("SIGTERM empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
             self.configServer.stop()
+            self.wakeUntilLimit.release()
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
@@ -268,6 +314,7 @@ final class DaemonRunner: @unchecked Sendable {
             guard let self = self else { exit(0) }
             self.log("SIGINT empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
             self.configServer.stop()
+            self.wakeUntilLimit.release()
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }

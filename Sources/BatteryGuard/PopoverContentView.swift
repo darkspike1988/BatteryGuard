@@ -12,6 +12,7 @@ struct PopoverContentView: View {
     @AppStorage("bg.menuShowHealth") private var showHealth = false
     @AppStorage("bg.menuShowPowerFlow") private var showPowerFlow = false
     @AppStorage("bg.menuCardOrder") private var cardOrder = MenuCardLayout.defaultRawOrder
+    @AppStorage("bg.menuShowNextTask") private var showNextTask = false
     @AppStorage("bg.menuShowHistory") private var showHistory = false
     @AppStorage("bg.menuCardsCompact") private var cardsCompact = false
     @State private var editingLimits = false
@@ -89,6 +90,9 @@ struct PopoverContentView: View {
                     Text("Profil wählen oder Schutz starten, um B-Guard zu aktivieren.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+            }
+            if configStore.config.specialChargePlan != nil {
+                SpecialChargeActionsView(configStore: configStore, statusStore: statusStore)
             }
             HStack(spacing: 10) {
                 Button {
@@ -173,11 +177,29 @@ struct PopoverContentView: View {
             if showPowerFlow {
                 PowerFlowView(sample: statusStore.powerFlow, compact: true)
             }
+        case .nextTask:
+            if showNextTask { nextTaskCard }
         case .history:
             if showHistory {
                 historyCard
             }
         }
+    }
+
+    private var nextTaskCard: some View {
+        let task = configStore.config.scheduledTasks.filter(\.enabled).compactMap { task in
+            task.schedule.nextOccurrence(after: Date()).map { (task, $0) }
+        }.min { $0.1 < $1.1 }
+        return VStack(alignment: .leading, spacing: cardsCompact ? 4 : 8) {
+            Label("Nächste Aufgabe", systemImage: "calendar.badge.clock").font(.caption).foregroundStyle(.secondary)
+            if let task {
+                Text(task.0.schedule.name).font(.callout)
+                Text(task.1.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
+                if let until = configStore.config.manualOverrideUntil, until > task.1 {
+                    Text("Wird durch manuelle Übersteuerung übersprungen").font(.caption).foregroundStyle(.secondary)
+                }
+            } else { Text("Keine kommende Aufgabe").font(.caption).foregroundStyle(.secondary) }
+        }.accessibilityElement(children: .combine)
     }
 
     private var historyCard: some View {

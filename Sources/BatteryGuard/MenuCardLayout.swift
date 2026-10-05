@@ -5,6 +5,7 @@ public enum MenuCardType: String, CaseIterable, Identifiable, Sendable {
     case metrics = "metrics"
     case powerFlow = "powerFlow"
     case history = "history"
+    case nextTask = "nextTask"
 
     public var id: String { rawValue }
 
@@ -16,6 +17,7 @@ public enum MenuCardType: String, CaseIterable, Identifiable, Sendable {
             return "Energiefluss"
         case .history:
             return "Verlauf"
+        case .nextTask: return "Nächste Aufgabe"
         }
     }
 
@@ -31,7 +33,7 @@ public enum MenuCardLayoutKeys {
 
 /// Reines Modell und Validierungslogik für konfigurierbare Menükarten.
 public enum MenuCardLayout {
-    public static let defaultOrder: [MenuCardType] = [.metrics, .powerFlow, .history]
+    public static let defaultOrder: [MenuCardType] = [.metrics, .powerFlow, .history, .nextTask]
     public static let defaultRawOrder: String = defaultOrder.map(\.rawValue).joined(separator: ",")
     public static let defaultShowHistory: Bool = false
     public static let defaultCompact: Bool = false

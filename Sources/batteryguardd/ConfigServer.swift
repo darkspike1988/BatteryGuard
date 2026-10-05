@@ -149,10 +149,21 @@ final class ConfigServer: @unchecked Sendable {
         return uid
     }
 
+    static func currentSpecialContext() -> BGSpecialPlanEvaluationContext {
+        let battery = BatteryReader.read()
+        return BGSpecialPlanEvaluationContext(percent: battery.percentAvailable ? battery.percent : nil,
+            externalPower: battery.externalPowerAvailable ? (battery.pluggedIn ? .connected : .disconnected) : .unknown,
+            canBlockCharging: SMCClient.shared.hasChargeControl,
+            // Key discovery/readback is not physical certification. Keep P3 discharge gated.
+            canDisconnectAdapter: false,
+            allowsAdapterDisconnect: DesktopEnvironment.allowsAdapterDisconnect())
+    }
+
     /// Testable authorization and transactional merge; the endpoint never
     /// accepts configURL from a request. Tests provide only temporary files.
     static func apply(_ request: BGConfigRequest, peerUID: uid_t, consoleUID: uid_t?,
-                      configURL: URL = URL(fileURLWithPath: BGPaths.config)) throws -> BGConfig {
+                      configURL: URL = URL(fileURLWithPath: BGPaths.config),
+                      specialContext: (() -> BGSpecialPlanEvaluationContext)? = nil) throws -> BGConfig {
         guard BGConfigPeerPolicy.allows(peerUID: peerUID, consoleUID: consoleUID) else {
             throw BGConfigIPCError.unauthorized
         }
@@ -161,6 +172,36 @@ final class ConfigServer: @unchecked Sendable {
             throw BGConfigIPCError.invalidMessage
         }
         if let action = request.action {
+            if action.action == .calibration {
+                // Read/write key discovery does not certify a complete physical calibration cycle.
+                throw BGChargingActionError.invalidRequest("Kalibrierung ist für diese Hardware noch nicht physisch bestätigt.")
+            }
+            if [.topUp, .holdCharge, .dischargeTo].contains(action.action) {
+                return try BGConfigFile.update(at: configURL) { latest in
+                    // Evaluate inside the transaction: the caller cannot choose the "current" hold target.
+                    let context = specialContext?() ?? Self.currentSpecialContext()
+                    var validated = action
+                    guard context.percent != nil else {
+                        throw BGChargingActionError.invalidRequest("Aktueller Ladestand nicht verfügbar.")
+                    }
+                    guard context.canBlockCharging else {
+                        throw BGChargingActionError.invalidRequest("Keine bestätigte separate Ladesteuerung verfügbar.")
+                    }
+                    if action.action == .holdCharge {
+                        // No backend is physically certified for this action yet.
+                        guard specialContext != nil else {
+                            throw BGChargingActionError.invalidRequest("Halten ist für diese Hardware noch nicht physisch bestätigt.")
+                        }
+                        validated.targetPercent = context.percent
+                    }
+                    if action.action == .dischargeTo {
+                        guard context.canDisconnectAdapter && context.allowsAdapterDisconnect else {
+                            throw BGChargingActionError.invalidRequest("Entladen nicht bestätigt oder Monitor-/Deckelkonflikt.")
+                        }
+                    }
+                    latest = try validated.applying(to: latest)
+                }
+            }
             return try BGConfigFile.performAction(action, at: configURL)
         }
         if request.queryOnly == true { return try BGConfigFile.read(at: configURL) }

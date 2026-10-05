@@ -32,6 +32,7 @@ public enum MenuBarAppearanceKeys {
     public static let showPower = "bg.menuShowPower"
     public static let showHealth = "bg.menuShowHealth"
     public static let showPowerFlow = "bg.menuShowPowerFlow"
+    public static let showNextTask = "bg.menuShowNextTask"
     public static let menuCardOrder = "bg.menuCardOrder"
     public static let showHistory = "bg.menuShowHistory"
     public static let menuCardsCompact = "bg.menuCardsCompact"
@@ -94,7 +95,7 @@ public enum MenuBarAppearance {
         isDaemonActive: Bool
     ) -> MenuBarSymbolDescriptor {
         let clamped = clampPercent(status.percent)
-        let warning = !isDaemonActive || status.state == .unsupported
+        let warning = !isDaemonActive || !status.hasBatteryPercent || status.state == .unsupported
         let base: String
         switch style {
         case .ring: base = "circle"
@@ -106,6 +107,9 @@ public enum MenuBarAppearance {
         if !isDaemonActive {
             overlay = "exclamationmark"
             description = "Hintergrunddienst nicht erreichbar"
+        } else if !status.hasBatteryPercent {
+            overlay = "questionmark"
+            description = "Ladestand momentan nicht verfügbar"
         } else if status.state == .unsupported {
             overlay = "exclamationmark"
             description = "Ladesteuerung nicht unterstützt"
@@ -136,6 +140,7 @@ public enum MenuBarAppearance {
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPower)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showHealth)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPowerFlow)
+        userDefaults.set(false, forKey: MenuBarAppearanceKeys.showNextTask)
         userDefaults.set(MenuCardLayout.defaultRawOrder, forKey: MenuBarAppearanceKeys.menuCardOrder)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showHistory)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.menuCardsCompact)

@@ -4,6 +4,8 @@ import IOKit.ps
 
 public struct BatteryInfo: Sendable, Equatable {
     public var percent: Int = 0
+    public var percentAvailable: Bool = true
+    public var externalPowerAvailable: Bool = true
     public var pluggedIn: Bool = false
     public var isCharging: Bool = false
     public var temperatureCelsius: Double? = nil
@@ -37,6 +39,8 @@ public enum BatteryReader {
 
     public static func read(smcClient: SMCClient = .shared) -> BatteryInfo {
         var info = BatteryInfo()
+        info.percentAvailable = false
+        info.externalPowerAvailable = false
 
         // 1. Aus IOKit-Registry 'AppleSmartBattery' lesen
         let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
@@ -45,16 +49,16 @@ public enum BatteryReader {
             if IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS,
                let dict = props?.takeRetainedValue() as? [String: Any] {
 
-                let curCap = (dict["CurrentCapacity"] as? NSNumber)?.intValue ?? 0
-                let maxCap = (dict["MaxCapacity"] as? NSNumber)?.intValue ?? 100
-                if maxCap > 0 {
-                    info.percent = Swift.min(100, Swift.max(0, Int(round(Double(curCap) / Double(maxCap) * 100.0))))
-                } else {
-                    info.percent = Swift.min(100, Swift.max(0, curCap))
+                if let curCap = (dict["CurrentCapacity"] as? NSNumber)?.intValue,
+                   let maxCap = (dict["MaxCapacity"] as? NSNumber)?.intValue,
+                   curCap >= 0, maxCap > 0, curCap <= maxCap {
+                    info.percent = Int(round(Double(curCap) / Double(maxCap) * 100))
+                    info.percentAvailable = true
                 }
 
                 if let ext = dict["ExternalConnected"] as? NSNumber {
                     info.pluggedIn = ext.boolValue
+                    info.externalPowerAvailable = true
                 }
 
                 if let chg = dict["IsCharging"] as? NSNumber {
@@ -114,11 +118,14 @@ public enum BatteryReader {
                 if let desc = IOPSGetPowerSourceDescription(psBlob, ps)?.takeUnretainedValue() as? [String: Any] {
                     guard desc[kIOPSTypeKey] as? String == kIOPSInternalBatteryType else { continue }
                     if let cur = desc[kIOPSCurrentCapacityKey] as? Int,
-                       let maxCap = desc[kIOPSMaxCapacityKey] as? Int, maxCap > 0 {
-                        info.percent = Swift.min(100, Swift.max(0, Int(round(Double(cur) / Double(maxCap) * 100.0))))
+                       let maxCap = desc[kIOPSMaxCapacityKey] as? Int, maxCap > 0, cur >= 0, cur <= maxCap {
+                        info.percent = Int(round(Double(cur) / Double(maxCap) * 100.0))
+                        info.percentAvailable = true
                     }
-                    if let state = desc[kIOPSPowerSourceStateKey] as? String {
+                    if let state = desc[kIOPSPowerSourceStateKey] as? String,
+                       state == kIOPSBatteryPowerValue || state == kIOPSACPowerValue {
                         info.pluggedIn = (state != kIOPSBatteryPowerValue)
+                        info.externalPowerAvailable = true
                     }
                     if let chg = desc[kIOPSIsChargingKey] as? Bool {
                         info.isCharging = chg

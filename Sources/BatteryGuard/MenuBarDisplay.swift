@@ -7,6 +7,8 @@ public enum MenuBarDisplayMode: String, CaseIterable, Identifiable, Sendable {
     case percent = "percent"
     case temperature = "temperature"
     case power = "power"
+    case percentAndTemperature = "percentAndTemperature"
+    case percentAndPower = "percentAndPower"
 
     public static let appStorageKey = "bg.menuBarDisplay"
     public static let defaultMode: MenuBarDisplayMode = .percent
@@ -23,6 +25,10 @@ public enum MenuBarDisplayMode: String, CaseIterable, Identifiable, Sendable {
             return "Akkutemperatur"
         case .power:
             return "Akku-Leistung"
+        case .percentAndTemperature:
+            return "Prozent & Akkutemperatur"
+        case .percentAndPower:
+            return "Prozent & Akku-Leistung"
         }
     }
 
@@ -40,6 +46,28 @@ public enum MenuBarDisplayMode: String, CaseIterable, Identifiable, Sendable {
             self = .temperature
         case "power", "akku-leistung", "akkuleistung", "leistung", "watts":
             self = .power
+        case "percentandtemperature", "percent_and_temperature", "percenttemperature",
+             "percentandtemp", "percent & temperature", "percent&temperature",
+             "percent & temp", "percent&temp", "percent+temperature", "percent+temp",
+             "prozent & akkutemperatur", "prozent&akkutemperatur",
+             "prozent und akkutemperatur", "prozent & temperatur",
+             "prozent&temperatur", "prozent und temperatur",
+             "prozentakkutemperatur", "prozenttemperatur",
+             "prozent-temperatur", "prozent-akkutemperatur",
+             "prozent & temp", "prozent&temp":
+            self = .percentAndTemperature
+        case "percentandpower", "percent_and_power", "percentpower",
+             "percent & power", "percent&power", "percent+power",
+             "percentandwatts", "percent & watts", "percent&watts",
+             "prozent & akku-leistung", "prozent&akku-leistung",
+             "prozent & akkuleistung", "prozent&akkuleistung",
+             "prozent & leistung", "prozent&leistung",
+             "prozent und akku-leistung", "prozent und akkuleistung",
+             "prozent und leistung", "prozentakku-leistung",
+             "prozentakkuleistung", "prozentleistung",
+             "prozent-leistung", "prozent-akku-leistung",
+             "prozent & watts", "prozent&watts":
+            self = .percentAndPower
         default:
             self = .percent
         }
@@ -112,6 +140,14 @@ public struct MenuBarDisplayFormatter {
             return formatTemperature(temperature, isDaemonActive: isDaemonActive)
         case .power:
             return formatPower(power, isDaemonActive: isDaemonActive)
+        case .percentAndTemperature:
+            let pStr = formatPercent(percent, isDaemonActive: isDaemonActive)
+            let tStr = formatTemperature(temperature, isDaemonActive: isDaemonActive)
+            return "\(pStr) \(tStr)"
+        case .percentAndPower:
+            let pStr = formatPercent(percent, isDaemonActive: isDaemonActive)
+            let wStr = formatPower(power, isDaemonActive: isDaemonActive)
+            return "\(pStr) \(wStr)"
         }
     }
 
@@ -119,18 +155,13 @@ public struct MenuBarDisplayFormatter {
     public static func text(for mode: MenuBarDisplayMode,
                             status: BGStatus,
                             isDaemonActive: Bool) -> String {
-        switch mode {
-        case .iconOnly:
-            return ""
-        case .percent:
-            return formatPercent(status.percent, isDaemonActive: isDaemonActive)
-        case .temperature:
-            let temp = extractTemperature(from: status)
-            return formatTemperature(temp, isDaemonActive: isDaemonActive)
-        case .power:
-            let power = extractPower(from: status)
-            return formatPower(power, isDaemonActive: isDaemonActive)
-        }
+        let temp = extractTemperature(from: status)
+        let power = extractPower(from: status)
+        return text(for: mode,
+                    percent: status.hasBatteryPercent ? status.percent : nil,
+                    temperature: temp,
+                    power: power,
+                    isDaemonActive: isDaemonActive)
     }
 
     /// Tooltip mit Hinweistext erzeugen.
@@ -140,7 +171,7 @@ public struct MenuBarDisplayFormatter {
                                power: Double?,
                                isDaemonActive: Bool) -> String {
         guard isDaemonActive else {
-            if mode == .power {
+            if mode == .power || mode == .percentAndPower {
                 return "B-Guard · Dienst nicht aktiv. \(powerNotice)."
             }
             return "B-Guard · Hintergrunddienst nicht aktiv"
@@ -155,6 +186,14 @@ public struct MenuBarDisplayFormatter {
         case .power:
             let pStr = formatPower(power, isDaemonActive: true)
             return "B-Guard · Akku-Leistung: \(pStr). \(powerNotice)."
+        case .percentAndTemperature:
+            let pStr = formatPercent(percent, isDaemonActive: true)
+            let tStr = formatTemperature(temperature, isDaemonActive: true)
+            return "B-Guard · Akkustand: \(pStr), Akkutemperatur: \(tStr)"
+        case .percentAndPower:
+            let pStr = formatPercent(percent, isDaemonActive: true)
+            let wStr = formatPower(power, isDaemonActive: true)
+            return "B-Guard · Akkustand: \(pStr), Akku-Leistung: \(wStr). \(powerNotice)."
         }
     }
 
@@ -164,7 +203,7 @@ public struct MenuBarDisplayFormatter {
         let temp = extractTemperature(from: status)
         let power = extractPower(from: status)
         return tooltip(for: mode,
-                       percent: status.percent,
+                       percent: status.hasBatteryPercent ? status.percent : nil,
                        temperature: temp,
                        power: power,
                        isDaemonActive: isDaemonActive)
@@ -177,7 +216,7 @@ public struct MenuBarDisplayFormatter {
                                      power: Double?,
                                      isDaemonActive: Bool) -> String {
         guard isDaemonActive else {
-            if mode == .power {
+            if mode == .power || mode == .percentAndPower {
                 return "B-Guard: Hintergrunddienst nicht aktiv. \(powerNotice)."
             }
             return "B-Guard: Hintergrunddienst nicht aktiv"
@@ -192,6 +231,14 @@ public struct MenuBarDisplayFormatter {
         case .power:
             let pStr = formatPower(power, isDaemonActive: true)
             return "B-Guard, Akku-Leistung \(pStr). \(powerNotice)."
+        case .percentAndTemperature:
+            let pStr = formatPercent(percent, isDaemonActive: true)
+            let tStr = formatTemperature(temperature, isDaemonActive: true)
+            return "B-Guard, Akkustand \(pStr), Akkutemperatur \(tStr)"
+        case .percentAndPower:
+            let pStr = formatPercent(percent, isDaemonActive: true)
+            let wStr = formatPower(power, isDaemonActive: true)
+            return "B-Guard, Akkustand \(pStr), Akku-Leistung \(wStr). \(powerNotice)."
         }
     }
 
@@ -201,7 +248,7 @@ public struct MenuBarDisplayFormatter {
         let temp = extractTemperature(from: status)
         let power = extractPower(from: status)
         return voiceOverText(for: mode,
-                             percent: status.percent,
+                             percent: status.hasBatteryPercent ? status.percent : nil,
                              temperature: temp,
                              power: power,
                              isDaemonActive: isDaemonActive)

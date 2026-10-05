@@ -157,7 +157,7 @@ final class LocalAPIStore {
             return Self.failure(400, "invalid_path", "Ungültiger API-Pfad.")
         }
         let path = components.path
-        let reads = ["/api/v1/status", "/api/v1/config", "/api/v1/history", "/api/v1/history.csv", "/api/v1/capabilities", "/api/v1/power-flow"]
+        let reads = ["/api/v1/status", "/api/v1/config", "/api/v1/history", "/api/v1/history.csv", "/api/v1/capabilities", "/api/v1/power-flow", "/api/v1/profiles"]
         guard reads.contains(path) || path == "/api/v1/actions" else { return Self.failure(404, "not_found", "Endpunkt nicht vorhanden.") }
         guard request.method == (path == "/api/v1/actions" ? "POST" : "GET") else {
             return Self.failure(405, "method_not_allowed", "Methode für diesen Endpunkt nicht erlaubt.")
@@ -187,6 +187,13 @@ final class LocalAPIStore {
             case "/api/v1/status":
                 struct Result: Encodable { let daemonActive: Bool; let status: BGStatus }
                 return try json(Result(daemonActive: daemonActive, status: status.status))
+            case "/api/v1/profiles":
+                do {
+                    let url = SavedProfileStore.defaultProfilesURL
+                    let profiles = FileManager.default.fileExists(atPath: url.path)
+                        ? try BGSavedProfileCollection.importData(SavedProfileStore.readBoundedData(from: url)).profiles : []
+                    return try json(profiles)
+                } catch { return Self.failure(503, "profiles_unavailable", "Gespeicherte Profile sind nicht verfügbar.") }
             case "/api/v1/config":
                 do { return try json(config.savedConfig()) }
                 catch { return Self.failure(503, "config_unavailable", "Gespeicherte Einstellungen sind nicht verfügbar.") }
@@ -196,7 +203,11 @@ final class LocalAPIStore {
                     "controlAllowed": allowsControl, "controlReady": daemonActive && !status.daemonNeedsUpdate,
                     "availableProfiles": BGProfile.allCases.map(\.rawValue), "historyRetentionHours": 168,
                     "smcKeysDetected": status.status.smcKeysDetected,
-                    "usesNativeDesktopFallback": status.status.usesNativeDesktopFallback]
+                    "usesNativeDesktopFallback": status.status.usesNativeDesktopFallback,
+                    "availableActions": BGChargingAction.allCases.map(\.rawValue),
+                    "topUpRequiresSeparateChargeControl": true,
+                    "holdChargeHardwareVerified": false, "dischargeToHardwareVerified": false,
+                    "calibrationHardwareVerified": false, "schedulesRunInDaemon": true]
                 return LocalHTTPResponse(status: 200, jsonData: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]))
             case "/api/v1/power-flow":
                 // Freshness represents collection freshness (when the sample was gathered by B-Guard),

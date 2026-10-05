@@ -30,6 +30,7 @@ final class NotificationManager: Sendable {
             } else if temperature < threshold - 2 { didNotifyHeat = false }
         }
 
+        guard status.hasBatteryPercent && status.hasExternalPower else { return }
         let onBattery = !status.pluggedIn || status.state == .onBattery
         
         // 1. Bei Akkubetrieb <= lowBatteryThreshold: 'Akku bei X % – bitte laden'

@@ -11,6 +11,7 @@ Jede Anfrage benötigt den Header `Authorization: Bearer <Token>`. Das Token bes
 | Methode und Pfad | Antwort |
 | --- | --- |
 | `GET /api/v1/status` | JSON mit `daemonActive` und `status` (`BGStatus`). |
+| `GET /api/v1/profiles` | Eigene gespeicherte Profile als JSON. |
 | `GET /api/v1/config` | Gespeicherte Konfiguration als `BGConfig`-JSON. Nur lesend. |
 | `GET /api/v1/history?hours=24` | Lokale Messpunkte als JSON. |
 | `GET /api/v1/history.csv?hours=24` | Dieselben Messpunkte als CSV. |
@@ -25,8 +26,9 @@ Liest alle 2 Sekunden rein lesend einen Snapshot aus `AppleSmartBattery` aus. Di
 
 Schema der JSON-Antwort:
 - `available` (Boolean): `true`, wenn frische Daten mit mindestens einem vorhandenen Leistungswert vorliegen; `false`, wenn die Messung veraltet (stale) ist.
-- `sampledAt` (String, ISO-8601-Zeitstempel): Zeitpunkt der Messwerterfassung.
-- `source` (String): Datenquelle (z. B. `"AppleSmartBattery"`).
+- `fresh` (Boolean): Messung liegt innerhalb der Frischefrist.
+- `sampledAt` (String, optional, ISO-8601-Zeitstempel): Zeitpunkt der Messwerterfassung.
+- `source` (String, optional): Datenquelle (z. B. `"AppleSmartBattery"`).
 - `inputWatts` (Zahl, optional): tatsächlich gemeldetes `SystemPowerIn / 1000` in Watt. 0 W wird nur bei bestätigt getrenntem Netzteil gemeldet.
 - `batteryWatts` (Zahl, optional): vorzeichenbehafteter Batteriefluss aus `Voltage * InstantAmperage / 1e6` in Watt.
 - `systemWatts` (Zahl, optional): geschätzter Systemverbrauch als Differenz `inputWatts - batteryWatts`.
@@ -67,7 +69,7 @@ curl --fail-with-body \
 
 ## Aktionen
 
-Ab B-Guard 0.3.2 benötigen Steueraktionen den Hintergrunddienst 0.3.2. Der Dienst wendet den Befehl atomar auf die aktuelle Konfiguration an; alte Dienste können ihn nicht still als unveränderten Feldvergleich bestätigen. Ein neuer Volllade- oder Reiseauftrag erhält eine eindeutige ID, damit der Abschluss eines älteren Auftrags ihn nicht entfernt.
+Die aktuellen Steueraktionen benötigen Hintergrunddienst 0.3.7. Das atomare Aktionsprotokoll wurde mit Dienst 0.3.2 eingeführt. Der Dienst wendet den Befehl atomar auf die aktuelle Konfiguration an; alte Dienste können ihn nicht still als unveränderten Feldvergleich bestätigen. Ein neuer Volllade- oder Reiseauftrag erhält eine eindeutige ID, damit der Abschluss eines älteren Auftrags ihn nicht entfernt.
 
 Sende ein JSON-Objekt an `POST /api/v1/actions`, mit `Content-Type: application/json`. Das Feld `action` ist eine Zeichenkette; die Parameter stehen daneben im selben Objekt.
 
@@ -121,3 +123,35 @@ HTTP-Statuscodes unterscheiden ungültige Anfragen von fehlender Freigabe oder e
 | `503` | Benötigter Dienst oder Speichervorgang nicht verfügbar. |
 
 Ist die App geschlossen oder die API ausgeschaltet, ist der HTTP-Server nicht erreichbar; das ist ein Verbindungsfehler statt einer JSON-Fehlerantwort. Das API-Token ersetzt nicht die Berechtigungsprüfung des lokalen Einstellungsdienstes. Für eine erfolgreiche Schreibaktion müssen auch dessen Voraussetzungen erfüllt sein.
+
+## Erweiterungen ab 0.3.7
+
+Dienst 0.3.7 erforderlich. `GET /api/v1/profiles` liefert eigene gespeicherte Profile. `GET /api/v1/config` enthält auch `specialChargePlan`, `calibrationPlan`, `scheduledTasks`, `scheduleHistory` (maximal 100 Einträge) `awakeUntilLimitUntil` und `manualOverrideUntil`.
+
+Zusätzliche `POST /api/v1/actions`-Aktionen:
+
+| action | Parameter | Verhalten |
+| --- | --- | --- |
+| `saved-profile` | `savedProfile`: validiertes Profilobjekt | Eigene Grenzen und Schutzparameter atomar anwenden. |
+| `top-up` | optional `minutes`: 1–1440 | 100 % bis zum bestätigten Abstecken oder Ablauf; separate Ladesperre erforderlich. |
+| `hold-charge` | optional `minutes`: 1–1440 | Aktuellen Ladestand im Dienst erfassen; derzeit ohne physisch bestätigte Hardware abgelehnt. |
+| `discharge-to` | `targetPercent`: 10–95; optional `minutes` | Einmalentladung; derzeit ohne physisch bestätigte Hardware abgelehnt. |
+| `cancel-special` | keine | Sonderaktion beenden, Basisprofil erhalten. |
+| `upsert-schedule` | `scheduledTask`: validiertes Aufgabenobjekt | Zeitplan hinzufügen/ersetzen, gespeicherten Ausführungsstand bewahren. |
+| `delete-schedule` | `scheduleID`: UUID | Zeitplan entfernen. |
+| `calibration` | keine | Vorbereitet; ohne physisch bestätigte Hardware abgelehnt. |
+| `cancel-calibration` | keine | Kalibrierungsauftrag beenden. |
+| `stay-awake-until-limit` | `minutes`: 1–120 | Explizite befristete Wachhaltung bis zum Ziel; geeignete Ladesteuerung erforderlich. |
+| `cancel-stay-awake` | keine | Wachhaltung beenden. |
+
+Manuelle Ladeaktionen übersteuern Zeitpläne für zwei Stunden; aktive Pause, Volllade-, Reise-, Sonder- und Kalibrierungsaufträge haben zusätzlich Vorrang. Zeitpläne speichern Profilparameter als eigenen Stand. Die Wiederholungen `once`, `daily`, `weekdays`, `weekly`, `biweekly`, `monthly` und `yearly` verwenden eine gespeicherte Zeitzone. Fehlende Monatstage werden übersprungen. `catchUp: false` erlaubt das normale 30-Sekunden-Ausführungsfenster; mit `true` wird höchstens der neueste verpasste Termin bis zu sechs Stunden nachgeholt.
+
+`/capabilities` nennt alle implementierten Aktionen unter `availableActions`. Das ist keine Hardwarefreigabe: `holdChargeHardwareVerified`, `dischargeToHardwareVerified` und `calibrationHardwareVerified` sind derzeit `false`; Top Up benötigt separate Ladesteuerung. `schedulesRunInDaemon` unterscheidet Zeitpläne von der REST API, für die die App weiterhin laufen muss. Erfolg bedeutet bestätigte Speicherung, keine garantierte Hardwarewirkung.
+
+### Eigenes Profil anwenden
+
+```json
+{"action":"saved-profile","savedProfile":{"id":"6900ECAC-4CBB-4B07-A7EB-6FDFA80387EA","name":"Schreibtisch","lowerLimit":75,"upperLimit":80,"heatProtectionCelsius":40,"activeDischargeAboveUpper":false}}
+```
+
+Profilnamen haben höchstens 60 Zeichen; untere Grenze 5–95, obere 20–100 und größer als die untere. Hitzeschutz ist 0 (aus) oder 30–50 °C. Zeitpläne sind ohne `enabled: true` deaktiviert. Ihr Ausführungsstand wird vom Dienst verwaltet.
