@@ -1,8 +1,12 @@
 # B-Guard Roadmap
 
-Stand: 5. Oktober 2026 · Umsetzungsstand: 0.3.7
+Stand: 5. Oktober 2026 · Veröffentlicht: 0.3.7 · Diagnoseausbau in Entwicklung: 0.4.0
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
+
+## Diagnoseausbau 0.4.0
+
+Messvertrag und erste Akku-/Mac-Diagnose implementiert; Langzeitverlauf, Ressourcen, Hinweise und Prüffragen zunächst mit begrenztem Umfang. [Paketstand D0–D6 und nächste Schritte](docs/DIAGNOSTICS_PLAN.md), [Datenvertrag und Abnahmegrenzen](docs/diagnostics-0.4.md), [Journey](docs/JOURNEY.md). Physische Gerätevalidierung bleibt Voraussetzung für belastbare Freigabe.
 
 ## Nächste Umsetzung: Funktionsumfang aus AlDente Pro
 

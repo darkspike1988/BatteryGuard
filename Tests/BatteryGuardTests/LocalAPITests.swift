@@ -67,6 +67,23 @@ struct LocalAPITests {
         f.config.flushPendingSave()
     }
 
+    @Test func diagnosticReportIsAuthenticatedReadOnlyAndRedacted() throws {
+        let f = try fixture(); defer { f.cleanUp() }
+        let secret = "secret-token-/Users/Alice"
+        f.status.status.message = secret
+        f.status.status.configurationNotice = secret
+        let original = f.config.config
+        let response = f.api.respond(to: f.request("/api/v1/diagnostics"))
+        #expect(response.status == 200)
+        let report = try BGJSON.decoder().decode(BGDiagnosticReport.self, from: response.jsonData)
+        #expect(report.schemaVersion == 1 && report.system == nil)
+        #expect(!String(decoding: response.jsonData, as: UTF8.self).contains(secret))
+        #expect(f.api.respond(to: f.request("/api/v1/diagnostics", overrides: ["authorization": "Bearer wrong"])).status == 401)
+        #expect(f.api.respond(to: f.request("/api/v1/diagnostics", method: "POST")).status == 405)
+        #expect(f.api.respond(to: f.request("/api/v1/diagnostics?other=1")).status == 400)
+        #expect(f.config.config == original && !f.config.hasUnsavedChanges)
+    }
+
     @Test func actionsRequireOptInAndConfirmedSave() throws {
         let f = try fixture(); defer { f.cleanUp() }
         let action = f.request("/api/v1/actions", method: "POST", json: #"{"action":"profile","profile":"desk"}"#)

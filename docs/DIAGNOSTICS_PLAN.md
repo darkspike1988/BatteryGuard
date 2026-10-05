@@ -1,6 +1,20 @@
 # Ausbauplan: belastbare Akku- und Mac-Diagnostik
 
-Stand: 5. Oktober 2026 · Ausgangspunkt: 0.3.7, Commit 06288623f1b8462bef94a691a26bd40c297cb447. Dies ist ein priorisierter Vorschlag mit Abnahmekriterien, keine bereits implementierte Diagnostik und kein Terminversprechen.
+Stand: 5. Oktober 2026 · Ausgangspunkt: 0.3.7, Commit 06288623f1b8462bef94a691a26bd40c297cb447. Dieser Plan enthält Zielumfang und Abnahmekriterien. Der erste Ausbau in Entwicklung 0.4.0 ist unten ausgewiesen; verbleibende Ziele sind kein Terminversprechen.
+
+## Umsetzung 0.4.0 in Entwicklung
+
+| Paket | Aktueller Stand | Nächster Schritt |
+| --- | --- | --- |
+| D0 | Messvertrag, Quellen, Einheiten und Frische implementiert | Physischer Referenzabgleich |
+| D1 | Kapazitätsquote und schmale Zyklusreferenz implementiert | Weitere Modelle und Apple-Anzeigen vergleichen |
+| D2 | Freiwillige lokale Tagesaggregate für 365 Tage | Abdeckung, Energie-/Schlafsegmente, Speicher-Migration |
+| D3 | Sichtbare Thermik-, CPU-, RAM-, Swap- und Volume-Messung | Referenzvergleich und Overhead-Budget |
+| D4 | Versionierte momentane Hinweise | Mindestdauer, Hysterese und Pilot-Fehlalarmtests |
+| D5 | Prüffragen und begrenzter Bericht | Zeitlich geführte Vorher-/Nachher-Journey |
+| D6 | Automatisierte Logiktests und macOS-CI vorbereitet | Reale Geräte-/Systemabnahme und Pilotphase |
+
+Details: [Implementierung und Grenzen](diagnostics-0.4.md), [Entwicklungs-Journey](JOURNEY.md). Die folgende Ausgangslage beschreibt den Review von 0.3.7.
 
 ## Produktziel
 
