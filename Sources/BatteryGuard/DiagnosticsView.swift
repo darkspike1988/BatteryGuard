@@ -112,7 +112,7 @@ struct DiagnosticsView: View {
                         ForEach(Array(history.capacityDays.sorted { $0.lastSampledAt > $1.lastSampledAt }.prefix(7))) { day in
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack {
-                                    Text(day.day.formatted(date: .abbreviated, time: .omitted))
+                                    Text(utcDayText(day.day))
                                     Spacer()
                                     Text(String(format: "%.1f %% · %d Messungen", day.mean, day.count)).monospacedDigit()
                                 }
@@ -128,12 +128,53 @@ struct DiagnosticsView: View {
         .onDisappear { statusStore.endDiagnostics() }
     }
 
+    private func utcDayText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
     private func diagnosticRow(_ title: String, metric: BGMetric, in data: BGBatteryMeasurements) -> some View {
         let item = data.measurement(metric)
         return VStack(alignment: .leading, spacing: 3) {
             LabeledContent(title, value: formatted(item))
-            Text(item.map { "\($0.source.rawValue) · \($0.quality.rawValue) · \($0.sampledAt.formatted(date: .omitted, time: .standard))" } ?? "Keine Quelle verfügbar")
+            Text(item.map { "\(sourceText($0.source)) · \(qualityText($0.quality)) · \($0.sampledAt.formatted(date: .omitted, time: .standard))" } ?? "Keine Quelle verfügbar")
                 .font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+
+    private func qualityText(_ quality: BGMeasurementQuality) -> String {
+        switch quality {
+        case .reported: "gemeldet"
+        case .derived: "berechnet"
+        case .unavailable: "nicht verfügbar"
+        case .unsupported: "nicht unterstützt"
+        case .invalid: "ungültig"
+        case .stale: "veraltet"
+        }
+    }
+
+    private func sourceText(_ source: BGMeasurementSource) -> String {
+        switch source {
+        case .powerSources: "macOS-Stromquellen"
+        case .registryCharge: "Akku-Registry: Ladekapazitäten"
+        case .registryTemperature: "Akku-Registry: Temperatur"
+        case .registryCycles: "Akku-Registry: Zyklen"
+        case .rawMaxCapacity: "Akku-Registry: Roh-Maximalkapazität"
+        case .fullChargeCapacity: "Akku-Daten: Vollladekapazität"
+        case .nominalCapacity: "Akku-Daten: Nennkapazität"
+        case .designCapacity: "Akku-Registry: Designkapazität"
+        case .nestedDesignCapacity: "Akku-Daten: Designkapazität"
+        case .registryPower: "Akku-Registry: Spannung und Strom"
+        case .smcTemperature: "Akku-Sensor über SMC"
+        case .capacityCalculation: "Maximal- / Designkapazität"
+        case .legacyStatus: "Status: Herkunft unbekannt"
+        case .machCPU: "macOS: CPU-Zeitanteile"
+        case .machMemory: "macOS: Speicherkategorien"
+        case .swapUsage: "macOS: Swap-Belegung"
+        case .volumeCapacity: "macOS: Volumekapazität"
         }
     }
 

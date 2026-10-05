@@ -21,6 +21,10 @@ Jede Anfrage benötigt den Header `Authorization: Bearer <Token>`. Das Token bes
 
 Der Verlauf verwendet ohne Parameter die letzten 24 Stunden. `hours` muss eine ganze Zahl von 1 bis 168 sein. Messlücken bleiben erhalten; die API erfindet keine Werte für Schlafzeiten oder eine geschlossene App. Eine erfolgreiche Statusabfrage bedeutet nicht automatisch, dass der Dienst erreichbar ist: Prüfe `daemonActive`, bevor du Messwerte als aktuell verwendest.
 
+### Diagnose (`GET /api/v1/diagnostics`, ab 0.4.0)
+
+Liefert Quellen, Qualität, normierte Einheiten, Zeitstempel, momentane Hinweise und vorhandene Kapazitäts-Tagesaggregate. Ohne sichtbare Diagnoseseite fehlen Systemdaten; die Abfrage startet keine Hintergrundmessung. Keine Query-Parameter oder Schreibaktionen. Berichtsschema und Datenschutzumfang: [Diagnosevertrag](diagnostics-0.4.md#messvertrag-und-rest).
+
 ### Energiefluss (`GET /api/v1/power-flow`)
 
 Liest alle 2 Sekunden rein lesend einen Snapshot aus `AppleSmartBattery` aus. Die App übernimmt dies eigenständig; ein Update des Hintergrunddienstes ist nicht erforderlich (Dienst 0.3.2 bleibt kompatibel).

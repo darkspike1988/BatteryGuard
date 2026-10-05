@@ -47,6 +47,12 @@ Nutzerauftrag: den Ausbauplan schrittweise ausführen. Ausgangspunkt: Merge von 
 
 Unter Linux wurde Swift 6.0.3 für den plattformunabhängigen Kern verwendet. Der SwiftPM-Kindprozess stürzte in dieser Umgebung beim Modulaufbau ab; direkter Swift-Compiler-Aufruf und derselbe Swift-Testing-Runner funktionierten. Das ist eine Umgebungseinschränkung, kein bestandener macOS-App-Build.
 
+Prüfbeleg für Implementierungscommit `b6e143dfe29bff393c51959ca9de4191d4f491bb`: [macOS-CI 37336587918](https://github.com/darkspike1988/BatteryGuard/actions/runs/37336587918) erfolgreich. 210 Swift-Testing-Tests in 30 Suiten und 96 XCTest-Tests bestanden (306 insgesamt), außerdem acht Journaltests, Shellsyntax, Release-Build, App-Intents-Metadaten, Bundle-Signaturprüfung und Community-DMG. Gerenderte Diagnoseansichten in Hell/Dunkel visuell geprüft: alle fünf Panels lesbar, keine abgeschnittenen Inhalte in der 840 × 1600-Vorschau. Kein Nachweis für native Bedienung auf kleinen Displays oder VoiceOver.
+
+Bei der Abschlussprüfung korrigiert: UTC-Tageslabel verwendet nun ausdrücklich UTC; Quellen-/Qualitätsbegriffe in der Oberfläche sind auf Deutsch erklärt. Exakte Quellenkennungen bleiben im Bericht. Diese Abschlussänderung benötigt ihren eigenen erfolgreichen CI-Lauf.
+
+Nächste Schritte: (1) gleichzeitiger Sensor-/Ressourcenvergleich auf dem Referenz-Mac samt Eigenverbrauch; (2) Vergleich auf weiteren Modellen und dokumentierter Messabdeckung; (3) auf dieser Basis Mindestdauer/Hysterese und geführte Vorher-/Nachher-Journeys ausbauen. Ohne diese Belege keine allgemeine Gerätegesundheit oder Alterungsprognose behaupten.
+
 Weitere Informationen und Datenvertrag: [diagnostics-0.4.md](diagnostics-0.4.md).
 
 ## Vorlage für den nächsten Eintrag (Fortsetzung)
