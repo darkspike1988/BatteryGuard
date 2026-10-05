@@ -39,3 +39,16 @@ Der letzte Claude-Aufruf meldet `Individual quota reached` und Status ERROR, ohn
 - [Apple: AppIntentsTesting](https://developer.apple.com/documentation/appintentstesting/testing-your-app-intents-code)
 - [Apple: Energiemodi](https://support.apple.com/en-us/101613)
 - [GitHub: Xcode-27-Runner](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)
+
+## Veröffentlichung und lokaler Stand
+
+- Implementierung auf GitHub: `4fb0e2b`; [macOS-CI](https://github.com/darkspike1988/BatteryGuard/actions/runs/37253178338) erfolgreich, einschließlich 287 Tests, Shellsyntax, Release-Bundle, Metadaten, Signatur und DMG.
+- [Release 0.3.7](https://github.com/darkspike1988/BatteryGuard/releases/tag/v0.3.7) mit versionierter und stabil benannter DMG, SHA-256-Dateien und ZIP veröffentlicht. GitHub-Download mit lokalem geprüften Asset und veröffentlichter Prüfsumme verglichen.
+- DMG schreibgeschützt eingehängt: App 0.3.7, Programme-Link und Installationsanleitung vorhanden; anschließend ausgeworfen.
+- Website über GitHub Pages veröffentlicht; tatsächliche HTML-Antwort enthält 0.3.7, Profil-/Zeitplanbeschreibung und stabilen Downloadlink.
+- Lokale App 0.3.7 installiert, Signatur geprüft und Prozess gestartet; vorheriges Bundle als lokale Sicherung erhalten. Kein Quarantäneattribut entfernt, kein Administratorrecht umgangen.
+- Der tatsächlich laufende lokale Dienst meldet weiterhin **0.3.2**. Dienst 0.3.7 ist im App-Bundle enthalten, aber noch nicht administrativ installiert. Deshalb sind die neuen Dienstfunktionen auf diesem Rechner noch nicht praktisch abgenommen.
+
+Ein zusätzlicher gezielter Gemini-Review der IPC-Vergrößerung meldete SUCCESS ohne konkrete Fehler. Seine approximativen Größenangaben sind keine separat gemessenen Zahlen; maßgeblich sind der bestandene Grenztest und die unveränderten absoluten Fristen.
+
+Der vollständige Nachtauftrag bleibt wegen der oben genannten System-/Hardware- und Signierungsvoraussetzungen offen. Kein Testlauf ersetzt diese Abnahmen.

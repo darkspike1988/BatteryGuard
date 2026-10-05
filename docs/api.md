@@ -29,7 +29,7 @@ Schema der JSON-Antwort:
 - `fresh` (Boolean): Messung liegt innerhalb der Frischefrist.
 - `sampledAt` (String, optional, ISO-8601-Zeitstempel): Zeitpunkt der Messwerterfassung.
 - `source` (String, optional): Datenquelle (z. B. `"AppleSmartBattery"`).
-- `inputWatts` (Zahl, optional): tatsächlich gemeldetes `SystemPowerIn / 1000` in Watt. 0 W wird nur bei bestätigt getrenntem Netzteil gemeldet.
+- `inputWatts` (Zahl, optional): tatsächlich gemeldetes `SystemPowerIn / 1000` in Watt. Ein gemeldeter Nullwert bleibt erhalten; bei bestätigt getrenntem Netzteil wird 0 W gesetzt.
 - `batteryWatts` (Zahl, optional): vorzeichenbehafteter Batteriefluss aus `Voltage * InstantAmperage / 1e6` in Watt.
 - `systemWatts` (Zahl, optional): geschätzter Systemverbrauch als Differenz `inputWatts - batteryWatts`.
 - `adapterRatedWatts` (Zahl, optional): Typ-Nennleistung aus `AdapterDetails.Watts` (z. B. 65 W; reine Nennleistung, niemals tatsächlicher Verbrauch).
@@ -155,3 +155,35 @@ Manuelle Ladeaktionen übersteuern Zeitpläne für zwei Stunden; aktive Pause, V
 ```
 
 Profilnamen haben höchstens 60 Zeichen; untere Grenze 5–95, obere 20–100 und größer als die untere. Hitzeschutz ist 0 (aus) oder 30–50 °C. Zeitpläne sind ohne `enabled: true` deaktiviert. Ihr Ausführungsstand wird vom Dienst verwaltet.
+
+### Zeitplan speichern
+
+```json
+{
+  "action": "upsert-schedule",
+  "scheduledTask": {
+    "schedule": {
+      "id": "56DDCA4A-B2E1-4873-BBB8-727446F08846",
+      "name": "Arbeitstag",
+      "timeZoneIdentifier": "Europe/Berlin",
+      "startsAt": "2026-10-06T08:00:00+02:00",
+      "recurrence": "weekdays"
+    },
+    "enabled": true,
+    "catchUp": false,
+    "action": {
+      "kind": "profile",
+      "profile": {
+        "id": "6900ECAC-4CBB-4B07-A7EB-6FDFA80387EA",
+        "name": "Schreibtisch",
+        "lowerLimit": 75,
+        "upperLimit": 80,
+        "heatProtectionCelsius": 40,
+        "activeDischargeAboveUpper": false
+      }
+    }
+  }
+}
+```
+
+Zum Bearbeiten dieselbe Aufgaben-ID verwenden. Die Profilparameter werden im Auftrag gespeichert; späteres Bearbeiten der Profilbibliothek ändert diesen Stand nicht. Maximal 50 Aufgaben. `endsAt` ist optional; Zeitzonen müssen gültige IANA-Bezeichner sein.

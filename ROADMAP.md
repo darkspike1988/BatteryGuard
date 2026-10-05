@@ -219,7 +219,7 @@ Der vollständige Umfang bleibt erhalten. **Software umgesetzt** ist ausdrückli
 | P5 | Kartenreihenfolge/kompakt/Reset plus nächste Aufgabe; kombinierte Anzeigen | Native Tastatur/VoiceOver-Bedienung und vollständige Kombinationen; neue MagSafe-LED-Modi und „Aus im Schlaf“ benötigen nachgewiesene Hardware, insbesondere kein geratener Blinkwert |
 | H1 | Bestehender Monitor-/Deckelschutz; optionale explizite Wachhaltung mit maximal zwei Stunden, Abbruch-/Fehlerfreigabe | Vollständige physische Matrix für Sailing, Deckel, Schlaf und zwei Benutzerkonten. Keine automatische Schlafsperre im Schreibtischmodus |
 | P6 | Persistente Kalibrierungsphasen, Wiederaufnahme, IDs, Abbruch, Reserve, Wärme-/Sensorpausen und Rückkehr simuliert | Start im echten Dienst gesperrt, bis Backend und ausdrücklich gestartete physische Testfolge bestätigt sind; keine Zeitplankalibrierung freigegeben |
-| Qualität | REST-Verbindungsgrenzen real geprüft; Diagnoseexport mit festem Schema; macOS-CI hinzugefügt | CI-Ergebnis nach Push prüfen. Developer-ID-Zertifikat fehlt; Notarisierung bleibt extern offen |
+| Qualität | REST-Verbindungsgrenzen real geprüft; Diagnoseexport mit festem Schema; macOS-CI hinzugefügt | GitHub-CI bestanden. Developer-ID-Zertifikat fehlt; Notarisierung bleibt extern offen |
 
 Für Energiemodi dokumentiert Apple die Systemeinstellungen als unterstützten Weg. B-Guard bietet weiterhin den Weg zu den Batterieeinstellungen; keine ungeprüfte private Schnittstelle zum automatischen Umschalten. Eine sichere Modellprüfung und automatische Modussteuerung bleiben Teil des offenen optionalen P2-Auftrags.
 
