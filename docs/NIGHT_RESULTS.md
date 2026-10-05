@@ -52,3 +52,5 @@ Der letzte Claude-Aufruf meldet `Individual quota reached` und Status ERROR, ohn
 Ein zusätzlicher gezielter Gemini-Review der IPC-Vergrößerung meldete SUCCESS ohne konkrete Fehler. Seine approximativen Größenangaben sind keine separat gemessenen Zahlen; maßgeblich sind der bestandene Grenztest und die unveränderten absoluten Fristen.
 
 Der vollständige Nachtauftrag bleibt wegen der oben genannten System-/Hardware- und Signierungsvoraussetzungen offen. Kein Testlauf ersetzt diese Abnahmen.
+
+Die [Abnahmematrix](ACCEPTANCE.md) erfasst das lesend identifizierte lokale Modell und die konkreten verbleibenden System-/Hardwareprüfungen.
