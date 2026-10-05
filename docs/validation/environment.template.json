@@ -1,0 +1,16 @@
+{
+  "sessionID": "mac01-0.3.7-20261005",
+  "deviceID": "mac01",
+  "model": "unknown",
+  "chip": "unknown",
+  "macOSVersion": "unknown",
+  "macOSBuild": "unknown",
+  "firmware": "unknown",
+  "appVersion": "0.3.7",
+  "daemonVersion": "unknown",
+  "commit": "unknown",
+  "adapter": "unknown",
+  "connection": "unknown",
+  "externalDisplay": "unknown",
+  "lid": "unknown"
+}
