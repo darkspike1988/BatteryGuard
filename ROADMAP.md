@@ -6,32 +6,38 @@ Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](do
 
 ## Nächste Umsetzung: Funktionsumfang aus AlDente Pro
 
-Diese Roadmap beschreibt eigene B-Guard-Implementierungen anhand der [offiziellen Funktionsseite](https://apphousekitchen.com/aldente-overview/features/) und der [Preisübersicht](https://apphousekitchen.com/de/aldente/preisgestaltung/), geprüft am 4. Oktober 2026. Die Pakete sind priorisierte Ziele, keine bereits verfügbaren Funktionen oder festen Veröffentlichungstermine. B-Guard bleibt kostenlos und MIT Open Source. Die weiter unten dokumentierte Umsetzungshistorie bleibt erhalten. Für die nächste Arbeit gilt die Reihenfolge hier; sie aktualisiert die ältere Reihenfolge in [STRATEGY.md](docs/STRATEGY.md).
+Diese Roadmap beschreibt eigene B-Guard-Implementierungen anhand der [offiziellen Funktionsseite](https://apphousekitchen.com/aldente-overview/features/) und der [Preisübersicht](https://apphousekitchen.com/de/aldente/preisgestaltung/), geprüft am 4. Oktober 2026. Die Pakete beschreiben Zielumfang und Abnahme; der aktuelle Softwarestand steht in der folgenden Tabelle. Es gibt keine festen Veröffentlichungstermine. B-Guard bleibt kostenlos und MIT Open Source. Die weiter unten dokumentierte Umsetzungshistorie bleibt erhalten. Für die nächste Arbeit gilt die Reihenfolge hier; sie aktualisiert die ältere Reihenfolge in [STRATEGY.md](docs/STRATEGY.md).
 
-### Reihenfolge und Abhängigkeiten
+### Aktueller Paketstand und nächste Abnahme
 
-| Paket | Priorität | Ergebnis | Voraussetzung |
-| --- | --- | --- | --- |
-| P1 | Hoch · teilweise in 0.3.5 | Power Flow und zusätzlicher Hardware-Ladestand (teilweise umgesetzt) | Verifizierte lesende Messquellen |
-| P2 | Hoch | Native Kurzbefehle und gemeinsame Aktionsschnittstelle | Bestehendes atomisches Dienstprotokoll |
-| P3 | Hoch | Vollständiges Top Up, Einmalentladung und „Laden hier halten“ | Fähigkeitsprüfung für jede Steueraktion |
-| P4 | Hoch | Eigene Profile und wiederkehrende Zeitpläne | P2/P3 und definierte Konfliktregeln |
-| P5 | Mittel | Frei konfigurierbares Menüfenster, Symbolstile und LED-Optionen | P1; LED-Fähigkeit je Hardware |
-| H1 | Parallel · zunächst lesend | Bestätigte Backends für Sailing, Deckel und Schlaf | Hardware-/Firmware-Abnahmematrix |
-| P6 | Später | Manueller Kalibrierungsassistent | H1 mit bestätigter Lade-/Entladesteuerung |
+| Paket | Softwarestand 0.3.7 | Noch offen |
+| --- | --- | --- |
+| P1 | Energiefluss und optionaler Hardware-Ladestand implementiert | Weitere physische Quellen-/Zustandsvergleiche |
+| P2 | Lesende und steuernde App Intents experimentell implementiert | Auffindbarkeit und Ausführung in Apples Kurzbefehle-App |
+| P3 | Top Up implementiert; Halten/Einmalentladung vorbereitet und gesperrt | Physische Backend-Abnahme und klare Anschlusswechsel-Ergebnisse |
+| P4 | Eigene Profile, Import/Export und wiederkehrende Dienstzeitpläne implementiert | Praktische End-to-End-Prüfung; gesperrte Hardwareaktionen bleiben gesperrt |
+| P5 | Karten, Reihenfolge, kompakte Ansicht und kombinierte Anzeigen umgesetzt | Weitere LED-Modi und anschlussbezogene Hardware-Abnahme |
+| H1 | Sichere Monitor-/Deckelfallbacks und Freigabe vor Schlaf implementiert | Modell-/Firmware-/Anschlussmatrix; kein zugesagtes Limit im Schlaf |
+| P6 | Zustandsmodell und Simulation vorbereitet | Physische Testfolge; Kalibrierung bleibt gesperrt |
+
+Die folgenden Paketbeschreibungen dokumentieren Zielumfang und Abnahmekriterien; sie bedeuten nicht, dass alle Teile noch ausstehen.
+
+Nächste Reihenfolge: [Hardware-Abnahmematrix und Journal](docs/validation/README.md) → [Kurzbefehle-System-Journey](docs/shortcuts.md) → [Release-/Notarisierungsabnahme](docs/release-validation.md). Tests werden mit Umgebung und Belegen erfasst; Simulationen zählen nicht als physische Abnahme.
+
+Für den weiteren Ausbau zur belastbaren Akku- und Mac-Diagnostik gilt der separate [Diagnostikplan D0–D6](docs/DIAGNOSTICS_PLAN.md): Messvertrag und Quellenqualität, Akku-Zustand, Langzeitverlauf, lesende Systemressourcen, erklärbare Hinweise und geführte Diagnose. Entscheidungen und Ergebnisse stehen in der [Journey](docs/JOURNEY.md).
 
 ### P1 — Energiefluss verständlich anzeigen (teilweise umgesetzt in 0.3.5)
 
 - **Power Flow & Snapshot:** Rein lesender Snapshot aus `AppleSmartBattery` alle 2 s, rein in der App umgesetzt. Bestehender Dienst 0.3.2 bleibt kompatibel.
 - **Berechnungen & Messwerte:**
-  - Netzteileingang: tatsächlicher gemeldeter Wert `SystemPowerIn / 1000` (in Watt). 0 W wird nur bei bestätigt getrenntem Netzteil angezeigt.
+  - Netzteileingang: tatsächlicher gemeldeter Wert `SystemPowerIn / 1000` (in Watt). Ein gemeldeter Nullwert bleibt erhalten; bei bestätigt getrenntem Netzteil werden 0 W angenommen.
   - Batteriefluss: vorzeichenbehaftet aus `Voltage * InstantAmperage / 1e6` (in Watt, Laden positiv / Entladen negativ).
   - Mac-Leistung: geschätzter Systemverbrauch aus Differenz `Eingang - Batterie`.
   - Nennleistung: `AdapterDetails.Watts` (z. B. 65 W) ist reine Typ-Nennleistung, niemals tatsächlicher Verbrauch.
   - Hardware-%: nur bei vorhandenem Rohkapazitätspaar, andernfalls unbekannt (`—`).
 - **Quellen & Grenzen:** Basiert auf unabhängig verifizierten Community-Quellen ([robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [power-flow-lite](https://github.com/isliliming/power-flow-lite)). Dokumentiert praktische Einheiten, keinen offiziellen Apple-Vertrag. Undokumentierte IOKit-Schlüssel variieren nach Hardware/macOS. Eine Frische von 10 s (`collected-at`) garantiert keine Sensoraktualisierung durch die Firmware; keine Steckdosenmessgerät-Genauigkeit.
 - **Oberfläche & Schnittstellen:** Optionale Menüleistenkarte (standardmäßig aus), vom Darstellungs-Reset umfasst. Authentifizierter Endpunkt `GET /api/v1/power-flow` (bei veralteten Daten `available: false` ohne numerische Werte) und CLI-Befehl `B-Guard.app/Contents/MacOS/BatteryGuard --read-power-flow` (einmaliger JSON-Snapshot ohne Einstellungs- oder Steuerungsänderung).
-- **Status:** P1 ist teilweise umgesetzt. Native Kurzbefehle/Intents (P2) und Kalibrierung (P6) sind separate spätere Pakete.
+- **Status:** P1 ist teilweise umgesetzt. Native Kurzbefehle/Intents (P2) sind ab 0.3.6/0.3.7 experimentell implementiert; ihre Systemabnahme und die physische Kalibrierungsabnahme (P6) bleiben offen.
 
 **Abnahme:** Netzteilbetrieb bei 0 W Akkustrom, Laden, Entladen, schwaches Netzteil mit Akku-Unterstützung, fehlende/veraltete Sensoren und Vorzeichen testen. Konkrete Hardwarewerte lesend gegenprüfen. Ein Diagramm darf nur tatsächlich verfügbare Flüsse zeigen. In 0.3.5 per Simulation und lokalem Netzteil-Snapshot teilweise erfüllt; physische Prüfung der weiteren Zustände und Modelle bleibt offen.
 

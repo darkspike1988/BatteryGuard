@@ -23,6 +23,8 @@ jobs:
           swift --version
       - name: Tests
         run: swift test
+      - name: Acceptance journal tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
       - name: Shell syntax
         run: for script in scripts/*.sh; do bash -n "$script" || exit 1; done
       - name: Release bundle and App Intents metadata

@@ -6,6 +6,10 @@ Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen
 
 Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md). Der [Schlachtplan](docs/STRATEGY.md) enthält die aktuelle Review, Marktanalyse, Bezahlmodelle und den Abgleich mit AlDente Pro.
 
+## Abnahme, Journey und Ausbauplan
+
+Die [Abnahmematrix und das lokale Testjournal](docs/validation/README.md) halten Geräte, Testschritte, Beobachtungen und Belege fest. Die [Entwicklungs-Journey](docs/JOURNEY.md) dokumentiert Änderungen und offene Prüfungen; der [Diagnostik-Ausbauplan](docs/DIAGNOSTICS_PLAN.md) beschreibt die nächsten Schritte zu belastbarer Akku- und Mac-Auswertung. Der [Releaseablauf](docs/release-validation.md) trennt Community-Build und praktische Notarisierung. Das Journal schaltet keine Hardwarefunktionen frei.
+
 ## Was B-Guard ergänzt
 
 macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Alltag:

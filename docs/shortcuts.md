@@ -19,3 +19,22 @@ Entwickler-Build: vollständiges Xcode 27 für den geprüften Metadaten-Schritt.
 Ein isolierter Harness mit Apples öffentlichem AppIntentsTesting-Framework wurde gebaut und ad-hoc signiert. Die Ausführung scheiterte vor den beiden lesenden Intent-Testfällen mit „Timed out while enabling automation mode“ (xcodebuild Exit 65). Das ist eine Grenze des XCTest-Runners, kein nachgewiesener Intent-Fehler. Kein UI-Zugriff, keine Berechtigungsänderung und keine Veränderung der Kurzbefehle-Bibliothek. Systemausführung und Suchdarstellung bleiben offen; die neuen Schreibaktionen wurden nicht live ausgeführt.
 
 [Apple: AppIntentsTesting](https://developer.apple.com/documentation/appintentstesting/testing-your-app-intents-code)
+
+## Reproduzierbare Journey in Apples Kurzbefehle-App
+
+Vorbereitung: B-Guard aus Programme starten, Dienstversion prüfen, Ausgangsprofil privat notieren und eine neue [Journalsession](validation/README.md) anlegen. REST API darf ausgeschaltet bleiben. Testergebnisse nicht aus einem direkten `perform()`-Aufruf ableiten.
+
+| Fall | Schritte | Erwartung |
+| --- | --- | --- |
+| S01 | Neuen Kurzbefehl anlegen; nach B-Guard und den exakten Aktionstiteln suchen | Akkustatus lesen, Energiefluss lesen, Ladeprofil und Aufträge lesen, Ladeaktion ausführen, Gespeichertes Ladeprofil anwenden auffindbar |
+| S02 | Lesende Aktionen einzeln ausführen; anschließend B-Guard-Oberfläche schließen und erneut ausführen | JSON oder erklärbarer Fehler; keine Vordergrundöffnung erforderlich; fehlende Daten nicht als Nullwerte interpretieren |
+| S03 | Ladeaktion ausführen → Profil wählen → Schreibtisch; alle unpassenden optionalen Parameter leer lassen | Dienst bestätigt gespeichertes Profil; danach mit Leseaktion gegenprüfen; Hardwarewirkung separat als H01/H02 testen; Ausgangsprofil wiederherstellen |
+| S04 | Schutz pausieren, Dauer 1 Minute; anschließend Schutz fortsetzen, ohne zusätzliche Parameter | Speicherung und Rückkehr nachvollziehbar; Schutzpause setzt auch Hitzeschutz aus; Ausgangszustand wiederherstellen |
+| S05 | Halten, Einmalentladung oder Kalibrierung mit passenden Parametern anfragen | Noch nicht physisch freigegebene Aktion wird abgelehnt; keine erfolgreiche Hardwareausführung behaupten |
+| S06 | In isolierter Testumgebung ohne aktuellen Dienst Schreibaktion ausführen | Konkreter Fehler; keine fingierte Erfolgsantwort; ohne Testumgebung blocked |
+| S07 | UI-/API-/Kurzbefehle-Aufträge kontrolliert überlappen; Reihenfolge und finale Konfiguration notieren | Keine veralteten Abschlüsse löschen erneuerte Anforderungen; API nur für diesen Test ausdrücklich aktivieren und danach zurücksetzen |
+| S08 | Temporäres eigenes Profil in Kurzbefehl wählen, in B-Guard löschen, Kurzbefehl erneut ausführen | Fehlermeldung statt Anwendung gelöschter Profildaten |
+
+Die Ausführung kann B-Guard im Hintergrund starten. „Oberfläche geschlossen“ bedeutet daher nicht „kein App-Prozess“. Profilwahl kann den Auto-Modus aktivieren und einen laufenden Vollladeauftrag beenden; Tests bei ruhigem Ausgangszustand durchführen.
+
+Pro Fall Uhrzeit, Schritte, beobachtete Ausgabe und geprüften Beleg im Journal erfassen. Konfigurations-JSON nicht ungeprüft veröffentlichen: Es kann genaue Reisezeiten enthalten. Nach jedem Schreibtest Ausgangsprofil und Ausnahmezustände wiederherstellen. Wenn Aktionen nicht auftauchen, App/Dienstversion, Build und Screenshot dokumentieren; keine Berechtigungsumgehung. Der Systemabnahmestand bleibt offen, bis echte Ergebnisse vorliegen.
