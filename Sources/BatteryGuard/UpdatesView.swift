@@ -7,6 +7,12 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.3.8", title: "Gespeicherte Profile schützen", changes: [
+            "Gleichzeitige Profiländerungen werden erkannt, statt neuere Daten zu überschreiben.",
+            "Profile direkt neu laden; Lesefehler von beschädigten Daten unterscheiden.",
+            "Import sichert den vorherigen Stand unter derselben Dateisperre. Export nach einem Lesefehler meldet einen Fehler.",
+            "Hintergrunddienst 0.3.7 bleibt erforderlich. Hardware- und Systemabnahmen bleiben offen."
+        ]),
         .init(version: "0.3.7", title: "Eigene Profile und Zeitpläne", changes: [
             "Benannte Profile mit Bearbeiten, Importvorschau, Sicherung und Export.",
             "Wiederkehrende Aufgaben im Hintergrunddienst mit Zeitzone, Sommerzeit, manueller Übersteuerung und Verlauf.",

@@ -70,7 +70,7 @@ struct SavedProfilesView: View {
                     } label: {
                         Label("Exportieren…", systemImage: "square.and.arrow.up")
                     }
-                    .disabled(store.profiles.isEmpty)
+                    .disabled(store.profiles.isEmpty || store.loadErrorMessage != nil)
                     .help("Alle Profile in eine JSON-Datei sichern")
 
                     Button {
@@ -78,24 +78,35 @@ struct SavedProfilesView: View {
                     } label: {
                         Label("Aktuelle Limits sichern", systemImage: "plus.circle")
                     }
-                    .disabled(store.isCorrupt)
+                    .disabled(store.isCorrupt || store.loadErrorMessage != nil)
                     .help("Die aktuell eingestellten Limits als Profil speichern")
                 }
+                Button {
+                    do { try store.load() }
+                    catch {
+                        alertTitle = "Profile konnten nicht geladen werden"
+                        alertMessage = error.localizedDescription
+                        showAlert = true
+                    }
+                } label: {
+                    Label("Profile neu laden", systemImage: "arrow.clockwise")
+                }
+                .help("Aktuelle Änderungen anderer Fenster oder Programme übernehmen")
             }
 
             // Corruption Warning Banner
-            if store.isCorrupt {
+            if store.loadErrorMessage != nil {
                 HStack(alignment: .top, spacing: 14) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.title2)
                         .foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Profildatei beschädigt")
+                        Text(store.isCorrupt ? "Profildatei beschädigt" : "Profildatei nicht lesbar")
                             .font(.headline)
                         Text(store.loadErrorMessage ?? "Unbekannter Lesefehler beim Laden der Profile.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("Die Originaldatei auf der Festplatte bleibt unberührt und wird nicht überschrieben. Sie können eine gültige Sicherung über 'Importieren…' einspielen, um die Datei zu ersetzen.")
+                        Text("Die Originaldatei auf der Festplatte bleibt unberührt und wird nicht überschrieben. Bei beschädigten Daten können Sie eine gültige Sicherung über 'Importieren…' einspielen. Bei Lesefehlern zuerst den Dateizugriff wiederherstellen; übergroße Dateien zuerst manuell sichern und verschieben.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

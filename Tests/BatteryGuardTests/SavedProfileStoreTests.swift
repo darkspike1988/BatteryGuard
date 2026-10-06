@@ -1,5 +1,6 @@
 import XCTest
 import Foundation
+import Darwin
 @testable import BatteryGuard
 import BatteryGuardShared
 
@@ -304,4 +305,98 @@ final class SavedProfileStoreTests: XCTestCase {
             XCTAssertEqual(error as? SavedProfileStoreError, .corruptFilePreserved)
         }
     }
+    func testStaleStoreCannotEraseAnotherStoresAddition() throws {
+        let first = SavedProfileStore(fileURL: testFileURL)
+        let stale = SavedProfileStore(fileURL: testFileURL)
+        let a = try BGSavedProfile(name: "A", lowerLimit: 50, upperLimit: 80)
+        let b = try BGSavedProfile(name: "B", lowerLimit: 55, upperLimit: 85)
+        try first.add(a)
+        let original = try Data(contentsOf: testFileURL)
+        XCTAssertThrowsError(try stale.add(b))
+        XCTAssertEqual(try Data(contentsOf: testFileURL), original)
+        XCTAssertTrue(stale.profiles.isEmpty)
+        try stale.load()
+        try stale.add(b)
+        XCTAssertEqual(SavedProfileStore(fileURL: testFileURL).profiles.map(\.id), [a.id, b.id])
+    }
+
+    func testPostLoadCorruptionAndDeletionCannotBeOverwritten() throws {
+        let store = SavedProfileStore(fileURL: testFileURL)
+        let a = try BGSavedProfile(name: "A", lowerLimit: 50, upperLimit: 80)
+        try store.add(a)
+        let corrupt = Data("not valid JSON".utf8)
+        try corrupt.write(to: testFileURL, options: .atomic)
+        XCTAssertThrowsError(try store.delete(id: a.id))
+        XCTAssertEqual(try Data(contentsOf: testFileURL), corrupt)
+        XCTAssertEqual(store.profiles, [a])
+        try FileManager.default.removeItem(at: testFileURL)
+        XCTAssertThrowsError(try store.update(a))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: testFileURL.path))
+        XCTAssertEqual(store.profiles, [a])
+    }
+
+    func testStaleExplicitReplacementPreservesNewerProfiles() throws {
+        let first = SavedProfileStore(fileURL: testFileURL)
+        let stale = SavedProfileStore(fileURL: testFileURL)
+        let a = try BGSavedProfile(name: "A", lowerLimit: 50, upperLimit: 80)
+        try first.add(a)
+        let original = try Data(contentsOf: testFileURL)
+        XCTAssertThrowsError(try stale.replaceCollection(BGSavedProfileCollection(profiles: [])))
+        XCTAssertEqual(try Data(contentsOf: testFileURL), original)
+    }
+
+    func testLoadFailureCannotExportAnEmptySuccessfulCollection() throws {
+        try Data("broken".utf8).write(to: testFileURL)
+        let store = SavedProfileStore(fileURL: testFileURL)
+        XCTAssertThrowsError(try store.exportData())
+        let valid = try BGSavedProfile(name: "Recovery", lowerLimit: 50, upperLimit: 80)
+        try store.replaceCollection(BGSavedProfileCollection(profiles: [valid]))
+        XCTAssertEqual(SavedProfileStore(fileURL: testFileURL).profiles, [valid])
+        let backups = try FileManager.default.contentsOfDirectory(at: tempDirectory, includingPropertiesForKeys: nil).filter { $0.lastPathComponent.contains("backup-") }
+        XCTAssertEqual(backups.count, 1)
+        XCTAssertEqual(try Data(contentsOf: XCTUnwrap(backups.first)), Data("broken".utf8))
+    }
+
+    func testUnreadableFileIsNotMarkedAsJSONCorruptionAndNeverOverwritten() throws {
+        let profile = try BGSavedProfile(name: "Private", lowerLimit: 50, upperLimit: 80)
+        let original = try BGSavedProfileCollection(profiles: [profile]).exportData()
+        try original.write(to: testFileURL)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: testFileURL.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: testFileURL.path) }
+        let store = SavedProfileStore(fileURL: testFileURL)
+        XCTAssertFalse(store.isCorrupt)
+        XCTAssertNotNil(store.loadErrorMessage)
+        XCTAssertThrowsError(try store.add(profile))
+        XCTAssertThrowsError(try store.replaceCollection(BGSavedProfileCollection(profiles: [])))
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: testFileURL.path)
+        XCTAssertEqual(try Data(contentsOf: testFileURL), original)
+        try store.load()
+        XCTAssertEqual(store.profiles, [profile])
+    }
+
+    func testHeldLockRejectsWriteWithoutChangingProfileFile() throws {
+        let store = SavedProfileStore(fileURL: testFileURL)
+        let lockURL = testFileURL.appendingPathExtension("lock")
+        let fd = open(lockURL.path, O_CREAT | O_RDWR, 0o600)
+        XCTAssertGreaterThanOrEqual(fd, 0)
+        defer { flock(fd, LOCK_UN); close(fd) }
+        XCTAssertEqual(flock(fd, LOCK_EX | LOCK_NB), 0)
+        let profile = try BGSavedProfile(name: "Locked", lowerLimit: 50, upperLimit: 80)
+        XCTAssertThrowsError(try store.add(profile))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: testFileURL.path))
+        XCTAssertTrue(store.profiles.isEmpty)
+    }
+
+    func testSymlinkLockIsRejectedWithoutTouchingTarget() throws {
+        let store = SavedProfileStore(fileURL: testFileURL)
+        let target = tempDirectory.appendingPathComponent("untouched.txt")
+        let original = Data("original".utf8)
+        try original.write(to: target)
+        try FileManager.default.createSymbolicLink(at: testFileURL.appendingPathExtension("lock"), withDestinationURL: target)
+        let profile = try BGSavedProfile(name: "Symlink", lowerLimit: 50, upperLimit: 80)
+        XCTAssertThrowsError(try store.add(profile))
+        XCTAssertEqual(try Data(contentsOf: target), original)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: testFileURL.path))
+    }
+
 }

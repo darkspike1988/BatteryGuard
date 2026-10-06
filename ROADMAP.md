@@ -226,3 +226,7 @@ Für Energiemodi dokumentiert Apple die Systemeinstellungen als unterstützten W
 Neue Regressionen betreffen atomare UI-Aktionen, veraltete unabhängige Einstellungen, erneuerte Aufträge, Sensorverfügbarkeit und eine erhaltene Hitzeschutz-Sperre beim Ablauf von Sonderaktionen. Fehlender Ladestand wird nicht als echte 0-%-Messung aufgezeichnet oder gemeldet.
 
 Konkrete Ergebnisse und externe Grenzen: [Nachtbericht](docs/NIGHT_RESULTS.md). Die Version allein schließt keines der oben offenen Abnahmekriterien ab.
+
+## Profil-Dateikonflikte · 0.3.8 · 6. Oktober 2026
+
+Veraltete Profilfenster überschreiben keine zwischenzeitlichen Änderungen mehr. Bytegenauer Dateistand, gemeinsame Dateisperre, nichtblockierende Konfliktmeldung und Neuladen in der Oberfläche ergänzt. Import sichert unter derselben Sperre; Lesefehler und fehlende Dateien werden unterschieden. Neue Regressionen für mehrere Stores, externe Beschädigung/Löschung, veralteten Import, Exportfehler und Leserechte. Appupdate, Dienst 0.3.7 weiterhin erforderlich. Alle oben offenen System-/Hardwareabnahmen bleiben bestehen.

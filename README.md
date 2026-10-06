@@ -1,4 +1,4 @@
-# B-Guard 0.3.7
+# B-Guard 0.3.8
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 

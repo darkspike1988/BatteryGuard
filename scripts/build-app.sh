@@ -83,9 +83,9 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.3.7</string>
+    <string>0.3.8</string>
     <key>CFBundleVersion</key>
-    <string>0.3.7</string>
+    <string>0.3.8</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>
