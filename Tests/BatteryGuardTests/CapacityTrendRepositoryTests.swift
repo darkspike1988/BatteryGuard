@@ -41,4 +41,37 @@ struct CapacityTrendRepositoryTests {
         #expect(try await CapacityTrendRepository(url: emptyURL).record(empty, now: now).isEmpty)
         #expect(!FileManager.default.fileExists(atPath: emptyURL.path))
     }
+    @Test func oversizedAndSymlinkFilesAreRejectedWithoutMutation() async throws {
+        let dir = try directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("capacity-days.json")
+        _ = FileManager.default.createFile(atPath: url.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: 64_000_000)
+        try handle.close()
+        do { _ = try await CapacityTrendRepository(url: url).load(now: now); Issue.record("Oversized file accepted") }
+        catch { }
+        #expect((try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue == 64_000_000)
+        try FileManager.default.removeItem(at: url)
+        let target = dir.appendingPathComponent("original.json")
+        try Data("[]".utf8).write(to: target)
+        try FileManager.default.createSymbolicLink(at: url, withDestinationURL: target)
+        do { _ = try await CapacityTrendRepository(url: url).load(now: now); Issue.record("Symlink accepted") }
+        catch { }
+        #expect(try Data(contentsOf: target) == Data("[]".utf8))
+    }
+
+    @Test func unreadableParentMustNotBeCachedAsMissing() async throws {
+        let dir = try directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("capacity-days.json")
+        try Data("[]".utf8).write(to: url)
+        let repository = CapacityTrendRepository(url: url)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: dir.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path) }
+        do { _ = try await repository.load(now: now); Issue.record("Unreadable parent treated as missing") }
+        catch { }
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        #expect(try await repository.load(now: now).isEmpty)
+        #expect(try Data(contentsOf: url) == Data("[]".utf8))
+    }
+
 }

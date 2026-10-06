@@ -12,3 +12,5 @@ Appupdate; Hintergrunddienst **0.4.0** bleibt erforderlich. Ein noch installiert
 Die Dateisperre koordiniert B-Guard-Prozesse; fremde Programme müssen diese Sperre ebenfalls beachten, um ein gleichzeitiges Schreiben vollständig zu verhindern. Bereits abgeschlossene externe Änderungen werden vor dem Speichern erkannt. Übergrößige Profildateien bleiben sicher abgewiesen; vor einem Wiederherstellungsimport müssen sie manuell gesichert und aus dem Profilpfad verschoben werden.
 
 Diese Veröffentlichung enthält außerdem die bereits zusammengeführte Diagnose-Erweiterung 0.4.0: Quellenqualität, Kapazitätsquote, freiwillige lokale Kapazitäts-Tageswerte, lesende CPU-/RAM-/Swap-/Systemthermik- und Volumewerte sowie `/api/v1/diagnostics`. Die [Diagnose-Dokumentation](https://github.com/darkspike1988/BatteryGuard/blob/main/docs/diagnostics-0.4.md) beschreibt Messgrenzen und offene Geräte-/Performance-Abnahmen.
+
+Die Kapazitätsdatei wird jetzt vor großen Speicherzuweisungen begrenzt gelesen. Nicht lesbare Dateien und symbolische Links werden abgewiesen; nur ein tatsächlich fehlender Pfad gilt als neue leere Historie.

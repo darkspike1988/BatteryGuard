@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import BatteryGuardShared
 
 actor CapacityTrendRepository {
@@ -8,9 +9,7 @@ actor CapacityTrendRepository {
 
     func load(now: Date = Date()) throws -> [BGCapacityDay] {
         if let cached { return cached }
-        guard FileManager.default.fileExists(atPath: url.path) else { cached = []; return [] }
-        let data = try Data(contentsOf: url)
-        guard data.count <= 2_000_000 else { throw CocoaError(.fileReadCorruptFile) }
+        guard let data = try readBoundedData() else { cached = []; return [] }
         let days = try BGJSON.decoder().decode([BGCapacityDay].self, from: data)
         guard days.count <= 1464, days.allSatisfy(\.isValid), Set(days.map(\.id)).count == days.count else {
             // Do not destroy or silently reset a damaged existing file.
@@ -18,6 +17,26 @@ actor CapacityTrendRepository {
         }
         cached = days.filter { $0.day >= now.addingTimeInterval(-BGCapacityTrend.retention) && $0.day <= now }
         return cached ?? []
+    }
+
+    private func readBoundedData() throws -> Data? {
+        let descriptor = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard descriptor >= 0 else {
+            if errno == ENOENT { return nil }
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        defer { close(descriptor) }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        guard (info.st_mode & S_IFMT) == S_IFREG, info.st_size <= 2_000_000 else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: false)
+        let data = try handle.read(upToCount: 2_000_001) ?? Data()
+        guard data.count <= 2_000_000 else { throw CocoaError(.fileReadCorruptFile) }
+        return data
     }
 
     func record(_ status: BGStatus, now: Date = Date()) throws -> [BGCapacityDay] {
