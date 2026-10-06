@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 5. Oktober 2026 · Veröffentlicht: 0.3.7 · Diagnoseausbau in Entwicklung: 0.4.0
+Stand: 6. Oktober 2026 · Veröffentlicht: 0.4.1 · Diagnose-Dienst: 0.4.0
 
 Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
 

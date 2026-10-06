@@ -1,5 +1,7 @@
 # Diagnose 0.4.0 — erster Ausbau
 
+Der Diagnoseumfang 0.4.0 wurde mit App 0.4.1 veröffentlicht; Hintergrunddienst 0.4.0 erforderlich. Die unten genannten offenen Geräte-/Performance-Abnahmen bleiben erhalten.
+
 Dies ist der Entwicklungsstand nach Umsetzung der ersten Diagnosebausteine. Eine neue öffentliche DMG wird hierdurch nicht veröffentlicht. App und Dienst werden als 0.4.0 gebaut; der neue Dienst muss nach einem späteren App-Update regulär installiert werden. Ältere Statusdaten bleiben lesbar, ihre Herkunft wird als unbekannt gekennzeichnet.
 
 ## Was Nutzer sehen
