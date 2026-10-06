@@ -7,11 +7,19 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
-        .init(version: "0.3.8", title: "Gespeicherte Profile schützen", changes: [
+        .init(version: "0.4.1", title: "Gespeicherte Profile schützen", changes: [
             "Gleichzeitige Profiländerungen werden erkannt, statt neuere Daten zu überschreiben.",
             "Profile direkt neu laden; Lesefehler von beschädigten Daten unterscheiden.",
             "Import sichert den vorherigen Stand unter derselben Dateisperre. Export nach einem Lesefehler meldet einen Fehler.",
-            "Hintergrunddienst 0.3.7 bleibt erforderlich. Hardware- und Systemabnahmen bleiben offen."
+            "Hintergrunddienst 0.4.0 bleibt erforderlich. Hardware- und Systemabnahmen bleiben offen."
+        ]),
+        .init(version: "0.4.0", title: "Messwerte nachvollziehen", changes: [
+            "Diagnoseseite für Akku, Systemthermik, CPU, RAM-Kategorien, Swap und Volumekapazität.",
+            "Quellen, Einheiten und Datenqualität; fehlende und veraltete Werte bleiben unbekannt.",
+            "Kapazitätsquote statt einer allgemeinen Gesundheitsnote. Werte über 100 % bleiben sichtbar.",
+            "Freiwillige lokale Kapazitäts-Tageswerte bis zu zwölf Monate, standardmäßig aus.",
+            "Geführte Prüffragen, bereinigter Messbericht und authentifizierter REST-Leseendpunkt /api/v1/diagnostics.",
+            "Hintergrunddienst 0.4.0 erforderlich. Neue Systemquellen benötigen noch praktische Geräte- und Performance-Abnahme."
         ]),
         .init(version: "0.3.7", title: "Eigene Profile und Zeitpläne", changes: [
             "Benannte Profile mit Bearbeiten, Importvorschau, Sicherung und Export.",

@@ -17,6 +17,8 @@ DerivedData/
 
 # macOS System Files
 .DS_Store
+__pycache__/
+*.pyc
 .AppleDouble
 .LSOverride
 ._*

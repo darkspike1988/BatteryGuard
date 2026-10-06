@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "H01",
+      "basis": "physical",
+      "title": "Ladesperre am Netzteil",
+      "expected": "Auto-Profil hält das obere Limit mit verbundenem Netzteil, sofern separate Ladesperre vorhanden ist."
+    },
+    {
+      "id": "H02",
+      "basis": "physical",
+      "title": "Pendelbetrieb",
+      "expected": "Ohne separate Ladesperre arbeitet der Adapter-Fallback mit dokumentierter Hysterese; als Pendeln angezeigt."
+    },
+    {
+      "id": "H03",
+      "basis": "physical",
+      "title": "Externer Monitor",
+      "expected": "Adapter bleibt verbunden; bei fehlender Ladesperre zeigt B-Guard den nativen Fallback."
+    },
+    {
+      "id": "H04",
+      "basis": "physical",
+      "title": "Deckel schließen und öffnen",
+      "expected": "Kein unerwarteter Monitor-/Stromverlust; kein automatisches Wachhalten; nach Öffnen neue Prüfung."
+    },
+    {
+      "id": "H05",
+      "basis": "physical",
+      "title": "Sleep/Wake",
+      "expected": "Vor Schlaf Freigabe, im Schlaf kein zugesagtes B-Guard-Limit, nach Wake frische Prüfung."
+    },
+    {
+      "id": "H06",
+      "basis": "physical",
+      "title": "Abstecken und Dockwechsel",
+      "expected": "Top Up endet nach bestätigter Trennung oder Frist; Basisprofil bleibt erhalten; Dockwechsel separat dokumentiert."
+    },
+    {
+      "id": "H07",
+      "basis": "physical",
+      "title": "App-Ende und Neustart",
+      "expected": "Dienst regelt bei geschlossener App weiter; Verlauf endet; Neustart verliert keine gespeicherten Aufgaben."
+    },
+    {
+      "id": "H08",
+      "basis": "physical",
+      "title": "Benutzerwechsel",
+      "expected": "Nur aktueller Konsolenbenutzer/root darf schreiben; inaktive Sitzung wird abgelehnt."
+    },
+    {
+      "id": "H09",
+      "basis": "physical",
+      "title": "Energiefluss",
+      "expected": "Laden positiv, Entladen negativ, fehlende Quellen unbekannt; Nennleistung getrennt vom Verbrauch."
+    },
+    {
+      "id": "H10",
+      "basis": "physical",
+      "title": "Native Limit-Konflikte",
+      "expected": "Höheres Ziel/Vollladen wird nicht garantiert und Apples Einstellung nicht verändert."
+    },
+    {
+      "id": "S01",
+      "basis": "system",
+      "title": "Kurzbefehle entdecken",
+      "expected": "Lesende und steuernde Aktionen sind in Apples Kurzbefehle-App auffindbar."
+    },
+    {
+      "id": "S02",
+      "basis": "system",
+      "title": "Lesen bei geschlossener Oberfläche",
+      "expected": "Akkustatus, Energiefluss und Ladeprofil/Aufträge liefern nachvollziehbares JSON ohne REST-Token."
+    },
+    {
+      "id": "S03",
+      "basis": "system",
+      "title": "Profil schreiben und wiederherstellen",
+      "expected": "Profilwahl wird atomar gespeichert; getrennte Prüfung der Hardwarewirkung; Ausgangsprofil wiederhergestellt."
+    },
+    {
+      "id": "S04",
+      "basis": "system",
+      "title": "Pause und Fortsetzen",
+      "expected": "Passende Parameter funktionieren; Pause/Resume werden gespeichert; Ausgangszustand wiederhergestellt."
+    },
+    {
+      "id": "S05",
+      "basis": "system",
+      "title": "Nicht verfügbare Aktionen",
+      "expected": "Halten, Einmalentladung und Kalibrierung werden ohne bestätigtes Backend abgelehnt."
+    },
+    {
+      "id": "S06",
+      "basis": "system",
+      "title": "Fehlender/veralteter Dienst",
+      "expected": "Schreibaktion meldet Fehler statt Erfolg; kein absichtliches Downgrade des Alltagsgeräts nötig."
+    },
+    {
+      "id": "S07",
+      "basis": "system",
+      "title": "Konkurrenz UI/API/Kurzbefehl",
+      "expected": "Kein erneuerter Auftrag wird durch alten Abschluss gelöscht; finale Konfiguration und Reihenfolge dokumentiert."
+    },
+    {
+      "id": "S08",
+      "basis": "system",
+      "title": "Gespeichertes Profil gelöscht",
+      "expected": "Gelöschtes Profil erzeugt Fehler statt stiller Anwendung alter Werte."
+    },
+    {
+      "id": "R01",
+      "basis": "release",
+      "title": "Community-Build",
+      "expected": "Tests, Metadaten, ad-hoc Signaturprüfung und DMG-Verifikation erfolgreich; keine Notarisierungszusage."
+    },
+    {
+      "id": "R02",
+      "basis": "release",
+      "title": "Developer-ID und Notarisierung",
+      "expected": "App und DMG akzeptiert, Tickets angeheftet/validiert, Gatekeeper-Prüfung und DMG-Verifikation erfolgreich."
+    },
+    {
+      "id": "R03",
+      "basis": "release",
+      "title": "Frische Installation",
+      "expected": "Heruntergeladene DMG mit Quarantäne auf sauberem Testkonto prüfen: App-Start und Dienstinstallation."
+    },
+    {
+      "id": "R04",
+      "basis": "release",
+      "title": "Update und Entfernen",
+      "expected": "Update erhält Einstellungen/Verlauf; Entfernung gibt Ladesteuerung frei; Rückkehr dokumentiert."
+    },
+    {
+      "id": "T01",
+      "basis": "system",
+      "title": "Zeitplan ohne Oberfläche",
+      "expected": "Profilregel läuft bei geschlossener App; Sleep/Wake erzeugt keine doppelte Ausführung; manuelle Übersteuerung bleibt erhalten."
+    },
+    {
+      "id": "U01",
+      "basis": "system",
+      "title": "Zugänglichkeit und Menükarten",
+      "expected": "Tastatur/VoiceOver und geringe Fensterhöhe lassen alle Aktionen/Fehler erreichbar; Kartenreset erhält Ladeeinstellungen."
+    },
+    {
+      "id": "H11",
+      "basis": "physical",
+      "title": "Ausdrückliche Wachhaltung",
+      "expected": "Nur gewählte befristete Wachhaltung; Freigabe bei Ziel, Abstecken, Frist oder Abbruch; kein normaler Schlafblock."
+    }
+  ]
+}

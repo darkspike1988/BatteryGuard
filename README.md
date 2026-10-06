@@ -1,10 +1,18 @@
-# B-Guard 0.3.8
+# B-Guard
 
 Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen und ein nachvollziehbarer Verlauf. Swift 6, macOS 14+, Apple Silicon.
 
 [Website](https://darkspike1988.github.io/BatteryGuard/) · [DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg) · [GitHub](https://github.com/darkspike1988/BatteryGuard)
 
 Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md). Der [Schlachtplan](docs/STRATEGY.md) enthält die aktuelle Review, Marktanalyse, Bezahlmodelle und den Abgleich mit AlDente Pro.
+
+## Abnahme, Journey und Ausbauplan
+
+Die [Abnahmematrix und das lokale Testjournal](docs/validation/README.md) halten Geräte, Testschritte, Beobachtungen und Belege fest. Die [Entwicklungs-Journey](docs/JOURNEY.md) dokumentiert Änderungen und offene Prüfungen; der [Diagnostik-Ausbauplan](docs/DIAGNOSTICS_PLAN.md) beschreibt die nächsten Schritte zu belastbarer Akku- und Mac-Auswertung. Der [Releaseablauf](docs/release-validation.md) trennt Community-Build und praktische Notarisierung. Das Journal schaltet keine Hardwarefunktionen frei.
+
+## Entwicklung 0.4.0
+
+Die neue Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, optionalen Langzeitverlauf und lesende Mac-Ressourcen. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). Die aktuelle App 0.4.1 enthält den Diagnoseumfang von 0.4.0 und schützt Profiländerungen vor veralteten Dateiständen. Diagnose-Dienst 0.4.0 erforderlich; der Download oben verweist weiterhin auf die jeweils veröffentlichte Version.
 
 ## Was B-Guard ergänzt
 

@@ -1,8 +1,10 @@
 import Foundation
 import IOKit
 import IOKit.ps
+import BatteryGuardShared
 
 public struct BatteryInfo: Sendable, Equatable {
+    public var measurements: BGBatteryMeasurements? = nil
     public var percent: Int = 0
     public var percentAvailable: Bool = true
     public var externalPowerAvailable: Bool = true
@@ -39,6 +41,8 @@ public enum BatteryReader {
 
     public static func read(smcClient: SMCClient = .shared) -> BatteryInfo {
         var info = BatteryInfo()
+        var diagnosticProperties: [String: Any] = [:]
+        var publicPercent: Int?
         info.percentAvailable = false
         info.externalPowerAvailable = false
 
@@ -48,6 +52,7 @@ public enum BatteryReader {
             var props: Unmanaged<CFMutableDictionary>?
             if IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0) == KERN_SUCCESS,
                let dict = props?.takeRetainedValue() as? [String: Any] {
+                diagnosticProperties = dict
 
                 if let curCap = (dict["CurrentCapacity"] as? NSNumber)?.intValue,
                    let maxCap = (dict["MaxCapacity"] as? NSNumber)?.intValue,
@@ -81,7 +86,7 @@ public enum BatteryReader {
                 let design = (dict["DesignCapacity"] as? NSNumber)?.intValue
                     ?? (bData?["DesignCapacity"] as? NSNumber)?.intValue
 
-                if let rm = rawMax, let ds = design, ds > 0 {
+                if let rm = rawMax, let ds = design, (1...100_000).contains(rm), (1...100_000).contains(ds) {
                     info.healthPercent = Swift.min(100, Swift.max(0, Int(round(Double(rm) / Double(ds) * 100.0))))
                     info.maxCapacityMah = rm
                     info.designCapacityMah = ds
@@ -121,6 +126,7 @@ public enum BatteryReader {
                        let maxCap = desc[kIOPSMaxCapacityKey] as? Int, maxCap > 0, cur >= 0, cur <= maxCap {
                         info.percent = Int(round(Double(cur) / Double(maxCap) * 100.0))
                         info.percentAvailable = true
+                        publicPercent = info.percent
                     }
                     if let state = desc[kIOPSPowerSourceStateKey] as? String,
                        state == kIOPSBatteryPowerValue || state == kIOPSACPowerValue {
@@ -138,6 +144,9 @@ public enum BatteryReader {
         if info.temperatureCelsius == nil {
             info.temperatureCelsius = smcClient.readBatteryTemperature()
         }
+
+        info.measurements = BGBatteryDiagnosticParser.parse(properties: diagnosticProperties, sampledAt: Date(),
+            publicPercent: publicPercent, fallbackTemperature: info.temperatureCelsius)
 
         return info
     }

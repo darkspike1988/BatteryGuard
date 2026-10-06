@@ -2,6 +2,12 @@
 
 Stand: 5. Oktober 2026, Software 0.3.7. Diese Liste schließt den ursprünglichen Nachtauftrag nicht ab. Für jeden Eintrag sind tatsächlicher Ablauf, erwartetes Ergebnis, beobachtetes Ergebnis und Gerät zu protokollieren. Fehlender Beleg bleibt offen.
 
+## Reproduzierbare Abnahme und Journey
+
+Die [Abnahmematrix mit lokalem JSON-Journal](validation/README.md) ergänzt diese Liste um konkrete Fall-IDs, Geräte-/Versionskontext, Beobachtungen, Belege und eine Markdown-Auswertung. [Kurzbefehle](shortcuts.md) und [Release-Abnahme](release-validation.md) enthalten die praktischen Abläufe. Änderungen und offene Ergebnisse stehen in der [Journey](JOURNEY.md); der weitere Diagnostikausbau in [DIAGNOSTICS_PLAN.md](DIAGNOSTICS_PLAN.md).
+
+Die folgende Gerätebaseline ist ein historischer lesender Befund. Sie wird nicht als aktueller Hardwaretest übernommen; für jede neue Session tatsächliche App-/Dienstversion und Anschluss erneut prüfen.
+
 ## Verifiziertes lokales Ausgangsgerät
 
 | Merkmal | Lesend festgestellt |

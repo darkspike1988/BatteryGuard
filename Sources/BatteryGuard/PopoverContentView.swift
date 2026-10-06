@@ -169,7 +169,8 @@ struct PopoverContentView: View {
                             .help("Lade-/Entladefluss, nicht der gesamte Mac-Verbrauch. 0 W ist möglich, wenn das Netzteil den Mac versorgt.")
                     }
                     if showHealth {
-                        menuMetric("Gesundheit", value: statusStore.isDaemonActive ? statusStore.status.healthPercent.map { "\($0) %" } ?? "– %" : "– %")
+                        menuMetric("Kapazitätsquote", value: statusStore.isDaemonActive ? statusStore.status.capacityRatioText() ?? "– %" : "– %")
+                            .help("Gemeldete Maximal-/Designkapazität; abgeleiteter Wert, keine allgemeine Mac-Gesundheitsnote.")
                     }
                 }
             }

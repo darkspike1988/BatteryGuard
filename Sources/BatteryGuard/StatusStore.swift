@@ -23,6 +23,12 @@ final class StatusStore: Sendable {
     var configProvider: (@MainActor () -> BGConfig)?
     
     var powerFlow: BGPowerFlowSample?
+    var systemDiagnostics: BGSystemSnapshot?
+    private let systemReader = SystemDiagnosticsReader()
+    private var diagnosticsVisible = false
+    private var isPreview = false
+    func beginDiagnostics() { diagnosticsVisible = true; if !isPreview { systemDiagnostics = systemReader.read() } }
+    func endDiagnostics() { diagnosticsVisible = false; systemReader.reset(); if !isPreview { systemDiagnostics = nil } }
     private let reader: @MainActor () -> BGPowerFlowSample?
     private var pollingTask: Task<Void, Never>?
     
@@ -51,6 +57,7 @@ final class StatusStore: Sendable {
     }
     
     func refreshStatus() {
+        if diagnosticsVisible && !isPreview { systemDiagnostics = systemReader.read() }
         configRefresh?()
         self.powerFlow = reader()
         let statusPath = BGPaths.status
@@ -81,6 +88,17 @@ final class StatusStore: Sendable {
     
     static var preview: StatusStore {
         let store = StatusStore(startImmediately: false, reader: { nil })
+        store.isPreview = true
+        let now = Date()
+        store.systemDiagnostics = BGSystemSnapshot(sampledAt: now, thermalState: .nominal,
+            measurements: BGBatteryMeasurements(values: [
+                BGMeasurement(.cpuLoad, value: 14, source: .machCPU, sampledAt: now, quality: .derived),
+                BGMeasurement(.memoryUsed, value: 6_000_000_000, source: .machMemory, sampledAt: now, quality: .derived),
+                BGMeasurement(.memoryTotal, value: 16_000_000_000, source: .machMemory, sampledAt: now),
+                BGMeasurement(.swapUsed, value: 0, source: .swapUsage, sampledAt: now),
+                BGMeasurement(.volumeAvailable, value: 220_000_000_000, source: .volumeCapacity, sampledAt: now),
+                BGMeasurement(.volumeTotal, value: 500_000_000_000, source: .volumeCapacity, sampledAt: now)
+            ]), modelIdentifier: "MacBookPro18,3")
         store.powerFlow = BGPowerFlowSample(
             inputWatts: 12,
             batteryWatts: 0,
@@ -96,6 +114,8 @@ final class StatusStore: Sendable {
         s.temperatureCelsius = 31.4
         s.cycleCount = 142
         s.healthPercent = 96
+        s.maxCapacityMah = 4800
+        s.designCapacityMah = 5000
         s.watts = 0
         s.daemonVersion = AppVersion.requiredDaemon
         s.updatedAt = Date()
