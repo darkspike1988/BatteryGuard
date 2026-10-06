@@ -64,3 +64,7 @@ Weitere Informationen und Datenvertrag: [diagnostics-0.4.md](diagnostics-0.4.md)
 - Befunde und korrigierte Fehler:
 - Offene Abnahmen/Blocker:
 - Nächste drei Schritte:
+
+## 6. Oktober 2026 · 0.4.1
+
+Diagnose-Erweiterung aus dem bereits zusammengeführten 0.4.0-Stand erhalten. Veraltete Profilfenster können fremde Änderungen nicht mehr still überschreiben; Sperre, Dateistandprüfung, Neuladen und Import-Sicherung ergänzt. Kapazitätsdateien vor großen Allokationen begrenzt lesen; fehlende Pfade von Zugriffsfehlern unterscheiden. 315 Swift-Tests und acht Journaltests lokal bestanden, vollständige macOS-CI erfolgreich. [Konkreter Review und Releasebelege](review-2026-10-06.md). Dienstupdate auf 0.4.0 und ursprüngliche System-/Hardwareabnahmen weiterhin offen.
