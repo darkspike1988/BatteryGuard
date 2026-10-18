@@ -22,6 +22,7 @@ public enum MenuCardType: String, CaseIterable, Identifiable, Sendable {
     }
 
     public var displayName: String { title }
+    public var localizedTitle: String { L(title) }
 }
 
 /// Schlüssel für die Menükarten-Konfiguration.

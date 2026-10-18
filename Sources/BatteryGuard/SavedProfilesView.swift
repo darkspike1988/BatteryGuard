@@ -17,7 +17,7 @@ struct SavedProfilesView: View {
     @State private var showAlert: Bool = false
 
     // MARK: - Action & Error State
-    @State private var alertTitle: String = "Hinweis"
+    @State private var alertTitle: String = L("Hinweis")
     @State private var alertMessage: String = ""
 
     // Save Current Limits state
@@ -84,7 +84,7 @@ struct SavedProfilesView: View {
                 Button {
                     do { try store.load() }
                     catch {
-                        alertTitle = "Profile konnten nicht geladen werden"
+                        alertTitle = L("Profile konnten nicht geladen werden")
                         alertMessage = error.localizedDescription
                         showAlert = true
                     }
@@ -101,9 +101,9 @@ struct SavedProfilesView: View {
                         .font(.title2)
                         .foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(store.isCorrupt ? "Profildatei beschädigt" : "Profildatei nicht lesbar")
+                        Text(L(store.isCorrupt ? "Profildatei beschädigt" : "Profildatei nicht lesbar"))
                             .font(.headline)
-                        Text(store.loadErrorMessage ?? "Unbekannter Lesefehler beim Laden der Profile.")
+                        Text(store.loadErrorMessage ?? L("Unbekannter Lesefehler beim Laden der Profile."))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text("Die Originaldatei auf der Festplatte bleibt unberührt und wird nicht überschrieben. Bei beschädigten Daten können Sie eine gültige Sicherung über 'Importieren…' einspielen. Bei Lesefehlern zuerst den Dateizugriff wiederherstellen; übergroße Dateien zuerst manuell sichern und verschieben.")
@@ -124,11 +124,11 @@ struct SavedProfilesView: View {
                         Image(systemName: "slider.horizontal.2.square")
                             .font(.system(size: 36, weight: .light))
                             .foregroundStyle(.secondary)
-                        Text(store.isCorrupt ? "Keine Profile verfügbar" : "Keine gespeicherten Profile")
+                        Text(L(store.isCorrupt ? "Keine Profile verfügbar" : "Keine gespeicherten Profile"))
                             .font(.headline)
-                        Text(store.isCorrupt
+                        Text(L(store.isCorrupt
                              ? "Importieren Sie eine gültige Sicherung, um Profile wiederherzustellen."
-                             : "Erstelle ein neues Profil oder speichere die aktuell konfigurierten Ladelimits.")
+                             : "Erstelle ein neues Profil oder speichere die aktuell konfigurierten Ladelimits."))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -191,7 +191,7 @@ struct SavedProfilesView: View {
                     do {
                         try store.delete(id: id)
                     } catch {
-                        alertTitle = "Fehler beim Löschen"
+                        alertTitle = L("Fehler beim Löschen")
                         alertMessage = error.localizedDescription
                         showAlert = true
                     }
@@ -202,7 +202,7 @@ struct SavedProfilesView: View {
                 deleteTargetID = nil
             }
         } message: {
-            Text("Möchtest du das Profil '\(deleteTargetName)' unwiderruflich löschen?")
+            Text(L("Möchtest du das Profil '%@' unwiderruflich löschen?", deleteTargetName))
         }
         .alert(alertTitle, isPresented: $showAlert) {
             Button("OK", role: .cancel) {}
@@ -244,12 +244,12 @@ struct SavedProfilesView: View {
                     }
 
                     HStack(spacing: 16) {
-                        Label("\(profile.lowerLimit) % – \(profile.upperLimit) %", systemImage: "bolt.badge.clock")
+                        Label(L("%lld %% – %lld %%", profile.lowerLimit, profile.upperLimit), systemImage: "bolt.badge.clock")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
                         if profile.heatProtectionCelsius > 0 {
-                            Label("Hitzeschutz: \(profile.heatProtectionCelsius) °C", systemImage: "thermometer.medium")
+                            Label(L("Hitzeschutz: %lld °C", profile.heatProtectionCelsius), systemImage: "thermometer.medium")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         } else {
@@ -303,14 +303,14 @@ struct SavedProfilesView: View {
         do {
             _ = try configStore.performAPIAction(.init(action: .savedProfile, savedProfile: profile))
         } catch {
-            alertTitle = "Fehler beim Anwenden"
+            alertTitle = L("Fehler beim Anwenden")
             alertMessage = error.localizedDescription
             showAlert = true
         }
     }
 
     private func openSaveCurrentSheet() {
-        saveCurrentName = "Profil vom \(Date().formatted(date: .numeric, time: .shortened))"
+        saveCurrentName = L("Profil vom %@", Date().formatted(date: .numeric, time: .shortened))
         saveCurrentError = nil
         showSaveCurrentSheet = true
     }
@@ -339,8 +339,8 @@ struct SavedProfilesView: View {
 
     private func importProfilesFromDisk() {
         let panel = NSOpenPanel()
-        panel.title = "Profile importieren"
-        panel.prompt = "Importieren"
+        panel.title = L("Profile importieren")
+        panel.prompt = L("Importieren")
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -361,7 +361,7 @@ struct SavedProfilesView: View {
             self.pendingImportCollection = collection
             self.showImportPreviewSheet = true
         } catch {
-            alertTitle = "Import fehlgeschlagen"
+            alertTitle = L("Import fehlgeschlagen")
             alertMessage = error.localizedDescription
             showAlert = true
         }
@@ -369,15 +369,15 @@ struct SavedProfilesView: View {
 
     private func exportProfilesToDisk() {
         guard !store.profiles.isEmpty else {
-            alertTitle = "Export nicht möglich"
-            alertMessage = "Es sind keine Profile zum Exportieren vorhanden."
+            alertTitle = L("Export nicht möglich")
+            alertMessage = L("Es sind keine Profile zum Exportieren vorhanden.")
             showAlert = true
             return
         }
 
         let panel = NSSavePanel()
-        panel.title = "Profile exportieren"
-        panel.prompt = "Exportieren"
+        panel.title = L("Profile exportieren")
+        panel.prompt = L("Exportieren")
         panel.nameFieldStringValue = "BatteryGuard-Profile.json"
         panel.allowedContentTypes = [.json]
         panel.canCreateDirectories = true
@@ -395,7 +395,7 @@ struct SavedProfilesView: View {
             let data = try store.exportData()
             try data.write(to: url, options: .atomic)
         } catch {
-            alertTitle = "Export fehlgeschlagen"
+            alertTitle = L("Export fehlgeschlagen")
             alertMessage = error.localizedDescription
             showAlert = true
         }
@@ -420,12 +420,12 @@ struct SavedProfilesView: View {
                 }
 
                 Section {
-                    LabeledContent("Starten bei (Unteres Limit)", value: "\(configStore.config.lowerLimit) %")
-                    LabeledContent("Stoppen bei (Oberes Limit)", value: "\(configStore.config.upperLimit) %")
+                    LabeledContent("Starten bei (Unteres Limit)", value: L("%lld %%", configStore.config.lowerLimit))
+                    LabeledContent("Stoppen bei (Oberes Limit)", value: L("%lld %%", configStore.config.upperLimit))
                     LabeledContent("Hitzeschutz", value: configStore.config.heatProtectionCelsius == 0
-                                   ? "Deaktiviert"
-                                   : "\(configStore.config.heatProtectionCelsius) °C")
-                    LabeledContent("Aktives Entladen", value: configStore.config.activeDischargeAboveUpper ? "Aktiviert" : "Deaktiviert")
+                                   ? L("Deaktiviert")
+                                   : L("%lld °C", configStore.config.heatProtectionCelsius))
+                    LabeledContent("Aktives Entladen", value: L(configStore.config.activeDischargeAboveUpper ? "Aktiviert" : "Deaktiviert"))
                 } header: {
                     Text("Zu speichernde Grenzwerte")
                 } footer: {
@@ -533,7 +533,7 @@ struct SavedProfilesView: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(isNew ? "Neues Profil erstellen" : "Profil bearbeiten")
+            .navigationTitle(L(isNew ? "Neues Profil erstellen" : "Profil bearbeiten"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") {
@@ -583,7 +583,7 @@ struct SavedProfilesView: View {
                 if let importError { Text(importError).foregroundStyle(.orange) }
                 if let collection = pendingImportCollection {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Vorschau der zu importierenden Profile (\(collection.profiles.count)):")
+                        Text(L("Vorschau der zu importierenden Profile (%lld):", collection.profiles.count))
                             .font(.headline)
 
                         let hasActiveDischarge = collection.profiles.contains { $0.activeDischargeAboveUpper }
@@ -612,13 +612,13 @@ struct SavedProfilesView: View {
                                 Text(profile.name)
                                     .font(.headline)
                                 Spacer()
-                                Text("\(profile.lowerLimit) % → \(profile.upperLimit) %")
+                                Text(L("%lld %% → %lld %%", profile.lowerLimit, profile.upperLimit))
                                     .font(.subheadline.weight(.medium))
                             }
                             HStack(spacing: 12) {
                                 Text(profile.heatProtectionCelsius > 0
-                                     ? "Hitzeschutz: \(profile.heatProtectionCelsius) °C"
-                                     : "Hitzeschutz: Aus")
+                                     ? L("Hitzeschutz: %lld °C", profile.heatProtectionCelsius)
+                                     : L("Hitzeschutz: Aus"))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
 
@@ -636,7 +636,7 @@ struct SavedProfilesView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Hinweis zum Import:")
                             .font(.caption.weight(.semibold))
-                        Text(store.isCorrupt ? "Die beschädigte Profildatei wird gesichert und durch den Import ersetzt." : "Der Import ersetzt alle bestehenden Profile (\(store.profiles.count)). Die vorherige Datei wird gesichert.")
+                        Text(store.isCorrupt ? L("Die beschädigte Profildatei wird gesichert und durch den Import ersetzt.") : L("Der Import ersetzt alle bestehenden Profile (%lld). Die vorherige Datei wird gesichert.", store.profiles.count))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

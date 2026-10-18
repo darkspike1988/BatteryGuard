@@ -64,7 +64,7 @@ struct HistoryView: View {
                     VStack(alignment: .leading, spacing: 22) {
                         HStack {
                             Picker("Messwert", selection: $metric) {
-                                ForEach(HistoryMetric.allCases) { Text($0.rawValue).tag($0) }
+                                ForEach(HistoryMetric.allCases) { Text(L($0.rawValue)).tag($0) }
                             }.pickerStyle(.segmented).frame(maxWidth: 280)
                             Spacer()
                             Picker("Zeitraum", selection: $hours) {
@@ -76,7 +76,7 @@ struct HistoryView: View {
                             HStack {
                                 Text("Akkuleistung").foregroundStyle(.secondary)
                                 Spacer()
-                                Text(points.last.map { String(format: "%.1f W", $0.value) } ?? "Nicht verfügbar")
+                                Text(points.last.map { String(format: "%.1f W", $0.value) } ?? L("Nicht verfügbar"))
                                     .monospacedDigit()
                             }.font(.callout)
                             Text("Plus: Akku lädt. Minus: Akku entlädt. 0 W: kein Stromfluss am Akku. Dies ist nicht der Gesamtverbrauch des Macs.")
@@ -84,7 +84,7 @@ struct HistoryView: View {
                         }
                         if points.isEmpty && metric != .charge && !filtered.isEmpty {
                             ContentUnavailableView("Messwert nicht verfügbar", systemImage: "waveform.path",
-                                description: Text("Für diesen Zeitraum liefert der Dienst keine \(metric.rawValue.lowercased())-Messwerte."))
+                                description: Text(L("Für diesen Zeitraum liefert der Dienst keine Messwerte für %@.", L(metric.rawValue).lowercased())))
                                 .frame(height: 260)
                         } else if points.count < 2 {
                             ContentUnavailableView {
@@ -95,7 +95,7 @@ struct HistoryView: View {
                         } else {
                             chart
                             Text(chartSummary).font(.caption).foregroundStyle(.secondary)
-                                .accessibilityLabel("Zusammenfassung: " + chartSummary)
+                                .accessibilityLabel(L("Zusammenfassung: %@", chartSummary))
                             HStack {
                                 Button { selectAdjacentPoint(offset: -1) } label: {
                                     Label("Vorheriger Messpunkt", systemImage: "chevron.left")
@@ -138,12 +138,12 @@ struct HistoryView: View {
         let samples = points
         guard let first = samples.first, let last = samples.last,
               let minimum = samples.map(\.value).min(), let maximum = samples.map(\.value).max() else {
-            return "Keine Messwerte verfügbar."
+            return L("Keine Messwerte verfügbar.")
         }
         let from = first.time.formatted(date: .abbreviated, time: .shortened)
         let until = last.time.formatted(date: .abbreviated, time: .shortened)
-        let range = String(format: "Minimum %.1f %@ · Maximum %.1f %@", minimum, metric.unit, maximum, metric.unit)
-        return "\(samples.count) Messpunkte von \(from) bis \(until). \(range)."
+        let range = L("Minimum %.1f %@ · Maximum %.1f %@", minimum, metric.unit, maximum, metric.unit)
+        return L("%d Messpunkte von %@ bis %@. %@.", samples.count, from, until, range)
     }
 
     private func selectAdjacentPoint(offset: Int) {
@@ -202,7 +202,7 @@ struct HistoryView: View {
             }
         }
         .frame(height: 260)
-        .accessibilityLabel("\(metric.rawValue) der letzten \(hours) Stunden")
+        .accessibilityLabel(L("%@ der letzten %lld Stunden", L(metric.rawValue), hours))
     }
 
     private var valueDomain: ClosedRange<Double> {
@@ -236,7 +236,7 @@ struct HistoryView: View {
     private func statistic(_ label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(value).font(.system(size: 26, weight: .light)).monospacedDigit()
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(L(label)).font(.caption).foregroundStyle(.secondary)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -254,10 +254,10 @@ struct HistoryView: View {
         do {
             try BGHistory.csv(history.samples).write(to: url, atomically: true, encoding: .utf8)
             exportFailed = false
-            exportMessage = "Verlauf als \(url.lastPathComponent) gespeichert."
+            exportMessage = L("Verlauf als %@ gespeichert.", url.lastPathComponent)
         } catch {
             exportFailed = true
-            exportMessage = "Export fehlgeschlagen: \(error.localizedDescription)"
+            exportMessage = L("Export fehlgeschlagen: %@", error.localizedDescription)
         }
     }
 }

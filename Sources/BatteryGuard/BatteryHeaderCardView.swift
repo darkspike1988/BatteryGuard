@@ -20,24 +20,24 @@ struct BatteryHeaderCardView: View {
     
     private var stateDescription: String {
         if !isDaemonActive {
-            return "Hintergrunddienst nicht aktiv"
+            return L("Hintergrunddienst nicht aktiv")
         }
         switch status.state {
         case .holding:
-            return status.message ?? "Laden pausiert – Netzteil versorgt"
+            return status.message.map(StatusMessageLocalizer.localized) ?? L("Laden pausiert – Netzteil versorgt")
         case .charging:
             if let w = status.watts, w > 0 {
-                return String(format: "Lädt (%.1f W)", w)
+                return L("Lädt (%.1f W)", w)
             }
-            return "Lädt"
+            return L("Lädt")
         case .discharging:
-            return "Entlädt am Netzteil"
+            return L("Entlädt am Netzteil")
         case .onBattery:
-            return "Akkubetrieb"
+            return L("Akkubetrieb")
         case .disabled:
-            return config.mode == .native ? "macOS steuert das Laden" : "Schutz deaktiviert"
+            return L(config.mode == .native ? "macOS steuert das Laden" : "Schutz deaktiviert")
         case .unsupported:
-            return "Hardware nicht unterstützt"
+            return L("Hardware nicht unterstützt")
         }
     }
     
@@ -66,26 +66,26 @@ struct BatteryHeaderCardView: View {
         
         let keys = status.smcKeysDetected
         if keys.contains("CHTE") || keys.contains("CH0B") {
-            return "Native SMC-Sperre"
+            return L("Native SMC-Sperre")
         } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
-            return "Pendel-Modus"
+            return L("Pendel-Modus")
         }
-        
+
         if let msg = status.message, !msg.isEmpty {
-            return msg
+            return StatusMessageLocalizer.localized(msg)
         }
-        return "SMC aktiv"
+        return L("SMC aktiv")
     }
     
     private var mechanismTooltip: String {
         guard isDaemonActive else { return "" }
         let keys = status.smcKeysDetected
         if keys.contains("CHTE") || keys.contains("CH0B") {
-            return "Hardware-Ladesperre aktiv (\(keys.joined(separator: ", "))). Die Batterie wird präzise auf dem Zielwert gehalten."
+            return L("Hardware-Ladesperre aktiv (%@). Die Batterie wird präzise auf dem Zielwert gehalten.", keys.joined(separator: ", "))
         } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
-            return "Neueres MacBook erkannt! Nutzt den Pendel-Modus (\(keys.joined(separator: ", "))): Das Netzteil wird virtuell vom Akku getrennt, bis der Akku unter das Limit fällt."
+            return L("Neueres MacBook erkannt! Nutzt den Pendel-Modus (%@): Das Netzteil wird virtuell vom Akku getrennt, bis der Akku unter das Limit fällt.", keys.joined(separator: ", "))
         }
-        return "Steuert die Ladelektronik."
+        return L("Steuert die Ladeelektronik.")
     }
     
     public var body: some View {

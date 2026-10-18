@@ -95,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               !FileManager.default.fileExists(atPath: BGPaths.daemonBinary) else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "B-Guard einrichten"
+        window.title = L("B-Guard einrichten")
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: SetupView { [weak window] in window?.close() })
         window.center()
@@ -203,8 +203,8 @@ struct MenuBarLabelView: View {
                     .font(.system(size: 13, weight: .medium, design: .rounded))
             }
         }
-        .help(MenuBarDisplayFormatter.tooltip(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive))
+        .help(MenuBarDisplayFormatter.tooltip(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive, localize: true))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(MenuBarAppearance.symbolDescriptor(style: menuBarIconStyle, status: status, isDaemonActive: isDaemonActive).accessibilityDescription + ". " + MenuBarDisplayFormatter.voiceOverText(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive) + (updateAvailable ? ". Neue B-Guard-Version verfügbar." : ""))
+        .accessibilityLabel(MenuBarAppearance.symbolDescriptor(style: menuBarIconStyle, status: status, isDaemonActive: isDaemonActive, localize: true).accessibilityDescription + ". " + MenuBarDisplayFormatter.voiceOverText(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive, localize: true) + (updateAvailable ? ". " + L("Neue B-Guard-Version verfügbar") + "." : ""))
     }
 }

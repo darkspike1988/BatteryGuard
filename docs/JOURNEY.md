@@ -93,3 +93,14 @@ Offen bleiben H01–H11 (physische Hardware), S02–S08 (Bedienung der Kurzbefeh
 - Reine Wettbewerbs-, Preis- und Fremdcode-Recherchen aus dem öffentlichen Repo entfernt und lokal unter `~/BatteryGuard-private/` aufbewahrt: `STRATEGY.md`, `competitors-commercial.md`, `competitors-opensource.md`, `research-oss.md`, `competitive-features-2026-10-04.md`, `market-pricing-2026-10-04.md`. Die Git-Historie bleibt unverändert.
 - Website und offizieller Download geprüft: `https://darkspike1988.github.io/BatteryGuard/` liefert HTTP 200, zeigt Version 0.4.1 und verlinkt `releases/latest/download/B-Guard.dmg`; das Release-Asset ist vorhanden und seine Prüfsumme stimmt.
 - Verbleibende N7-Blöcke sind oben dokumentiert; es wird keine Abnahme vorgetäuscht.
+
+## 18. Oktober 2026 · Oberfläche in Deutsch, Englisch und Russisch
+
+- Alle sichtbaren App-Texte laufen über `Localizable.strings` in `de`, `en` und `ru`; `CFBundleLocalizations` und die `.lproj`-Kopien im App-Bundle sind gesetzt. Die Sprache folgt automatisch der macOS-Systemsprache, ohne In-App-Umschalter.
+- SwiftUI-Literale werden automatisch lokalisiert. Dynamische Texte (Formatzeichenketten, Ternaries, Fehlermeldungen, Status- und Benachrichtigungstexte, App-Intent-Beschreibungen) nutzen `L()` im App-Target und `BGLocalized()` im Shared-Target.
+- Deutsche Standardwerte bleiben als Quellsprache erhalten; Tests, die diese Werte prüfen, laufen unverändert.
+- en/ru enthalten denselben Key-Bestand (828 Einträge), keine leeren Werte und identische Platzhalter. Neue `LocalizationTests` prüfen Parität, Platzhalter und die deklarierten Bundle-Sprachen.
+- Statusmeldungen des Hintergrunddienstes werden erst bei der Anzeige übersetzt (`StatusMessageLocalizer`): direkte Schlüssel für feste Texte, Muster für dynamische Werte wie Ladelimit, Pendel-Modus, Kalibrierung und Hitzeschutz.
+- Vorschauen mit `-AppleLanguages '(en)'` und `'(ru)'` gerendert und gesichtet: Übersicht, Menüfenster, Einstellungen, Diagnose, Verlauf, Updates und Einrichtung erscheinen vollständig übersetzt.
+- Updateprüfung bleibt wie zuvor standardmäßig aktiv und in den Einstellungen abschaltbar.
+- Build ohne Warnungen erfolgreich; 219 Tests bestanden (216 bestehende plus 3 Lokalisierungstests). Keine neue Hardwarewirkung geprüft.

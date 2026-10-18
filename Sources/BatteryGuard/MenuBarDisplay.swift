@@ -31,6 +31,7 @@ public enum MenuBarDisplayMode: String, CaseIterable, Identifiable, Sendable {
             return "Prozent & Akku-Leistung"
         }
     }
+    public var localizedTitle: String { L(title) }
 
     public init(fromRawString string: String?) {
         guard let string else {
@@ -169,44 +170,48 @@ public struct MenuBarDisplayFormatter {
                                percent: Int?,
                                temperature: Double?,
                                power: Double?,
-                               isDaemonActive: Bool) -> String {
+                               isDaemonActive: Bool,
+                               localize: Bool = false) -> String {
+        let notice = localize ? L(powerNotice) : powerNotice
         guard isDaemonActive else {
             if mode == .power || mode == .percentAndPower {
-                return "B-Guard · Dienst nicht aktiv. \(powerNotice)."
+                return localized("B-Guard · Dienst nicht aktiv. %@.", localize: localize, notice)
             }
-            return "B-Guard · Hintergrunddienst nicht aktiv"
+            return localized("B-Guard · Hintergrunddienst nicht aktiv", localize: localize)
         }
         switch mode {
         case .iconOnly:
-            return "B-Guard · Akkustand: \(formatPercent(percent, isDaemonActive: true))"
+            return localized("B-Guard · Akkustand: %@", localize: localize, formatPercent(percent, isDaemonActive: true))
         case .percent:
-            return "B-Guard · Akkustand: \(formatPercent(percent, isDaemonActive: true))"
+            return localized("B-Guard · Akkustand: %@", localize: localize, formatPercent(percent, isDaemonActive: true))
         case .temperature:
-            return "B-Guard · Akkutemperatur: \(formatTemperature(temperature, isDaemonActive: true))"
+            return localized("B-Guard · Akkutemperatur: %@", localize: localize, formatTemperature(temperature, isDaemonActive: true))
         case .power:
             let pStr = formatPower(power, isDaemonActive: true)
-            return "B-Guard · Akku-Leistung: \(pStr). \(powerNotice)."
+            return localized("B-Guard · Akku-Leistung: %@. %@.", localize: localize, pStr, notice)
         case .percentAndTemperature:
             let pStr = formatPercent(percent, isDaemonActive: true)
             let tStr = formatTemperature(temperature, isDaemonActive: true)
-            return "B-Guard · Akkustand: \(pStr), Akkutemperatur: \(tStr)"
+            return localized("B-Guard · Akkustand: %@, Akkutemperatur: %@", localize: localize, pStr, tStr)
         case .percentAndPower:
             let pStr = formatPercent(percent, isDaemonActive: true)
             let wStr = formatPower(power, isDaemonActive: true)
-            return "B-Guard · Akkustand: \(pStr), Akku-Leistung: \(wStr). \(powerNotice)."
+            return localized("B-Guard · Akkustand: %@, Akku-Leistung: %@. %@.", localize: localize, pStr, wStr, notice)
         }
     }
 
     public static func tooltip(for mode: MenuBarDisplayMode,
                                status: BGStatus,
-                               isDaemonActive: Bool) -> String {
+                               isDaemonActive: Bool,
+                               localize: Bool = false) -> String {
         let temp = extractTemperature(from: status)
         let power = extractPower(from: status)
         return tooltip(for: mode,
                        percent: status.hasBatteryPercent ? status.percent : nil,
                        temperature: temp,
                        power: power,
-                       isDaemonActive: isDaemonActive)
+                       isDaemonActive: isDaemonActive,
+                       localize: localize)
     }
 
     /// Barrierefreier VoiceOver-Zusammenfassungstext.
@@ -214,44 +219,54 @@ public struct MenuBarDisplayFormatter {
                                      percent: Int?,
                                      temperature: Double?,
                                      power: Double?,
-                                     isDaemonActive: Bool) -> String {
+                                     isDaemonActive: Bool,
+                                     localize: Bool = false) -> String {
+        let notice = localize ? L(powerNotice) : powerNotice
         guard isDaemonActive else {
             if mode == .power || mode == .percentAndPower {
-                return "B-Guard: Hintergrunddienst nicht aktiv. \(powerNotice)."
+                return localized("B-Guard: Hintergrunddienst nicht aktiv. %@.", localize: localize, notice)
             }
-            return "B-Guard: Hintergrunddienst nicht aktiv"
+            return localized("B-Guard: Hintergrunddienst nicht aktiv", localize: localize)
         }
         switch mode {
         case .iconOnly:
-            return "B-Guard, Akkustand \(formatPercent(percent, isDaemonActive: true))"
+            return localized("B-Guard, Akkustand %@", localize: localize, formatPercent(percent, isDaemonActive: true))
         case .percent:
-            return "B-Guard, Akkustand \(formatPercent(percent, isDaemonActive: true))"
+            return localized("B-Guard, Akkustand %@", localize: localize, formatPercent(percent, isDaemonActive: true))
         case .temperature:
-            return "B-Guard, Akkutemperatur \(formatTemperature(temperature, isDaemonActive: true))"
+            return localized("B-Guard, Akkutemperatur %@", localize: localize, formatTemperature(temperature, isDaemonActive: true))
         case .power:
             let pStr = formatPower(power, isDaemonActive: true)
-            return "B-Guard, Akku-Leistung \(pStr). \(powerNotice)."
+            return localized("B-Guard, Akku-Leistung %@. %@.", localize: localize, pStr, notice)
         case .percentAndTemperature:
             let pStr = formatPercent(percent, isDaemonActive: true)
             let tStr = formatTemperature(temperature, isDaemonActive: true)
-            return "B-Guard, Akkustand \(pStr), Akkutemperatur \(tStr)"
+            return localized("B-Guard, Akkustand %@, Akkutemperatur %@", localize: localize, pStr, tStr)
         case .percentAndPower:
             let pStr = formatPercent(percent, isDaemonActive: true)
             let wStr = formatPower(power, isDaemonActive: true)
-            return "B-Guard, Akkustand \(pStr), Akku-Leistung \(wStr). \(powerNotice)."
+            return localized("B-Guard, Akkustand %@, Akku-Leistung %@. %@.", localize: localize, pStr, wStr, notice)
         }
     }
 
     public static func voiceOverText(for mode: MenuBarDisplayMode,
                                      status: BGStatus,
-                                     isDaemonActive: Bool) -> String {
+                                     isDaemonActive: Bool,
+                                     localize: Bool = false) -> String {
         let temp = extractTemperature(from: status)
         let power = extractPower(from: status)
         return voiceOverText(for: mode,
                              percent: status.hasBatteryPercent ? status.percent : nil,
                              temperature: temp,
                              power: power,
-                             isDaemonActive: isDaemonActive)
+                             isDaemonActive: isDaemonActive,
+                             localize: localize)
+    }
+
+    private static func localized(_ key: String, localize: Bool, _ arguments: CVarArg...) -> String {
+        let format = localize ? Bundle.main.localizedString(forKey: key, value: key, table: nil) : key
+        guard !arguments.isEmpty else { return format }
+        return String(format: format, locale: .current, arguments: arguments)
     }
 
     public static func extractTemperature(from status: BGStatus) -> Double? {

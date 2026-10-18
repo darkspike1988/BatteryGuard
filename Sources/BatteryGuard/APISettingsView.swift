@@ -7,7 +7,7 @@ struct APISettingsView: View {
         Section {
             Toggle("Lokale REST API aktivieren", isOn: Binding(get: { api.enabled }, set: { api.setEnabled($0) }))
             if api.enabled {
-                LabeledContent("Status", value: api.running ? "Bereit" : (api.isError ? "Nicht verfügbar" : "Wird gestartet …"))
+                LabeledContent("Status", value: api.running ? L("Bereit") : (api.isError ? L("Nicht verfügbar") : L("Wird gestartet …")))
                 Text(api.address).font(.caption.monospaced()).textSelection(.enabled)
                 Toggle("Steuerbefehle über API erlauben", isOn: $api.allowsControl)
                 HStack {

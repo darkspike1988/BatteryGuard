@@ -32,7 +32,7 @@ enum DesignPreview {
         if args.contains("--warm") {
             status.status.temperatureCelsius = 44
             status.status.state = .holding
-            status.status.message = "Hitzeschutz aktiv. Laden wird nach dem Abkühlen fortgesetzt."
+            status.status.message = "Hitzeschutz aktiv: 44.0°C – Freigabe nach Abkühlung"
         }
         let history = HistoryStore(preview: true, emptyPreview: args.contains("--empty-history"))
         let services = ServiceManager()

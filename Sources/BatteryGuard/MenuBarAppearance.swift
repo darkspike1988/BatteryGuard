@@ -22,6 +22,7 @@ public enum MenuBarIconStyle: String, CaseIterable, Identifiable, Sendable {
             return "Schild"
         }
     }
+    public var localizedTitle: String { L(title) }
 }
 
 /// Schlüssel für die Anzeige-Einstellungen in UserDefaults.
@@ -92,7 +93,8 @@ public enum MenuBarAppearance {
     public static func symbolDescriptor(
         style: MenuBarIconStyle,
         status: BGStatus,
-        isDaemonActive: Bool
+        isDaemonActive: Bool,
+        localize: Bool = false
     ) -> MenuBarSymbolDescriptor {
         let clamped = clampPercent(status.percent)
         let warning = !isDaemonActive || !status.hasBatteryPercent || status.state == .unsupported
@@ -102,29 +104,34 @@ public enum MenuBarAppearance {
         case .battery: base = batterySymbolName(for: status.percent)
         case .shield: base = "shield"
         }
+        func text(_ key: String, _ arguments: CVarArg...) -> String {
+            let format = localize ? Bundle.main.localizedString(forKey: key, value: key, table: nil) : key
+            guard !arguments.isEmpty else { return format }
+            return String(format: format, locale: .current, arguments: arguments)
+        }
         let overlay: String?
         let description: String
         if !isDaemonActive {
             overlay = "exclamationmark"
-            description = "Hintergrunddienst nicht erreichbar"
+            description = text("Hintergrunddienst nicht erreichbar")
         } else if !status.hasBatteryPercent {
             overlay = "questionmark"
-            description = "Ladestand momentan nicht verfügbar"
+            description = text("Ladestand momentan nicht verfügbar")
         } else if status.state == .unsupported {
             overlay = "exclamationmark"
-            description = "Ladesteuerung nicht unterstützt"
+            description = text("Ladesteuerung nicht unterstützt")
         } else if status.isChargingHardware {
             overlay = "bolt.fill"
-            description = "Akku lädt bei \(clamped) %"
+            description = text("Akku lädt bei %lld %%", clamped)
         } else if status.state == .discharging || status.state == .onBattery || !status.pluggedIn {
             overlay = "arrow.down"
-            description = "Akkubetrieb bei \(clamped) %"
+            description = text("Akkubetrieb bei %lld %%", clamped)
         } else if status.state == .holding {
             overlay = "pause.fill"
-            description = "Laden pausiert bei \(clamped) %"
+            description = text("Laden pausiert bei %lld %%", clamped)
         } else {
             overlay = nil
-            description = "Netzteil verbunden, Akku lädt nicht"
+            description = text("Netzteil verbunden, Akku lädt nicht")
         }
         return MenuBarSymbolDescriptor(style: style, baseSystemName: base,
                                        overlaySystemName: overlay, clampedPercent: clamped,

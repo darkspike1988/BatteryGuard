@@ -26,7 +26,7 @@ final class NotificationManager: Sendable {
             let threshold = Double(config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : 40)
             if temperature > threshold, heatEnabled, !didNotifyHeat {
                 didNotifyHeat = true
-                send(title: "Akku ist warm", body: String(format: "Aktuell %.1f °C. Prüfe Belüftung und Hitzeschutz.", temperature))
+                send(title: L("Akku ist warm"), body: L("Aktuell %.1f °C. Prüfe Belüftung und Hitzeschutz.", temperature))
             } else if temperature < threshold - 2 { didNotifyHeat = false }
         }
 
@@ -42,7 +42,7 @@ final class NotificationManager: Sendable {
         ) {
             send(
                 title: "B-Guard",
-                body: "Akku bei \(status.percent) % – bitte laden"
+                body: L("Akku bei %lld %% – bitte laden", status.percent)
             )
         }
         
@@ -54,7 +54,7 @@ final class NotificationManager: Sendable {
                     didNotifyUpperLimit = true
                     send(
                         title: "B-Guard",
-                        body: "Limit erreicht"
+                        body: L("Limit erreicht")
                     )
                 }
             } else if status.percent < config.upperLimit - 2 {

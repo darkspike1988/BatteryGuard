@@ -14,15 +14,15 @@ public enum SavedProfileStoreError: LocalizedError, Equatable, Sendable {
     public var errorDescription: String? {
         switch self {
         case .fileChanged:
-            return "Die Profile wurden zwischenzeitlich geändert. Bitte Profile neu laden und die Änderung erneut durchführen."
+            return L("Die Profile wurden zwischenzeitlich geändert. Bitte Profile neu laden und die Änderung erneut durchführen.")
         case .corruptFilePreserved:
-            return "Die Profildatei ist beschädigt und wurde zum Schutz nicht überschrieben. Bitte reparieren oder durch einen Import ersetzen."
+            return L("Die Profildatei ist beschädigt und wurde zum Schutz nicht überschrieben. Bitte reparieren oder durch einen Import ersetzen.")
         case .profileNotFound(let id):
-            return "Profil mit der ID \(id) wurde nicht gefunden."
+            return L("Profil mit der ID %@ wurde nicht gefunden.", id.uuidString)
         case .saveFailed(let message):
-            return "Speichern der Profile fehlgeschlagen: \(message)"
+            return L("Speichern der Profile fehlgeschlagen: %@", message)
         case .payloadTooLarge(let bytes, let maxBytes):
-            return "Dateigröße (\(bytes) Bytes) überschreitet das Maximum von \(maxBytes) Bytes (256 KiB)."
+            return L("Dateigröße (%lld Bytes) überschreitet das Maximum von %lld Bytes (256 KiB).", bytes, maxBytes)
         }
     }
 }
@@ -151,10 +151,10 @@ public final class SavedProfileStore: Sendable {
         defer { close(fd) }
         var info = stat()
         guard fstat(fd, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG else {
-            throw SavedProfileStoreError.saveFailed("Die Profilsperre ist keine reguläre Datei.")
+            throw SavedProfileStoreError.saveFailed(L("Die Profilsperre ist keine reguläre Datei."))
         }
         guard flock(fd, LOCK_EX | LOCK_NB) == 0 else {
-            throw SavedProfileStoreError.saveFailed("Die Profile werden gerade verwendet. Bitte erneut versuchen.")
+            throw SavedProfileStoreError.saveFailed(L("Die Profile werden gerade verwendet. Bitte erneut versuchen."))
         }
         defer { flock(fd, LOCK_UN) }
         return try body()
@@ -176,7 +176,7 @@ public final class SavedProfileStore: Sendable {
             do {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
             } catch {
-                throw SavedProfileStoreError.saveFailed("Verzeichnis konnte nicht erstellt werden: \(error.localizedDescription)")
+                throw SavedProfileStoreError.saveFailed(L("Verzeichnis konnte nicht erstellt werden: %@", error.localizedDescription))
             }
         }
 

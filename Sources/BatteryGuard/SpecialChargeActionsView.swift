@@ -15,7 +15,7 @@ struct SpecialChargeActionsView: View {
         VStack(alignment: .leading, spacing: 10) {
             if let plan = configStore.config.specialChargePlan {
                 Text(title(plan.kind)).font(.headline)
-                Text("Ziel: \(plan.targetPercent) % · spätestens bis \(plan.expiresAt.formatted(date: .abbreviated, time: .shortened))")
+                Text(L("Ziel: %lld %% · spätestens bis %@", plan.targetPercent, plan.expiresAt.formatted(date: .abbreviated, time: .shortened)))
                     .font(.caption).foregroundStyle(.secondary)
                 Button("Sonderaktion beenden") { perform(.init(action: .cancelSpecial)) }
             } else {
@@ -44,9 +44,9 @@ struct SpecialChargeActionsView: View {
     }
     private func title(_ kind: BGSpecialPlanKind) -> String {
         switch kind {
-        case .topUp: "Top Up bis Abstecken"
-        case .discharge: "Einmalentladung"
-        case .hold: "Ladestand halten"
+        case .topUp: L("Top Up bis Abstecken")
+        case .discharge: L("Einmalentladung")
+        case .hold: L("Ladestand halten")
         }
     }
 }

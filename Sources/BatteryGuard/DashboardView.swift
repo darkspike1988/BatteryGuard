@@ -30,12 +30,12 @@ struct DashboardView: View {
                 List(DashboardPage.allCases, selection: $page) { item in
                     HStack(spacing: 10) {
                         Image(systemName: item.symbol).foregroundStyle(Color.secondary).frame(width: 18)
-                        Text(item.rawValue).foregroundStyle(Color.primary)
+                        Text(L(item.rawValue)).foregroundStyle(Color.primary)
                     }.tag(item)
                 }.listStyle(.sidebar)
                 HStack(spacing: 7) {
                     Circle().fill(statusStore.isDaemonActive ? Color.green : Color.orange).frame(width: 6, height: 6)
-                    Text(statusStore.isDaemonActive ? "Dienst verbunden" : "Dienst nicht erreichbar").font(.caption).foregroundStyle(.secondary)
+                    Text(L(statusStore.isDaemonActive ? "Dienst verbunden" : "Dienst nicht erreichbar")).font(.caption).foregroundStyle(.secondary)
                 }.padding(18)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 190, max: 220)
@@ -54,7 +54,7 @@ struct DashboardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(nsColor: .windowBackgroundColor))
-            .navigationTitle(page?.rawValue ?? "B-Guard")
+            .navigationTitle(L(page?.rawValue ?? "B-Guard"))
         }
         .frame(minWidth: 780, minHeight: 600)
         .onDisappear { configStore.flushPendingSave() }
@@ -81,10 +81,10 @@ struct OverviewView: View {
                         BatteryHeroView(status: statusStore.status, config: configStore.config, active: statusStore.isDaemonActive)
                         Spacer(minLength: 0)
                         VStack(alignment: .trailing, spacing: 9) {
-                            Text(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? "MACOS-LIMIT" : "LADEZIEL").font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(.secondary)
-                            Text(configStore.config.mode == .native || (statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback) ? statusStore.status.nativeChargeLimit.map { "\($0) %" } ?? "macOS" : "\(configStore.config.upperLimit) %")
+                            Text(L(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? "MACOS-LIMIT" : "LADEZIEL")).font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(.secondary)
+                            Text(configStore.config.mode == .native || (statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback) ? statusStore.status.nativeChargeLimit.map { L("%lld %%", $0) } ?? L("macOS") : L("%lld %%", configStore.config.upperLimit))
                                 .font(.system(size: 28, weight: .light)).monospacedDigit()
-                            Text(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? "Profilziel: \(configStore.config.upperLimit) %" : profileName).font(.caption).foregroundStyle(.secondary)
+                            Text(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? L("Profilziel: %lld %%", configStore.config.upperLimit) : profileName).font(.caption).foregroundStyle(.secondary)
                         }.frame(minWidth: 86)
                     }
                 }
@@ -126,9 +126,9 @@ struct OverviewView: View {
                             Text(profileName).font(.caption).foregroundStyle(.secondary)
                         }
                         ProfilePickerView(store: configStore)
-                        Text(configStore.config.mode == .native
+                        Text(L(configStore.config.mode == .native
                              ? "Im macOS-Modus bleibt B-Guard ein Beobachter. Die Steuerung kannst du in den Einstellungen aktivieren."
-                             : "Ein Profil ändert nur deinen Ladebereich. Hitzeschutz und weitere Einstellungen bleiben erhalten.")
+                             : "Ein Profil ändert nur deinen Ladebereich. Hitzeschutz und weitere Einstellungen bleiben erhalten."))
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -158,31 +158,31 @@ struct OverviewView: View {
     }
 
     private var profileName: String {
-        if configStore.config.mode == .native { return "Nur beobachten" }
-        return BGProfile.allCases.first { $0.matches(configStore.config) }?.title ?? "Eigener Ladebereich"
+        if configStore.config.mode == .native { return L("Nur beobachten") }
+        return BGProfile.allCases.first { $0.matches(configStore.config) }?.localizedTitle ?? L("Eigener Ladebereich")
     }
 
     private var insight: String {
         if statusStore.status.usesNativeDesktopFallback {
-            return "Bei externem Monitor oder geschlossenem Deckel bleibt das Netzteil verbunden. macOS steuert das Laden; das B-Guard-Profilziel wird dabei nicht erzwungen."
+            return L("Bei externem Monitor oder geschlossenem Deckel bleibt das Netzteil verbunden. macOS steuert das Laden; das B-Guard-Profilziel wird dabei nicht erzwungen.")
         }
         if let t = statusStore.status.temperatureCelsius, t >= 40 {
-            return "Der Akku ist warm. Prüfe Hitzeschutz und Belüftung, bevor du länger lädst."
+            return L("Der Akku ist warm. Prüfe Hitzeschutz und Belüftung, bevor du länger lädst.")
         }
         if configStore.config.mode == .pendulum || (!statusStore.status.smcKeysDetected.contains("CHTE") && !statusStore.status.smcKeysDetected.contains("CH0B") && configStore.config.mode == .auto) {
-            return "Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Dabei läuft er zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku."
+            return L("Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Dabei läuft er zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku.")
         }
-        return "Dein Verlauf bleibt auf diesem Mac. B-Guard zeichnet nur auf, während die App läuft und aktuelle Messwerte verfügbar sind."
+        return L("Dein Verlauf bleibt auf diesem Mac. B-Guard zeichnet nur auf, während die App läuft und aktuelle Messwerte verfügbar sind.")
     }
 
     private func metric(_ title: String, value: String?, symbol: String) -> some View {
         BGPanel {
             VStack(alignment: .leading, spacing: 9) {
-                Label(title, systemImage: symbol).font(.caption).foregroundStyle(.secondary)
+                Label(L(title), systemImage: symbol).font(.caption).foregroundStyle(.secondary)
                 Text(statusStore.isDaemonActive ? (value ?? "—") : "—")
                     .font(.system(size: 22, weight: .medium)).monospacedDigit()
-                if title == "Akkuleistung" {
-                    Text(!statusStore.isDaemonActive || value == nil ? "Messwert nicht verfügbar" : "Plus: Laden · Minus: Entladen")
+                if title == "Akku-Leistung" {
+                    Text(L(!statusStore.isDaemonActive || value == nil ? "Messwert nicht verfügbar" : "Plus: Laden · Minus: Entladen"))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -191,16 +191,16 @@ struct OverviewView: View {
 
     private var batteryPowerExplanation: String {
         guard statusStore.isDaemonActive, let watts = statusStore.status.watts, watts.isFinite else {
-            return "Akku-Leistung: Messwert nicht verfügbar."
+            return L("Akku-Leistung: Messwert nicht verfügbar.")
         }
         if abs(watts) < 0.05 {
-            return statusStore.status.pluggedIn
+            return L(statusStore.status.pluggedIn
                 ? "Kein messbarer Akkustrom. Das Netzteil kann den Mac versorgen, ohne den Akku zu laden. 0 W bedeutet nicht, dass der Mac keinen Strom verbraucht."
-                : "Momentan kein messbarer Akkustrom. Angezeigt wird der Lade-/Entladefluss, nicht der gesamte Mac-Verbrauch."
+                : "Momentan kein messbarer Akkustrom. Angezeigt wird der Lade-/Entladefluss, nicht der gesamte Mac-Verbrauch.")
         }
-        return watts > 0
+        return L(watts > 0
             ? "Akku-Leistung: Energie fließt in den Akku. Der gesamte Mac-Verbrauch wird hier nicht gemessen."
-            : "Akku-Leistung: Energie fließt aus dem Akku. Der gesamte Mac-Verbrauch wird hier nicht gemessen."
+            : "Akku-Leistung: Energie fließt aus dem Akku. Der gesamte Mac-Verbrauch wird hier nicht gemessen.")
     }
 
     private var travelPanel: some View {
@@ -215,11 +215,11 @@ struct OverviewView: View {
                 }
                 if let planned = configStore.config.travelReadyAt,
                    planned.addingTimeInterval(BGConfig.travelGraceTime) > Date() {
-                    Text("Geplant für \(planned.formatted(date: .abbreviated, time: .shortened))")
+                    Text(L("Geplant für %@", planned.formatted(date: .abbreviated, time: .shortened)))
                         .font(.callout.weight(.medium))
-                    Text(configStore.config.mode == .native
+                    Text(L(configStore.config.mode == .native
                          ? "Der Plan wartet, solange macOS die Ladung steuert. Aktiviere die B-Guard-Steuerung in den Einstellungen, damit er ausgeführt wird."
-                         : "Vollladen startet drei Stunden vorher. Nach 100 % oder spätestens eine Stunde nach dem Termin gilt wieder dein Ladeprofil.")
+                         : "Vollladen startet drei Stunden vorher. Nach 100 % oder spätestens eine Stunde nach dem Termin gilt wieder dein Ladeprofil."))
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
                     Text("Plane eine volle Ladung vor deiner nächsten Reise.").font(.callout).foregroundStyle(.secondary)
@@ -253,7 +253,7 @@ struct ChargingActionsView: View {
                             configStore.cancelFullCharge()
                         } else { configStore.startFullCharge() }
                     } label: {
-                        Label(fullActive ? "Vollladen beenden" : "Jetzt auf 100 % laden", systemImage: "bolt")
+                        Label(L(fullActive ? "Vollladen beenden" : "Jetzt auf 100 % laden"), systemImage: "bolt")
                     }.buttonStyle(.bordered).disabled(!canControl)
                     if configStore.config.isPaused(at: Date()) {
                         Button("Schutz fortsetzen") { configStore.resumeProtection() }.buttonStyle(.bordered).disabled(!canControl)
@@ -273,9 +273,9 @@ struct ChargingActionsView: View {
 
     private var exceptionDescription: String {
         if let pause = configStore.config.pauseUntil, pause > Date() {
-            return "Automatisch wieder aktiv: \(pause.formatted(date: .omitted, time: .shortened)). Während der Pause greift B-Guard nicht ein."
+            return L("Automatisch wieder aktiv: %@. Während der Pause greift B-Guard nicht ein.", pause.formatted(date: .omitted, time: .shortened))
         }
-        if fullActive { return "Nach 100 % kehrt B-Guard zum Ladeprofil zurück. Manuelles Vollladen endet spätestens nach acht Stunden." }
-        return "Vollladen behält den Hitzeschutz bei. Eine Pause setzt die B-Guard-Steuerung für die gewählte Dauer aus."
+        if fullActive { return L("Nach 100 % kehrt B-Guard zum Ladeprofil zurück. Manuelles Vollladen endet spätestens nach acht Stunden.") }
+        return L("Vollladen behält den Hitzeschutz bei. Eine Pause setzt die B-Guard-Steuerung für die gewählte Dauer aus.")
     }
 }

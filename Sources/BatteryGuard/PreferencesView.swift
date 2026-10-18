@@ -65,16 +65,16 @@ struct PreferencesView: View {
                 if let limit = statusStore.status.nativeChargeLimit, statusStore.isDaemonActive {
                     LabeledContent("Erkanntes macOS-Limit", value: "\(limit) %")
                 }
-                Text(configStore.config.mode.description).font(.caption).foregroundStyle(.secondary)
+                Text(configStore.config.mode.localizedDescription).font(.caption).foregroundStyle(.secondary)
                 if configStore.config.mode == .native {
                     Button("macOS-Batterieeinstellungen öffnen") {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)
                     }
                 } else {
                     Toggle("Ladeschutz aktiv", isOn: $configStore.config.enabled)
-                    Stepper("Laden ab \(configStore.config.lowerLimit) %", value: $configStore.config.lowerLimit,
+                    Stepper(L("Laden ab %lld %%", configStore.config.lowerLimit), value: $configStore.config.lowerLimit,
                             in: 5...min(95, configStore.config.upperLimit - 1))
-                    Stepper("Stoppen bei \(configStore.config.upperLimit) %", value: $configStore.config.upperLimit,
+                    Stepper(L("Stoppen bei %lld %%", configStore.config.upperLimit), value: $configStore.config.upperLimit,
                             in: max(20, configStore.config.lowerLimit + 1)...100)
                     Text("Im Pendelmodus verbindet sich das Netzteil bei Maximum minus 5 % wieder. Die untere Grenze bleibt die Sicherheitsgrenze des Hitzeschutzes.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -109,7 +109,7 @@ struct PreferencesView: View {
             Section {
                 SpecialChargeActionsView(configStore: configStore, statusStore: statusStore)
                 if let deadline = configStore.config.awakeUntilLimitUntil, deadline > Date() {
-                    Text("Wachhalten angefordert bis spätestens " + deadline.formatted(date: .omitted, time: .shortened)).font(.caption)
+                    Text(L("Wachhalten angefordert bis spätestens %@", deadline.formatted(date: .omitted, time: .shortened))).font(.caption)
                     Button("Wachhalten beenden") { configStore.performAction(.init(action: .cancelStayAwake)) }
                 } else {
                     Button("Bis zum Ladelimit wachhalten · höchstens 2 Stunden") { configStore.performAction(.init(action: .stayAwakeUntilLimit, minutes: 120)) }
@@ -149,7 +149,7 @@ struct PreferencesView: View {
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
                 LabeledContent("macOS-Freigabe", value: notificationPermissionDescription)
                 if notificationAuthorization == .notDetermined {
-                    Button(requestingNotifications ? "Freigabe wird angefragt …" : "Mitteilungen erlauben") {
+                    Button(L(requestingNotifications ? "Freigabe wird angefragt …" : "Mitteilungen erlauben")) {
                         Task { await requestNotificationPermission() }
                     }.disabled(requestingNotifications)
                 }
@@ -175,12 +175,12 @@ struct PreferencesView: View {
             Section {
                 Picker("Symbolstil", selection: $menuBarIconStyle) {
                     ForEach(MenuBarIconStyle.allCases) { style in
-                        Text(style.title).tag(style)
+                        Text(style.localizedTitle).tag(style)
                     }
                 }
                 Picker("Menüleistenanzeige", selection: $menuBarDisplay) {
                     ForEach(MenuBarDisplayMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
+                        Text(mode.localizedTitle).tag(mode)
                     }
                 }
                 Text("Wähle das Menüleistensymbol und die Zusatzanzeige. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung.")
@@ -198,7 +198,7 @@ struct PreferencesView: View {
                     let cards = MenuCardLayout.validate(rawOrder: menuCardOrder)
                     ForEach(Array(cards.enumerated()), id: \.element) { _, card in
                         HStack {
-                            Text(card.displayName)
+                            Text(card.localizedTitle)
                             Spacer()
                             Button {
                                 menuCardOrder = MenuCardLayout.moveUp(card: card, in: menuCardOrder)
@@ -207,7 +207,7 @@ struct PreferencesView: View {
                             }
                             .buttonStyle(.borderless)
                             .disabled(!MenuCardLayout.canMoveUp(card: card, in: cards))
-                            .accessibilityLabel("\(card.displayName) nach oben verschieben")
+                            .accessibilityLabel(L("%@ nach oben verschieben", card.localizedTitle))
 
                             Button {
                                 menuCardOrder = MenuCardLayout.moveDown(card: card, in: menuCardOrder)
@@ -216,7 +216,7 @@ struct PreferencesView: View {
                             }
                             .buttonStyle(.borderless)
                             .disabled(!MenuCardLayout.canMoveDown(card: card, in: cards))
-                            .accessibilityLabel("\(card.displayName) nach unten verschieben")
+                            .accessibilityLabel(L("%@ nach unten verschieben", card.localizedTitle))
                         }
                     }
                 }
@@ -240,7 +240,7 @@ struct PreferencesView: View {
             if let api { APISettingsView(api: api) }
 
             Section {
-                LabeledContent("Status", value: statusStore.isDaemonActive ? "Verbunden" : "Nicht erreichbar")
+                LabeledContent("Status", value: L(statusStore.isDaemonActive ? "Verbunden" : "Nicht erreichbar"))
                 if let notice = statusStore.status.configurationNotice {
                     Label(notice, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange)
                 }
@@ -250,7 +250,7 @@ struct PreferencesView: View {
                     LabeledContent("SMC-Unterstützung", value: statusStore.status.smcKeysDetected.joined(separator: ", "))
                 }
                 HStack {
-                    Button(statusStore.isDaemonActive ? "Dienst aktualisieren" : "Dienst installieren") { services.install() }
+                    Button(L(statusStore.isDaemonActive ? "Dienst aktualisieren" : "Dienst installieren")) { services.install() }
                     if statusStore.isDaemonActive { Button("Dienst entfernen…", role: .destructive) { confirmUninstall = true } }
                     if services.isBusy { ProgressView().controlSize(.small) }
                 }.disabled(services.isBusy)
@@ -258,7 +258,7 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 if let message = services.message { Text(message).font(.caption).foregroundStyle(services.isError ? Color.orange : Color.secondary) }
                 if configStore.hasWriteError {
-                    Text("Einstellungen nicht gespeichert: \(configStore.writeErrorMessage ?? "Unbekannter Fehler")")
+                    Text(L("Einstellungen nicht gespeichert: %@", configStore.writeErrorMessage ?? L("Unbekannter Fehler")))
                         .font(.caption).foregroundStyle(.orange)
                     Button("Erneut speichern") { configStore.saveConfig() }
                 }
@@ -302,14 +302,14 @@ struct PreferencesView: View {
     }
 
     private var notificationPermissionDescription: String {
-        guard Bundle.main.bundleIdentifier != nil else { return "Nur in der installierten App verfügbar" }
+        guard Bundle.main.bundleIdentifier != nil else { return L("Nur in der installierten App verfügbar") }
         switch notificationAuthorization {
-        case .authorized: return notificationAlertsEnabled ? "Erlaubt" : "Erlaubt · Hinweise ausgeschaltet"
-        case .denied: return "Nicht erlaubt"
-        case .notDetermined: return "Noch nicht angefragt"
-        case .provisional: return "Still erlaubt"
-        case nil: return "Wird geprüft …"
-        @unknown default: return "Unbekannt"
+        case .authorized: return L(notificationAlertsEnabled ? "Erlaubt" : "Erlaubt · Hinweise ausgeschaltet")
+        case .denied: return L("Nicht erlaubt")
+        case .notDetermined: return L("Noch nicht angefragt")
+        case .provisional: return L("Still erlaubt")
+        case nil: return L("Wird geprüft …")
+        @unknown default: return L("Unbekannt")
         }
     }
 
@@ -327,7 +327,7 @@ struct PreferencesView: View {
         do {
             _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
             notificationError = nil
-        } catch { notificationError = "Freigabe konnte nicht angefragt werden: " + error.localizedDescription }
+        } catch { notificationError = L("Freigabe konnte nicht angefragt werden: %@", error.localizedDescription) }
         await refreshNotificationPermission()
     }
 }

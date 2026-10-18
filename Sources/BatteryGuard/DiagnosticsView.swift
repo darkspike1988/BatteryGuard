@@ -35,9 +35,9 @@ struct DiagnosticsView: View {
                 BGPanel {
                     VStack(alignment: .leading, spacing: 12) {
                         Picker("Was möchtest du prüfen?", selection: $question) {
-                            ForEach(DiagnosticQuestion.allCases) { Text($0.rawValue).tag($0) }
+                            ForEach(DiagnosticQuestion.allCases) { Text(L($0.rawValue)).tag($0) }
                         }
-                        Text(question.guidance).font(.callout).foregroundStyle(.secondary)
+                        Text(L(question.guidance)).font(.callout).foregroundStyle(.secondary)
                         Button("Aktuellen Diagnosebericht exportieren") { exportReport() }
                         Text("Der Bericht enthält Messzeiten und Werte, aber keine Profile, Reisezeiten, Tokens, Seriennummern oder Prozessnamen.")
                             .font(.caption).foregroundStyle(.secondary)
@@ -54,7 +54,7 @@ struct DiagnosticsView: View {
                         diagnosticRow("Designkapazität", metric: .designCapacity, in: battery)
                         diagnosticRow("Kapazitätsquote", metric: .capacityRatio, in: battery)
                         if let reference = BGBatteryCycleReference.maximumCycles(model: system?.modelIdentifier) {
-                            Text("Apple-Referenz für \(system?.modelIdentifier ?? "") : \(reference) Zyklen. Kein Countdown bis zum Ausfall.")
+                            Text(L("Apple-Referenz für %@: %lld Zyklen. Kein Countdown bis zum Ausfall.", system?.modelIdentifier ?? "", reference))
                                 .font(.caption).foregroundStyle(.secondary)
                         } else {
                             Text("Keine verifizierte modellbezogene Zyklusreferenz in B-Guard. Apples Modellliste prüfen.").font(.caption).foregroundStyle(.secondary)
@@ -103,7 +103,7 @@ struct DiagnosticsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                         if let error = history.capacityError { Text(error).font(.caption).foregroundStyle(.orange) }
                         if let delta = BGCapacityTrend.change(history.capacityDays) {
-                            Text(String(format: "Beobachtete Veränderung: %+.1f Prozentpunkte", delta))
+                            Text(L("Beobachtete Veränderung: %+.1f Prozentpunkte", delta))
                             Text("Vergleich erster und letzter Tagesmittelwerte gleicher Quelle, Designkapazität und OS-Version; keine Alterungsprognose.").font(.caption).foregroundStyle(.secondary)
                         } else {
                             Text("Trend noch nicht vergleichbar: mindestens drei Tageswerte gleicher Quellen und Systemversion nötig.")
@@ -114,9 +114,9 @@ struct DiagnosticsView: View {
                                 HStack {
                                     Text(utcDayText(day.day))
                                     Spacer()
-                                    Text(String(format: "%.1f %% · %d Messungen", day.mean, day.count)).monospacedDigit()
+                                    Text(L("%.1f %% · %d Messungen", day.mean, day.count)).monospacedDigit()
                                 }
-                                Text(String(format: "Spanne %.1f–%.1f %% · UTC-Tag · keine ganztägige Messabdeckung", day.minimum, day.maximum))
+                                Text(L("Spanne %.1f–%.1f %% · UTC-Tag · keine ganztägige Messabdeckung", day.minimum, day.maximum))
                                     .foregroundStyle(.secondary)
                             }.font(.caption)
                         }
@@ -139,73 +139,73 @@ struct DiagnosticsView: View {
     private func diagnosticRow(_ title: String, metric: BGMetric, in data: BGBatteryMeasurements) -> some View {
         let item = data.measurement(metric)
         return VStack(alignment: .leading, spacing: 3) {
-            LabeledContent(title, value: formatted(item))
-            Text(item.map { "\(sourceText($0.source)) · \(qualityText($0.quality)) · \($0.sampledAt.formatted(date: .omitted, time: .standard))" } ?? "Keine Quelle verfügbar")
+            LabeledContent(L(title), value: formatted(item))
+            Text(item.map { L("%@ · %@ · %@", sourceText($0.source), qualityText($0.quality), $0.sampledAt.formatted(date: .omitted, time: .standard)) } ?? L("Keine Quelle verfügbar"))
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
 
     private func qualityText(_ quality: BGMeasurementQuality) -> String {
         switch quality {
-        case .reported: "gemeldet"
-        case .derived: "berechnet"
-        case .unavailable: "nicht verfügbar"
-        case .unsupported: "nicht unterstützt"
-        case .invalid: "ungültig"
-        case .stale: "veraltet"
+        case .reported: L("gemeldet")
+        case .derived: L("berechnet")
+        case .unavailable: L("nicht verfügbar")
+        case .unsupported: L("nicht unterstützt")
+        case .invalid: L("ungültig")
+        case .stale: L("veraltet")
         }
     }
 
     private func sourceText(_ source: BGMeasurementSource) -> String {
         switch source {
-        case .powerSources: "macOS-Stromquellen"
-        case .registryCharge: "Akku-Registry: Ladekapazitäten"
-        case .registryTemperature: "Akku-Registry: Temperatur"
-        case .registryCycles: "Akku-Registry: Zyklen"
-        case .rawMaxCapacity: "Akku-Registry: Roh-Maximalkapazität"
-        case .fullChargeCapacity: "Akku-Daten: Vollladekapazität"
-        case .nominalCapacity: "Akku-Daten: Nennkapazität"
-        case .designCapacity: "Akku-Registry: Designkapazität"
-        case .nestedDesignCapacity: "Akku-Daten: Designkapazität"
-        case .registryPower: "Akku-Registry: Spannung und Strom"
-        case .smcTemperature: "Akku-Sensor über SMC"
-        case .capacityCalculation: "Maximal- / Designkapazität"
-        case .legacyStatus: "Status: Herkunft unbekannt"
-        case .machCPU: "macOS: CPU-Zeitanteile"
-        case .machMemory: "macOS: Speicherkategorien"
-        case .swapUsage: "macOS: Swap-Belegung"
-        case .volumeCapacity: "macOS: Volumekapazität"
+        case .powerSources: L("macOS-Stromquellen")
+        case .registryCharge: L("Akku-Registry: Ladekapazitäten")
+        case .registryTemperature: L("Akku-Registry: Temperatur")
+        case .registryCycles: L("Akku-Registry: Zyklen")
+        case .rawMaxCapacity: L("Akku-Registry: Roh-Maximalkapazität")
+        case .fullChargeCapacity: L("Akku-Daten: Vollladekapazität")
+        case .nominalCapacity: L("Akku-Daten: Nennkapazität")
+        case .designCapacity: L("Akku-Registry: Designkapazität")
+        case .nestedDesignCapacity: L("Akku-Daten: Designkapazität")
+        case .registryPower: L("Akku-Registry: Spannung und Strom")
+        case .smcTemperature: L("Akku-Sensor über SMC")
+        case .capacityCalculation: L("Maximal- / Designkapazität")
+        case .legacyStatus: L("Status: Herkunft unbekannt")
+        case .machCPU: L("macOS: CPU-Zeitanteile")
+        case .machMemory: L("macOS: Speicherkategorien")
+        case .swapUsage: L("macOS: Swap-Belegung")
+        case .volumeCapacity: L("macOS: Volumekapazität")
         }
     }
 
     private func formatted(_ item: BGMeasurement?) -> String {
-        guard let item, let value = item.value else { return "Nicht verfügbar" }
+        guard let item, let value = item.value else { return L("Nicht verfügbar") }
         if item.unit == "bytes" { return ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .memory) }
         if item.metric == .cycleCount { return String(format: "%.0f", value) }
         return String(format: "%.1f %@", value, item.unit)
     }
 
     private var thermalText: String {
-        guard let system, system.isFresh(at: Date()) else { return "Nicht verfügbar" }
+        guard let system, system.isFresh(at: Date()) else { return L("Nicht verfügbar") }
         switch system.thermalState {
-        case .nominal: return "Normal laut macOS"
-        case .fair: return "Leicht erhöht laut macOS"
-        case .serious: return "Deutlich erhöht laut macOS"
-        case .critical: return "Kritisch laut macOS"
-        case .unknown: return "Unbekannt"
+        case .nominal: return L("Normal laut macOS")
+        case .fair: return L("Leicht erhöht laut macOS")
+        case .serious: return L("Deutlich erhöht laut macOS")
+        case .critical: return L("Kritisch laut macOS")
+        case .unknown: return L("Unbekannt")
         }
     }
 
     private func issueText(_ issue: BGDiagnosticIssue) -> String {
         switch issue {
-        case .batteryDataUnavailable: "Kein aktueller Akkustand. Dienst und Messquellen prüfen; daraus folgt keine Entwarnung."
-        case .capacityIsEstimate: "Kapazitätsquote ist berechnet und kann von Apples Anzeige abweichen. Einzelne Schwankungen sind kein nachgewiesener Verschleiß."
-        case .legacySourceUnknown: "Älterer Dienst: Herkunft einzelner Werte unbekannt. Für den neuen Quellenvertrag den Dienst aktualisieren."
-        case .systemDataUnavailable: "Keine aktuellen Systemdaten. Eine umfassende Mac-Bewertung ist nicht möglich."
-        case .thermalElevated: "macOS meldet deutlich erhöhte Systemthermik. Normale Arbeitslast prüfen und unnötige Last verringern; keine Defektdiagnose."
-        case .thermalCritical: "macOS meldet kritische Systemthermik. Arbeit reduzieren und den Mac abkühlen lassen."
-        case .cpuBusy: "CPU im letzten Messintervall stark ausgelastet. Aktivitätsanzeige prüfen; hohe Last allein ist kein Fehler."
-        case .volumeCapacityUnavailable: "Verfügbare Volumekapazität unbekannt. Keine Aussage zum Speicherplatz möglich."
+        case .batteryDataUnavailable: L("Kein aktueller Akkustand. Dienst und Messquellen prüfen; daraus folgt keine Entwarnung.")
+        case .capacityIsEstimate: L("Kapazitätsquote ist berechnet und kann von Apples Anzeige abweichen. Einzelne Schwankungen sind kein nachgewiesener Verschleiß.")
+        case .legacySourceUnknown: L("Älterer Dienst: Herkunft einzelner Werte unbekannt. Für den neuen Quellenvertrag den Dienst aktualisieren.")
+        case .systemDataUnavailable: L("Keine aktuellen Systemdaten. Eine umfassende Mac-Bewertung ist nicht möglich.")
+        case .thermalElevated: L("macOS meldet deutlich erhöhte Systemthermik. Normale Arbeitslast prüfen und unnötige Last verringern; keine Defektdiagnose.")
+        case .thermalCritical: L("macOS meldet kritische Systemthermik. Arbeit reduzieren und den Mac abkühlen lassen.")
+        case .cpuBusy: L("CPU im letzten Messintervall stark ausgelastet. Aktivitätsanzeige prüfen; hohe Last allein ist kein Fehler.")
+        case .volumeCapacityUnavailable: L("Verfügbare Volumekapazität unbekannt. Keine Aussage zum Speicherplatz möglich.")
         }
     }
 
@@ -218,7 +218,7 @@ struct DiagnosticsView: View {
             let report = BGDiagnosticReport(appVersion: AppVersion.installed, daemonVersion: statusStore.status.daemonVersion,
                                             battery: statusStore.status, system: system, capacityDays: history.capacityDays, at: Date())
             try BGJSON.encoder().encode(report).write(to: url, options: .atomic)
-            exportMessage = "Messbericht gespeichert."
-        } catch { exportMessage = "Messbericht konnte nicht gespeichert werden." }
+            exportMessage = L("Messbericht gespeichert.")
+        } catch { exportMessage = L("Messbericht konnte nicht gespeichert werden.") }
     }
 }

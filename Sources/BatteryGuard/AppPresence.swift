@@ -38,7 +38,7 @@ public final class AppPresence {
         }
         set {
             guard Self.isRunningFromBundle else {
-                lastError = "Autostart kann nicht registriert werden: Die Anwendung läuft nicht aus einem App-Bundle (z. B. via 'swift run')."
+                lastError = L("Autostart kann nicht registriert werden: Die Anwendung läuft nicht aus einem App-Bundle (z. B. via 'swift run').")
                 return
             }
 
@@ -50,7 +50,7 @@ public final class AppPresence {
                 }
                 lastError = nil
             } catch {
-                lastError = "Fehler beim Konfigurieren des Autostarts: \(error.localizedDescription)"
+                lastError = L("Fehler beim Konfigurieren des Autostarts: %@", error.localizedDescription)
             }
 
             refreshLaunchAtLoginStatus()

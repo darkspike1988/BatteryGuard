@@ -88,13 +88,13 @@ public struct BGSpecialChargePlan: Codable, Equatable, Sendable {
 
     public func evaluate(context: BGSpecialPlanEvaluationContext, at now: Date = Date()) -> BGSpecialPlanOutcome {
         guard isValid else {
-            return .unavailable(reason: "Ungültiger Ladeplan.")
+            return .unavailable(reason: BGLocalized("Ungültiger Ladeplan."))
         }
 
-        guard now.timeIntervalSince1970.isFinite else { return .unavailable(reason: "Zeitpunkt unbekannt.") }
-        if now >= expiresAt { return .complete(reason: "Zeitlimit abgelaufen.") }
+        guard now.timeIntervalSince1970.isFinite else { return .unavailable(reason: BGLocalized("Zeitpunkt unbekannt.")) }
+        if now >= expiresAt { return .complete(reason: BGLocalized("Zeitlimit abgelaufen.")) }
         guard context.percent.map({ (0...100).contains($0) }) == true else {
-            return .unavailable(reason: "Aktueller Ladestand nicht verfügbar.")
+            return .unavailable(reason: BGLocalized("Aktueller Ladestand nicht verfügbar."))
         }
         switch kind {
         case .topUp:
@@ -105,53 +105,53 @@ public struct BGSpecialChargePlan: Codable, Equatable, Sendable {
 
             // Topup persists at 100 until CONFIRMED disconnect after observed connected or deadline
             if updated.hasObservedPower && context.externalPower == .disconnected {
-                return .complete(reason: "Netzteil nach Top-Up getrennt.")
+                return .complete(reason: BGLocalized("Netzteil nach Top-Up getrennt."))
             }
 
             if let percent = context.percent, percent >= 100 {
-                return .active(reason: "100 % erreicht – wird gehalten bis zum Trennen des Netzteils.", plan: updated)
+                return .active(reason: BGLocalized("100 % erreicht – wird gehalten bis zum Trennen des Netzteils."), plan: updated)
             }
 
             if context.externalPower == .connected {
-                return .active(reason: "Top-Up auf 100 % aktiv.", plan: updated)
+                return .active(reason: BGLocalized("Top-Up auf 100 % aktiv."), plan: updated)
             } else if context.externalPower == .unknown {
-                return .active(reason: "Top-Up aktiv (Netzteil-Status unbekannt).", plan: updated)
+                return .active(reason: BGLocalized("Top-Up aktiv (Netzteil-Status unbekannt)."), plan: updated)
             } else {
-                return .active(reason: "Warte auf Anschluss des Netzteils...", plan: updated)
+                return .active(reason: BGLocalized("Warte auf Anschluss des Netzteils..."), plan: updated)
             }
 
         case .discharge:
             guard context.canDisconnectAdapter && context.allowsAdapterDisconnect else {
-                return .unavailable(reason: "Entladen erfordert Adapter-Steuerung und Benutzer-Erlaubnis.")
+                return .unavailable(reason: BGLocalized("Entladen erfordert Adapter-Steuerung und Benutzer-Erlaubnis."))
             }
             if now >= expiresAt {
-                return .complete(reason: "Zeitlimit für Entladen abgelaufen.")
+                return .complete(reason: BGLocalized("Zeitlimit für Entladen abgelaufen."))
             }
             if let percent = context.percent, percent <= targetPercent {
-                return .complete(reason: "Ziel-Ladestand (\(targetPercent) %) erreicht.")
+                return .complete(reason: BGLocalized("Ziel-Ladestand (%lld %%) erreicht.", targetPercent))
             }
             if context.externalPower == .disconnected {
-                return .complete(reason: "Netzteil getrennt (Entladen beendet).")
+                return .complete(reason: BGLocalized("Netzteil getrennt (Entladen beendet)."))
             }
 
             var updated = self
             if context.externalPower == .connected {
                 updated.hasObservedPower = true
             }
-            return .active(reason: "Entladen auf \(targetPercent) % aktiv.", plan: updated)
+            return .active(reason: BGLocalized("Entladen auf %lld %% aktiv.", targetPercent), plan: updated)
 
         case .hold:
             guard context.canBlockCharging else {
-                return .unavailable(reason: "Hardware unterstützt keine Ladesperre.")
+                return .unavailable(reason: BGLocalized("Hardware unterstützt keine Ladesperre."))
             }
             if now >= expiresAt {
-                return .complete(reason: "Zeitlimit für Halten abgelaufen.")
+                return .complete(reason: BGLocalized("Zeitlimit für Halten abgelaufen."))
             }
             var updated = self
             if context.externalPower == .connected {
                 updated.hasObservedPower = true
             }
-            return .active(reason: "Ladestand wird bei \(targetPercent) % gehalten.", plan: updated)
+            return .active(reason: BGLocalized("Ladestand wird bei %lld %% gehalten.", targetPercent), plan: updated)
         }
     }
 }

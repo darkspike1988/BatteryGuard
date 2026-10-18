@@ -8,7 +8,7 @@ enum AppActionError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsavedChanges: "Einstellungen werden noch gespeichert. Bitte erneut versuchen."
+        case .unsavedChanges: L("Einstellungen werden noch gespeichert. Bitte erneut versuchen.")
         case .saveFailed(let message): message
         }
     }
@@ -66,7 +66,7 @@ final class ConfigStore: Sendable {
             self.writeErrorMessage = nil
         } catch {
             self.hasWriteError = true
-            self.writeErrorMessage = "Konfiguration konnte nicht gelesen werden: " + error.localizedDescription
+            self.writeErrorMessage = L("Konfiguration konnte nicht gelesen werden: %@", error.localizedDescription)
         }
     }
     
@@ -133,7 +133,7 @@ final class ConfigStore: Sendable {
     /// The API must return success only after the shared daemon has accepted the save.
     func performAPIAction(_ request: BGChargingActionRequest, at now: Date = Date()) throws -> BGConfig {
         guard !hasPendingSave else { throw AppActionError.unsavedChanges }
-        guard persistenceEnabled else { throw AppActionError.saveFailed("Vorschau kann keine Einstellungen speichern.") }
+        guard persistenceEnabled else { throw AppActionError.saveFailed(L("Vorschau kann keine Einstellungen speichern.")) }
         let saved = try BGConfigFile.performAction(request, at: configURL, now: now)
         let wasInitialLoad = isInitialLoad
         isInitialLoad = true
@@ -159,7 +159,7 @@ final class ConfigStore: Sendable {
         guard duration.isFinite, duration >= 60, duration <= 720 * 60,
               duration.truncatingRemainder(dividingBy: 60) == 0 else {
             hasWriteError = true
-            writeErrorMessage = "Eine Pause muss zwischen 1 und 720 ganzen Minuten dauern."
+            writeErrorMessage = L("Eine Pause muss zwischen 1 und 720 ganzen Minuten dauern.")
             return
         }
         performAction(BGChargingActionRequest(action: .pause, minutes: Int(duration / 60)))

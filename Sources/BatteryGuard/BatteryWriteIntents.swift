@@ -97,7 +97,7 @@ public struct SavedChargingProfileEntity: AppEntity {
     public let upper: Int
     public let activeDischarge: Bool
     public var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(name)", subtitle: "\(lower)–\(upper) % · \(activeDischarge ? "Aktives Entladen" : "Ladeprofil")")
+        DisplayRepresentation(title: "\(name)", subtitle: "\(lower)–\(upper) % · \(activeDischarge ? L("Aktives Entladen") : L("Ladeprofil"))")
     }
     public init(_ profile: BGSavedProfile) {
         id = profile.id; name = profile.name; lower = profile.lowerLimit; upper = profile.upperLimit; activeDischarge = profile.activeDischargeAboveUpper

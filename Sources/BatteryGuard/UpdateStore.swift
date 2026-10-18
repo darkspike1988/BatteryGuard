@@ -65,12 +65,12 @@ enum UpdateError: LocalizedError, Equatable {
     case server(Int), invalidRelease, invalidDownload, checksum, downloadSizeExceeded
     var errorDescription: String? {
         switch self {
-        case .server(403), .server(429): "GitHub begrenzt gerade die Anfragen. Bitte später erneut versuchen."
-        case .server(let code): "GitHub ist nicht erreichbar (HTTP \(code))."
-        case .invalidRelease: "Die veröffentlichte Version konnte nicht zuverlässig erkannt werden."
-        case .invalidDownload: "Kein verifizierbarer DMG-Download vorhanden. Bitte die GitHub-Veröffentlichung prüfen."
-        case .checksum: "Die Prüfsumme stimmt nicht. Der Download wurde verworfen und nicht geöffnet."
-        case .downloadSizeExceeded: "Der Download überschreitet die erwartete Dateigröße."
+        case .server(403), .server(429): L("GitHub begrenzt gerade die Anfragen. Bitte später erneut versuchen.")
+        case .server(let code): L("GitHub ist nicht erreichbar (HTTP %ld).", code)
+        case .invalidRelease: L("Die veröffentlichte Version konnte nicht zuverlässig erkannt werden.")
+        case .invalidDownload: L("Kein verifizierbarer DMG-Download vorhanden. Bitte die GitHub-Veröffentlichung prüfen.")
+        case .checksum: L("Die Prüfsumme stimmt nicht. Der Download wurde verworfen und nicht geöffnet.")
+        case .downloadSizeExceeded: L("Der Download überschreitet die erwartete Dateigröße.")
         }
     }
 }
@@ -200,11 +200,11 @@ final class UpdateStore {
             checkedAt = Date()
             preferences.set(data, forKey: "bg.cachedRelease")
             preferences.set(checkedAt, forKey: "bg.lastSuccessfulUpdateCheck")
-            message = updateAvailable ? "B-Guard \(result.version) ist verfügbar."
-                : "Du verwendest die aktuelle oder eine neuere Version."
+            message = updateAvailable ? L("B-Guard %@ ist verfügbar.", result.version)
+                : L("Du verwendest die aktuelle oder eine neuere Version.")
         } catch {
             isError = true
-            message = "Updateprüfung fehlgeschlagen. " + error.localizedDescription
+            message = L("Updateprüfung fehlgeschlagen. %@", error.localizedDescription)
         }
     }
 
@@ -245,8 +245,8 @@ final class UpdateStore {
         let settings = await center.notificationSettings()
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
         let content = UNMutableNotificationContent()
-        content.title = "B-Guard \(release.version) ist verfügbar"
-        content.body = "Neue Änderungen und Verbesserungen warten. Öffne Updates & Neuigkeiten in B-Guard."
+        content.title = L("B-Guard %@ ist verfügbar", release.version)
+        content.body = L("Neue Änderungen und Verbesserungen warten. Öffne Updates & Neuigkeiten in B-Guard.")
         content.sound = .default
         do {
             try await center.add(UNNotificationRequest(identifier: "bg.update.\(release.version)", content: content, trigger: nil))
@@ -273,7 +273,7 @@ final class UpdateStore {
         let id = UUID()
         downloadID = id
         isError = false
-        message = "Update wird geladen und geprüft …"
+        message = L("Update wird geladen und geprüft …")
         defer { isDownloading = false; downloadSession = nil; downloadID = nil }
         let session = URLSession(configuration: .ephemeral)
         downloadSession = session
@@ -304,23 +304,23 @@ final class UpdateStore {
             try FileManager.default.moveItem(at: temporary, to: destination)
             downloadedURL = destination
             if NSWorkspace.shared.open(destination) {
-                message = "Download geprüft und geöffnet. B-Guard beenden und die neue App auf Programme ziehen."
+                message = L("Download geprüft und geöffnet. B-Guard beenden und die neue App auf Programme ziehen.")
             } else {
-                message = "Download geprüft. Öffne die DMG im Downloads-Ordner und ersetze B-Guard in Programme."
+                message = L("Download geprüft. Öffne die DMG im Downloads-Ordner und ersetze B-Guard in Programme.")
             }
         } catch {
             if downloadCancelled {
                 isError = false
-                message = "Download abgebrochen."
+                message = L("Download abgebrochen.")
             } else if progress.hasSizeExceeded {
                 isError = true
-                message = "Update konnte nicht geladen werden. " + UpdateError.downloadSizeExceeded.localizedDescription
+                message = L("Update konnte nicht geladen werden. %@", UpdateError.downloadSizeExceeded.localizedDescription)
             } else if error is CancellationError || (error as? URLError)?.code == .cancelled {
                 isError = false
-                message = "Download abgebrochen."
+                message = L("Download abgebrochen.")
             } else {
                 isError = true
-                message = "Update konnte nicht geladen werden. " + error.localizedDescription
+                message = L("Update konnte nicht geladen werden. %@", error.localizedDescription)
             }
         }
     }
@@ -329,6 +329,6 @@ final class UpdateStore {
         guard isDownloading else { return }
         downloadCancelled = true
         downloadSession?.invalidateAndCancel()
-        message = "Download wird abgebrochen …"
+        message = L("Download wird abgebrochen …")
     }
 }

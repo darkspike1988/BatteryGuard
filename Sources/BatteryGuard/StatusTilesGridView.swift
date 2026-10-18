@@ -113,7 +113,7 @@ private struct StatusGlassTile: View {
                 Image(systemName: icon)
                     .font(.caption2)
                     .foregroundStyle(iconColor)
-                Text(title)
+                Text(L(title))
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
             }
@@ -123,7 +123,7 @@ private struct StatusGlassTile: View {
                 .contentTransition(.numericText())
                 .lineLimit(1)
             if let detail {
-                Text(detail).font(.caption2).foregroundStyle(.secondary)
+                Text(L(detail)).font(.caption2).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -131,6 +131,6 @@ private struct StatusGlassTile: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .adaptiveGlassCard(cornerRadius: 12)
-        .help(helpText)
+        .help(L(helpText))
     }
 }

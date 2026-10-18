@@ -119,7 +119,7 @@ final class StatusStore: Sendable {
         s.watts = 0
         s.daemonVersion = AppVersion.requiredDaemon
         s.updatedAt = Date()
-        s.message = "Dein Akku bleibt im Ladebereich von 75–80 %."
+        s.message = L("Dein Akku bleibt im Ladebereich von 75–80 %.")
         store.status = s
         store.isDaemonActive = true
         return store
@@ -131,7 +131,7 @@ extension BGStatus {
         var s = BGStatus()
         s.daemonVersion = "–"
         s.updatedAt = Date.distantPast
-        s.message = "Keine aktuellen Messwerte verfügbar"
+        s.message = L("Keine aktuellen Messwerte verfügbar")
         return s
     }
 }

@@ -4,10 +4,10 @@ import BatteryGuardShared
 extension BGMode {
     var localizedName: String {
         switch self {
-        case .auto: return "Auto"
-        case .native: return "Nativ (macOS)"
-        case .pendulum: return "Pendel"
-        case .direct: return "Direkt (Root)"
+        case .auto: return L("Auto")
+        case .native: return L("Nativ (macOS)")
+        case .pendulum: return L("Pendel")
+        case .direct: return L("Direkt (Root)")
         }
     }
     
@@ -28,6 +28,7 @@ extension BGMode {
         case .direct: return "Direktmodus nicht implementiert. Bitte Auto, Nativ oder Pendel wählen."
         }
     }
+    var localizedDescription: String { L(description) }
 }
 
 struct ModePickerView: View {
@@ -99,7 +100,7 @@ struct ModePickerView: View {
                         .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
                     }
                     .buttonStyle(.plain)
-                    .help(m.description)
+                    .help(m.localizedDescription)
                 }
             }
             .padding(3)
@@ -112,7 +113,7 @@ struct ModePickerView: View {
                     .foregroundStyle(.secondary)
                     .padding(.top, 1)
                 
-                Text(mode.description)
+                Text(mode.localizedDescription)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)

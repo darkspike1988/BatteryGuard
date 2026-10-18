@@ -55,6 +55,11 @@ if [[ -d "$PROJECT_DIR/Resources" ]]; then
             cp "$item" "$RESOURCES_DIR/"
         fi
     done
+    for lproj in "$PROJECT_DIR/Resources"/*.lproj; do
+        if [[ -d "$lproj" ]]; then
+            cp -R "$lproj" "$RESOURCES_DIR/"
+        fi
+    done
 fi
 
 # Info.plist generieren
@@ -76,6 +81,12 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <string>com.batteryguard.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>de</string>
+        <string>en</string>
+        <string>ru</string>
+    </array>
     <key>CFBundleName</key>
     <string>B-Guard</string>
     <key>CFBundleDisplayName</key>

@@ -25,7 +25,7 @@ actor HistoryRepository {
                 .appendingPathComponent("history-recovery-\(UUID().uuidString).json")
             // Erst sichern. Scheitert das Verschieben, bleibt die Originaldatei unangetastet.
             try FileManager.default.moveItem(at: url, to: backup)
-            recoveryNotice = "Beschädigter Verlauf wurde in \(backup.lastPathComponent) gesichert. Neue Messungen werden wieder aufgezeichnet."
+            recoveryNotice = L("Beschädigter Verlauf wurde in %@ gesichert. Neue Messungen werden wieder aufgezeichnet.", backup.lastPathComponent)
             samples = []
             return []
         }
@@ -77,14 +77,14 @@ final class HistoryStore {
         } else {
             Task { [weak self, capacityRepository] in
                 do { self?.capacityDays = try await capacityRepository.load() }
-                catch { self?.capacityError = "Kapazitätsverlauf konnte nicht geladen werden. Die Datei bleibt unverändert." }
+                catch { self?.capacityError = L("Kapazitätsverlauf konnte nicht geladen werden. Die Datei bleibt unverändert.") }
             }
             Task { [weak self, repository] in
                 do {
                     self?.samples = try await repository.load()
                     self?.errorMessage = await repository.recoveryNotice
                 }
-                catch { self?.errorMessage = "Verlauf konnte nicht geladen werden: \(error.localizedDescription)" }
+                catch { self?.errorMessage = L("Verlauf konnte nicht geladen werden: %@", error.localizedDescription) }
             }
         }
     }
@@ -98,7 +98,7 @@ final class HistoryStore {
                 do {
                     self?.capacityDays = try await capacityRepository.record(status)
                     self?.capacityError = nil
-                } catch { self?.capacityError = "Kapazitätsverlauf konnte nicht gespeichert werden. Bestehende Daten bleiben erhalten." }
+                } catch { self?.capacityError = L("Kapazitätsverlauf konnte nicht gespeichert werden. Bestehende Daten bleiben erhalten.") }
             }
         }
         Task { [weak self, repository] in
@@ -107,7 +107,7 @@ final class HistoryStore {
                 if self?.samples != updated { self?.samples = updated }
                 self?.errorMessage = await repository.recoveryNotice
             } catch {
-                self?.errorMessage = "Verlauf konnte nicht gespeichert werden: \(error.localizedDescription)"
+                self?.errorMessage = L("Verlauf konnte nicht gespeichert werden: %@", error.localizedDescription)
             }
         }
     }

@@ -10,6 +10,7 @@ public enum BGProfile: String, CaseIterable, Identifiable, Sendable {
         case .mobile: "Unterwegs"
         }
     }
+    public var localizedTitle: String { BGLocalized(title) }
     public var symbol: String {
         switch self {
         case .desk: "desktopcomputer"

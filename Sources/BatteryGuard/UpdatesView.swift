@@ -117,18 +117,18 @@ struct UpdatesView: View {
                         if updates.isDownloading {
                             ProgressView(value: Double(updates.downloadBytes), total: Double(max(1, updates.downloadTotal)))
                             HStack {
-                                Text("\(ByteCountFormatter.string(fromByteCount: updates.downloadBytes, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: updates.downloadTotal, countStyle: .file))")
+                                Text(L("%@ von %@", ByteCountFormatter.string(fromByteCount: updates.downloadBytes, countStyle: .file), ByteCountFormatter.string(fromByteCount: updates.downloadTotal, countStyle: .file)))
                                     .font(.caption).monospacedDigit().foregroundStyle(.secondary)
                                 Spacer()
                                 Button("Download abbrechen") { updates.cancelDownload() }
                             }
                         }
                         HStack {
-                            Button(updates.isChecking ? "Wird geprüft …" : "Nach Updates suchen") {
+                            Button(L(updates.isChecking ? "Wird geprüft …" : "Nach Updates suchen")) {
                                 Task { await updates.check() }
                             }.disabled(updates.isChecking || updates.isDownloading)
                             if updates.updateAvailable {
-                                Button(updates.isDownloading ? "Wird geladen …" : "Update laden und öffnen") {
+                                Button(L(updates.isDownloading ? "Wird geladen …" : "Update laden und öffnen")) {
                                     Task { await updates.downloadAndOpen() }
                                 }.buttonStyle(.borderedProminent)
                                     .disabled(updates.isChecking || updates.isDownloading || updates.release?.safeDownload == nil)
@@ -140,7 +140,7 @@ struct UpdatesView: View {
                                 .textSelection(.enabled)
                         }
                         if let checked = updates.checkedAt {
-                            Text("Zuletzt erfolgreich geprüft: \(checked.formatted(date: .abbreviated, time: .shortened))")
+                            Text(L("Zuletzt erfolgreich geprüft: %@", checked.formatted(date: .abbreviated, time: .shortened)))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         if let downloaded = updates.downloadedURL {
@@ -155,7 +155,7 @@ struct UpdatesView: View {
                 if let release = updates.release, updates.updateAvailable, let body = release.body, !body.isEmpty {
                     BGPanel {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Neu in \(release.version)").font(.headline)
+                            Text(L("Neu in %@", release.version)).font(.headline)
                             Text(body).font(.callout).textSelection(.enabled)
                         }
                     }
@@ -165,14 +165,14 @@ struct UpdatesView: View {
                     BGPanel {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Text(entry.title).font(.headline)
+                                Text(L(entry.title)).font(.headline)
                                 Spacer()
                                 Text(entry.version).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                             }
                             ForEach(entry.changes, id: \.self) { change in
                                 HStack(alignment: .top, spacing: 10) {
                                     Text("•").foregroundStyle(.secondary)
-                                    Text(change).font(.callout).fixedSize(horizontal: false, vertical: true)
+                                    Text(L(change)).font(.callout).fixedSize(horizontal: false, vertical: true)
                                 }
                             }
                         }

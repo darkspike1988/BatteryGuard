@@ -18,8 +18,8 @@ struct BGSectionHeading: View {
     let subtitle: String
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.title2.weight(.semibold))
-            Text(subtitle).font(.callout).foregroundStyle(.secondary)
+            Text(L(title)).font(.title2.weight(.semibold))
+            Text(L(subtitle)).font(.callout).foregroundStyle(.secondary)
         }
     }
 }
@@ -31,28 +31,28 @@ extension BGStatus {
     }
 
     func displayTitle(active: Bool, config: BGConfig) -> String {
-        guard active else { return "Keine Verbindung zum Dienst" }
-        if state == .unsupported { return "Ladesteuerung nicht verfügbar" }
-        if config.isPaused(at: Date()) { return "Schutz vorübergehend pausiert" }
+        guard active else { return L("Keine Verbindung zum Dienst") }
+        if state == .unsupported { return L("Ladesteuerung nicht verfügbar") }
+        if config.isPaused(at: Date()) { return L("Schutz vorübergehend pausiert") }
         if config.mode == .native {
-            return isChargingHardware ? "macOS lädt den Akku" : (pluggedIn ? "macOS steuert das Laden" : "Akkubetrieb")
+            return L(isChargingHardware ? "macOS lädt den Akku" : (pluggedIn ? "macOS steuert das Laden" : "Akkubetrieb"))
         }
         switch state {
-        case .charging: return isChargingHardware ? "Akku wird geladen" : "Laden freigegeben"
-        case .holding: return "Laden pausiert"
-        case .discharging: return "Akku entlädt am Netzteil"
-        case .onBattery: return "Akkubetrieb"
-        case .disabled: return config.enabled ? "macOS übernimmt das Laden" : "Ladeschutz ausgeschaltet"
-        case .unsupported: return "Ladesteuerung nicht verfügbar"
+        case .charging: return L(isChargingHardware ? "Akku wird geladen" : "Laden freigegeben")
+        case .holding: return L("Laden pausiert")
+        case .discharging: return L("Akku entlädt am Netzteil")
+        case .onBattery: return L("Akkubetrieb")
+        case .disabled: return L(config.enabled ? "macOS übernimmt das Laden" : "Ladeschutz ausgeschaltet")
+        case .unsupported: return L("Ladesteuerung nicht verfügbar")
         }
     }
 
     func displayDetail(active: Bool, config: BGConfig) -> String {
-        guard active else { return "Öffne die Einstellungen, um den Hintergrunddienst zu prüfen." }
-        if config.mode == .native { return nativeChargeLimit.map { "macOS-Ladelimit: \($0) %. In den Batterieeinstellungen anpassbar." }
-                ?? "Das Ladelimit wird in den macOS-Batterieeinstellungen festgelegt." }
-        if let message, !message.isEmpty { return message }
-        return pluggedIn ? "Mit Netzteil verbunden" : "Vom Akku versorgt"
+        guard active else { return L("Öffne die Einstellungen, um den Hintergrunddienst zu prüfen.") }
+        if config.mode == .native { return nativeChargeLimit.map { L("macOS-Ladelimit: %lld %%. In den Batterieeinstellungen anpassbar.", $0) }
+                ?? L("Das Ladelimit wird in den macOS-Batterieeinstellungen festgelegt.") }
+        if let message, !message.isEmpty { return StatusMessageLocalizer.localized(message) }
+        return L(pluggedIn ? "Mit Netzteil verbunden" : "Vom Akku versorgt")
     }
 
     func tint(active: Bool) -> Color {
@@ -117,7 +117,7 @@ struct ProfilePickerView: View {
                 Button { store.apply(profile) } label: {
                     VStack(spacing: 7) {
                         Image(systemName: profile.symbol).font(.system(size: 18, weight: .regular))
-                        Text(profile.title).font(.caption.weight(.medium))
+                        Text(profile.localizedTitle).font(.caption.weight(.medium))
                         Text("\(profile.upper) %").font(.caption).foregroundStyle(Color.secondary)
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, compact ? 12 : 16)
@@ -128,9 +128,9 @@ struct ProfilePickerView: View {
                         .strokeBorder(selected ? Color.accentColor.opacity(0.3) : Color.clear))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(profile.title), Ladelimit \(profile.upper) Prozent")
-                .accessibilityValue(selected ? "Ausgewählt" : "Nicht ausgewählt")
-                .help("Laden ab \(profile.lower) %, stoppen bei \(profile.upper) %. Deine weiteren Schutzeinstellungen bleiben erhalten.")
+                .accessibilityLabel(L("%@, Ladelimit %lld Prozent", profile.localizedTitle, profile.upper))
+                .accessibilityValue(L(selected ? "Ausgewählt" : "Nicht ausgewählt"))
+                .help(L("Laden ab %lld %%, stoppen bei %lld %%. Deine weiteren Schutzeinstellungen bleiben erhalten.", profile.lower, profile.upper))
             }
         }
         .disabled(store.config.mode == .native || store.config.mode == .direct)

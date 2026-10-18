@@ -5,7 +5,7 @@ struct ScheduledTasksView: View {
     @Bindable var configStore: ConfigStore
     @State private var editing = false
     @State private var editID: UUID?
-    @State private var name = "Neuer Zeitplan"
+    @State private var name = L("Neuer Zeitplan")
     @State private var start = Date().addingTimeInterval(3600)
     @State private var recurrence: ScheduledRule.Recurrence = .daily
     @State private var kind: BGScheduledAction.Kind = .profile
@@ -24,7 +24,7 @@ struct ScheduledTasksView: View {
             Text("Zeitpläne laufen im Hintergrunddienst, auch bei geschlossener App. Manuelle Aktionen haben Vorrang; eine manuelle Profilwahl übersteuert Zeitpläne für zwei Stunden.")
                 .font(.caption).foregroundStyle(.secondary)
             if let until = configStore.config.manualOverrideUntil, until > Date() {
-                Text("Manuelle Übersteuerung bis \(until.formatted(date: .abbreviated, time: .shortened))")
+                Text(L("Manuelle Übersteuerung bis %@", until.formatted(date: .abbreviated, time: .shortened)))
                     .font(.caption).foregroundStyle(.secondary)
             }
             ForEach(configStore.config.scheduledTasks) { task in
@@ -37,14 +37,14 @@ struct ScheduledTasksView: View {
                         Button("Bearbeiten") { open(task) }
                         Button("Löschen", role: .destructive) { perform(.init(action: .deleteSchedule, scheduleID: task.id)) }
                     }
-                    Text("\(recurrenceTitle(task.schedule.recurrence)) · \(task.schedule.timeZoneIdentifier)")
+                    Text(L("%@ · %@", recurrenceTitle(task.schedule.recurrence), task.schedule.timeZoneIdentifier))
                         .font(.caption).foregroundStyle(.secondary)
                     if let next = task.schedule.nextOccurrence(after: Date()), task.enabled {
-                        Text("Nächster Termin: \(next.formatted(date: .abbreviated, time: .shortened))")
+                        Text(L("Nächster Termin: %@", next.formatted(date: .abbreviated, time: .shortened)))
                             .font(.caption)
                     }
                     if let last = task.state.lastExecutionDate {
-                        Text("Zuletzt \(last.formatted(date: .abbreviated, time: .shortened)): \(resultTitle(task.state.lastResult))")
+                        Text(L("Zuletzt %@: %@", last.formatted(date: .abbreviated, time: .shortened), resultTitle(task.state.lastResult)))
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }.padding(.vertical, 5)
@@ -55,7 +55,7 @@ struct ScheduledTasksView: View {
             if !configStore.config.scheduleHistory.isEmpty {
                 DisclosureGroup("Letzte Aufgaben") {
                     ForEach(Array(configStore.config.scheduleHistory.suffix(10).reversed().enumerated()), id: \.offset) { _, run in
-                        Text("\(run.executedAt.formatted(date: .abbreviated, time: .shortened)): \(resultTitle(run.resultString))")
+                        Text(L("%@: %@", run.executedAt.formatted(date: .abbreviated, time: .shortened), resultTitle(run.resultString)))
                             .font(.caption)
                     }
                 }
@@ -66,7 +66,7 @@ struct ScheduledTasksView: View {
     }
     private var editor: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(editID == nil ? "Zeitplan hinzufügen" : "Zeitplan bearbeiten").font(.title2)
+            Text(L(editID == nil ? "Zeitplan hinzufügen" : "Zeitplan bearbeiten")).font(.title2)
             Form {
                 TextField("Name", text: $name)
                 Toggle("Aktiv", isOn: $enabled)
@@ -84,15 +84,15 @@ struct ScheduledTasksView: View {
                 }
                 if kind == .profile {
                     Picker("Profil", selection: $profileKey) {
-                        ForEach(BGProfile.allCases) { value in Text(value.title).tag(value.rawValue) }
+                        ForEach(BGProfile.allCases) { value in Text(value.localizedTitle).tag(value.rawValue) }
                         ForEach(profileStore.profiles) { value in Text(value.name).tag(value.id.uuidString) }
-                        if let profileSnapshot { Text("Gespeicherter Stand: " + profileSnapshot.name).tag("snapshot") }
+                        if let profileSnapshot { Text(L("Gespeicherter Stand: %@", profileSnapshot.name)).tag("snapshot") }
                     }
                     if selectedProfileHasDischarge { Text("Dieses Profil schaltet aktives Entladen ein; das Netzteil kann softwareseitig getrennt werden.").font(.caption).foregroundStyle(.orange) }
                     Text("Die Profilparameter werden als eigener Stand im Zeitplan gespeichert.").font(.caption)
                 } else {
-                    Stepper("Maximale Dauer: \(minutes) Minuten", value: $minutes, in: 1...1440, step: 30)
-                    if kind == .discharge { Stepper("Ziel: \(target) %", value: $target, in: 10...95) }
+                    Stepper(L("Maximale Dauer: %lld Minuten", minutes), value: $minutes, in: 1...1440, step: 30)
+                    if kind == .discharge { Stepper(L("Ziel: %lld %%", target), value: $target, in: 10...95) }
                     Text("Die Aktion wird nur bei bestätigter Fähigkeit ausgeführt. Halten und Einmalentladung bleiben bis zur Hardware-Abnahme gesperrt.").font(.caption)
                 }
                 Toggle("Verpassten Termin bis zu 6 Stunden nachholen", isOn: $catchUp)
@@ -107,7 +107,7 @@ struct ScheduledTasksView: View {
         }.padding(20).frame(width: 520)
     }
     private func open(_ task: BGScheduledTask?) {
-        editID = task?.id; name = task?.schedule.name ?? "Neuer Zeitplan"
+        editID = task?.id; name = task?.schedule.name ?? L("Neuer Zeitplan")
         start = task?.schedule.startsAt ?? Date().addingTimeInterval(3600)
         recurrence = task?.schedule.recurrence ?? .daily
         zone = task?.schedule.timeZoneIdentifier ?? TimeZone.current.identifier
@@ -131,10 +131,10 @@ struct ScheduledTasksView: View {
             let saved: BGSavedProfile?
             if kind == .profile {
                 if let builtin = BGProfile(rawValue: profileKey) {
-                    saved = try BGSavedProfile(name: builtin.title, lowerLimit: builtin.lower, upperLimit: builtin.upper)
+                    saved = try BGSavedProfile(name: builtin.localizedTitle, lowerLimit: builtin.lower, upperLimit: builtin.upper)
                 } else if profileKey == "snapshot", let profileSnapshot { saved = profileSnapshot }
                 else if let selected = profileStore.profiles.first(where: { $0.id.uuidString == profileKey }) { saved = selected }
-                else { throw BGChargingActionError.invalidRequest("Das gewählte Profil ist nicht mehr vorhanden.") }
+                else { throw BGChargingActionError.invalidRequest(L("Das gewählte Profil ist nicht mehr vorhanden.")) }
             } else { saved = nil }
             let action = BGScheduledAction(kind: kind, profile: saved,
                 minutes: kind == .profile ? nil : minutes, targetPercent: kind == .discharge ? target : nil)
@@ -150,24 +150,24 @@ struct ScheduledTasksView: View {
     }
     private func recurrenceTitle(_ value: ScheduledRule.Recurrence) -> String {
         switch value {
-        case .once: "Einmalig"
-        case .daily: "Täglich"
-        case .weekdays: "Montag bis Freitag"
-        case .weekly: "Wöchentlich"
-        case .biweekly: "Alle zwei Wochen"
-        case .monthly: "Monatlich"
-        case .yearly: "Jährlich"
+        case .once: L("Einmalig")
+        case .daily: L("Täglich")
+        case .weekdays: L("Montag bis Freitag")
+        case .weekly: L("Wöchentlich")
+        case .biweekly: L("Alle zwei Wochen")
+        case .monthly: L("Monatlich")
+        case .yearly: L("Jährlich")
         }
     }
     private func resultTitle(_ value: String?) -> String {
         switch value {
-        case "stored: requested action": "Auftrag gespeichert"
-        case "skipped: manual override": "Durch manuelle Aktion übersprungen"
-        case "skipped: missed occurrence": "Verpassten Termin übersprungen"
-        case "skipped: newer task selected": "Neueren Zeitplan bevorzugt"
-        case "skipped: clock correction": "Nach Uhrzeitkorrektur übersprungen"
-        case "failed: action unavailable or invalid": "Aktion nicht verfügbar oder ungültig"
-        default: "Noch keine Ausführung"
+        case "stored: requested action": L("Auftrag gespeichert")
+        case "skipped: manual override": L("Durch manuelle Aktion übersprungen")
+        case "skipped: missed occurrence": L("Verpassten Termin übersprungen")
+        case "skipped: newer task selected": L("Neueren Zeitplan bevorzugt")
+        case "skipped: clock correction": L("Nach Uhrzeitkorrektur übersprungen")
+        case "failed: action unavailable or invalid": L("Aktion nicht verfügbar oder ungültig")
+        default: L("Noch keine Ausführung")
         }
     }
 }

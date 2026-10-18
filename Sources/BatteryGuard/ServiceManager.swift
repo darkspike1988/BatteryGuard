@@ -15,7 +15,7 @@ final class ServiceManager {
         guard !isBusy else { return }
         guard let path = Bundle.main.path(forResource: name, ofType: "sh") else {
             isError = true
-            message = "Installationsdatei fehlt. Bitte die gebaute B-Guard.app verwenden."
+            message = L("Installationsdatei fehlt. Bitte die gebaute B-Guard.app verwenden.")
             return
         }
         isBusy = true
@@ -42,8 +42,8 @@ final class ServiceManager {
             }.value
             self?.isBusy = false
             self?.isError = !result.0
-            self?.message = result.0 ? (name == "install-daemon" ? "Dienst installiert und gestartet." : "Dienst entfernt. macOS übernimmt das Laden.")
-                : "Vorgang nicht abgeschlossen. " + result.1.trimmingCharacters(in: .whitespacesAndNewlines)
+            self?.message = result.0 ? (name == "install-daemon" ? L("Dienst installiert und gestartet.") : L("Dienst entfernt. macOS übernimmt das Laden."))
+                : L("Vorgang nicht abgeschlossen. %@", result.1.trimmingCharacters(in: .whitespacesAndNewlines))
         }
     }
 }

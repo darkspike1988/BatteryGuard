@@ -24,9 +24,9 @@ public enum BGChargingActionError: Error, LocalizedError, Equatable, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidRequest(let reason): return reason
+        case .invalidRequest(let reason): return BGLocalized(reason)
         case .unsupportedMode:
-            return "Diese Aktion braucht B-Guard-Steuerung. Bitte zuerst ein Ladeprofil aktivieren oder den Schutz starten."
+            return BGLocalized("Diese Aktion braucht B-Guard-Steuerung. Bitte zuerst ein Ladeprofil aktivieren oder den Schutz starten.")
         }
     }
 }

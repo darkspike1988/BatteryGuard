@@ -15,20 +15,20 @@ struct SetupView: View {
             Image(systemName: "battery.75percent")
                 .font(.system(size: 52, weight: .regular)).foregroundStyle(.secondary)
             Text("Willkommen bei B-Guard").font(.title2.weight(.semibold))
-            Text(needsCopy
+            Text(L(needsCopy
                  ? "Ziehe B-Guard zuerst in den Programme-Ordner. Öffne die App anschließend von dort."
-                 : "Ein letzter Schritt: Der Hintergrunddienst liest die Akkuwerte und führt deine Ladeprofile aus. macOS fragt dafür einmal nach deinem Administratorpasswort.")
+                 : "Ein letzter Schritt: Der Hintergrunddienst liest die Akkuwerte und führt deine Ladeprofile aus. macOS fragt dafür einmal nach deinem Administratorpasswort."))
                 .foregroundStyle(.secondary)
             if let message = services.message {
                 Text(message).foregroundStyle(services.isError ? Color.orange : Color.secondary)
                     .textSelection(.enabled)
             }
             HStack {
-                Button(services.message != nil && !services.isError ? "Fertig" : "Später", action: close)
+                Button(L(services.message != nil && !services.isError ? "Fertig" : "Später"), action: close)
                     .disabled(services.isBusy)
                 Spacer()
                 if !needsCopy && (services.message == nil || services.isError) {
-                    Button(services.isBusy ? "Wird eingerichtet …" : "B-Guard einrichten") {
+                    Button(L(services.isBusy ? "Wird eingerichtet …" : "B-Guard einrichten")) {
                         services.install()
                     }
                     .buttonStyle(.borderedProminent).disabled(services.isBusy)

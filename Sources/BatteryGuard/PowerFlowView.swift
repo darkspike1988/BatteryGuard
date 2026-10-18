@@ -29,21 +29,21 @@ public struct PowerFlowView: View {
                 }
                 if compact {
                     VStack(spacing: 8) {
-                        compactRow(icon: "powerplug.fill", title: "Netzteil", detail: ratedWattsText ?? "Gemeldet", value: formatWatts(sample?.inputWatts))
+                        compactRow(icon: "powerplug.fill", title: L("Netzteil"), detail: ratedWattsText ?? L("Gemeldet"), value: formatWatts(sample?.inputWatts))
                         Image(systemName: isFresh && (sample?.inputWatts ?? 0) > 0.5 ? "arrow.down" : "minus")
                             .font(.caption2.weight(.bold)).foregroundStyle(.secondary.opacity(0.7))
-                        compactRow(icon: "laptopcomputer", title: "Mac", detail: "Abgeleiteter Verbrauch", value: formatWatts(sample?.systemWatts))
+                        compactRow(icon: "laptopcomputer", title: L("Mac"), detail: L("Abgeleiteter Verbrauch"), value: formatWatts(sample?.systemWatts))
                         Image(systemName: batteryArrow(vertical: true))
                             .font(.caption2.weight(.bold)).foregroundStyle(.secondary.opacity(0.7))
-                        compactRow(icon: batteryIcon, title: "Akku", detail: [batteryStatus, hardwarePercentText].compactMap { $0 }.joined(separator: " • "), value: formatSignedWatts(sample?.batteryWatts))
+                        compactRow(icon: batteryIcon, title: L("Akku"), detail: [batteryStatus, hardwarePercentText].compactMap { $0 }.joined(separator: " • "), value: formatSignedWatts(sample?.batteryWatts))
                     }
                 } else {
                     HStack(alignment: .center, spacing: 12) {
-                        nodeCard(title: "Netzteil", subtitle: "Eingang (gemeldet)", icon: "powerplug.fill", value: formatWatts(sample?.inputWatts), extra: ratedWattsText)
-                        flowIndicator(symbol: isFresh && (sample?.inputWatts ?? 0) > 0.5 ? "arrow.right" : "minus", label: "Eingang")
-                        nodeCard(title: "Mac", subtitle: "System (abgeleitet)", icon: "laptopcomputer", value: formatWatts(sample?.systemWatts), extra: nil)
+                        nodeCard(title: L("Netzteil"), subtitle: L("Eingang (gemeldet)"), icon: "powerplug.fill", value: formatWatts(sample?.inputWatts), extra: ratedWattsText)
+                        flowIndicator(symbol: isFresh && (sample?.inputWatts ?? 0) > 0.5 ? "arrow.right" : "minus", label: L("Eingang"))
+                        nodeCard(title: L("Mac"), subtitle: L("System (abgeleitet)"), icon: "laptopcomputer", value: formatWatts(sample?.systemWatts), extra: nil)
                         flowIndicator(symbol: batteryArrow(vertical: false), label: batteryStatus)
-                        nodeCard(title: "Akku", subtitle: batteryStatus, icon: batteryIcon, value: formatSignedWatts(sample?.batteryWatts), extra: hardwarePercentText)
+                        nodeCard(title: L("Akku"), subtitle: batteryStatus, icon: batteryIcon, value: formatSignedWatts(sample?.batteryWatts), extra: hardwarePercentText)
                     }
                 }
                 Text("Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch.")
@@ -105,19 +105,19 @@ public struct PowerFlowView: View {
 
     private var ratedWattsText: String? {
         guard isFresh, let rated = sample?.adapterRatedWatts, rated > 0 else { return nil }
-        return "Nennleistung: \(Int(round(rated))) W"
+        return L("Nennleistung: %lld W", Int(round(rated)))
     }
 
     private var hardwarePercentText: String? {
         guard isFresh, let hw = sample?.hardwarePercent else { return nil }
-        return "Hardware: \(Int(round(hw))) % (Schätzwert)"
+        return L("Hardware: %lld %% (Schätzwert)", Int(round(hw)))
     }
 
     private var batteryStatus: String {
-        guard isFresh, let w = sample?.batteryWatts else { return "Lade-/Entladefluss" }
-        if w > 0.1 { return "Lädt" }
-        if w < -0.1 { return "Entlädt" }
-        return "Nahe 0 W"
+        guard isFresh, let w = sample?.batteryWatts else { return L("Lade-/Entladefluss") }
+        if w > 0.1 { return L("Lädt") }
+        if w < -0.1 { return L("Entlädt") }
+        return L("Nahe 0 W")
     }
 
     private var batteryIcon: String {
@@ -133,18 +133,18 @@ public struct PowerFlowView: View {
     }
 
     private var accessibilitySummary: String {
-        guard isFresh, let sample else { return "Energiefluss: Keine aktuellen Messwerte verfügbar." }
-        var parts: [String] = ["Energiefluss:"]
-        if let input = sample.inputWatts { parts.append("Netzteileingang \(String(format: "%.1f", input)) Watt.") }
-        if let rated = sample.adapterRatedWatts { parts.append("Nennleistung \(Int(round(rated))) Watt.") }
-        if let sys = sample.systemWatts { parts.append("Mac-Verbrauch geschätzt \(String(format: "%.1f", sys)) Watt.") }
+        guard isFresh, let sample else { return L("Energiefluss: Keine aktuellen Messwerte verfügbar.") }
+        var parts: [String] = [L("Energiefluss:")]
+        if let input = sample.inputWatts { parts.append(L("Netzteileingang %.1f Watt.", input)) }
+        if let rated = sample.adapterRatedWatts { parts.append(L("Nennleistung %lld Watt.", Int(round(rated)))) }
+        if let sys = sample.systemWatts { parts.append(L("Mac-Verbrauch geschätzt %.1f Watt.", sys)) }
         if let bat = sample.batteryWatts {
-            if bat > 0.1 { parts.append("Akku lädt mit \(String(format: "%.1f", bat)) Watt.") }
-            else if bat < -0.1 { parts.append("Akku entlädt mit \(String(format: "%.1f", abs(bat))) Watt.") }
-            else { parts.append("Akkufluss nahe null Watt.") }
+            if bat > 0.1 { parts.append(L("Akku lädt mit %.1f Watt.", bat)) }
+            else if bat < -0.1 { parts.append(L("Akku entlädt mit %.1f Watt.", abs(bat))) }
+            else { parts.append(L("Akkufluss nahe null Watt.")) }
         }
-        if let hw = sample.hardwarePercent { parts.append("Hardware-Ladestand \(Int(round(hw))) Prozent Schätzwert.") }
-        if parts.count == 1 { return "Energiefluss: Keine Messwerte verfügbar." }
+        if let hw = sample.hardwarePercent { parts.append(L("Hardware-Ladestand %lld Prozent Schätzwert.", Int(round(hw)))) }
+        if parts.count == 1 { return L("Energiefluss: Keine Messwerte verfügbar.") }
         return parts.joined(separator: " ")
     }
 }

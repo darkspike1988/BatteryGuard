@@ -57,7 +57,7 @@ final class LocalAPIStore {
                     guard let self, self.listenerID == id else { return }
                     self.running = false
                     self.isError = true
-                    self.message = "API konnte nicht gestartet werden. " + error
+                    self.message = L("API konnte nicht gestartet werden. %@", error)
                 }
             }) { [weak self] request in
                 guard let self else { return Self.failure(503, "api_unavailable", "API nicht verfügbar.") }
@@ -65,7 +65,7 @@ final class LocalAPIStore {
             }
         } catch {
             isError = true
-            message = "API konnte nicht gestartet werden. " + error.localizedDescription
+            message = L("API konnte nicht gestartet werden. %@", error.localizedDescription)
         }
     }
 
@@ -75,17 +75,17 @@ final class LocalAPIStore {
         guard enabled, let token else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(token, forType: .string)
-        message = "API-Token kopiert. Behandle ihn wie ein Passwort."
+        message = L("API-Token kopiert. Behandle ihn wie ein Passwort.")
     }
 
     func rotateToken() {
         do {
             token = try credentials.rotate()
             isError = false
-            message = "Neuer API-Token erstellt. Der bisherige Token ist ungültig."
+            message = L("Neuer API-Token erstellt. Der bisherige Token ist ungültig.")
         } catch {
             isError = true
-            message = "Token konnte nicht erneuert werden. " + error.localizedDescription
+            message = L("Token konnte nicht erneuert werden. %@", error.localizedDescription)
         }
     }
 

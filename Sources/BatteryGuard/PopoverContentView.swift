@@ -40,7 +40,7 @@ struct PopoverContentView: View {
                     openWindow(id: "updates")
                     NSApplication.shared.activate(ignoringOtherApps: true)
                 } label: {
-                    Label("B-Guard \(release.version) verfügbar · Was ist neu?", systemImage: "arrow.down.circle")
+                    Label(L("B-Guard %@ verfügbar · Was ist neu?", release.version), systemImage: "arrow.down.circle")
                         .font(.callout)
                 }.buttonStyle(.plain).foregroundStyle(Color.accentColor)
             }
@@ -55,12 +55,12 @@ struct PopoverContentView: View {
                 HStack {
                     Text("Ladeprofil").font(.callout.weight(.medium))
                     Spacer()
-                    Text(configStore.config.mode == .native || statusStore.status.usesNativeDesktopFallback ? "macOS" : "\(configStore.config.upperLimit) % Limit")
+                    Text(L(configStore.config.mode == .native || statusStore.status.usesNativeDesktopFallback ? "macOS" : "%lld %% Limit", configStore.config.upperLimit))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Menu {
                     ForEach(BGProfile.allCases) { profile in
-                        Button("\(profile.title) · \(profile.lower)–\(profile.upper) %") {
+                        Button(L("%@ · %lld–%lld %%", profile.localizedTitle, profile.lower, profile.upper)) {
                             configStore.activateProfile(profile)
                         }
                     }
@@ -68,19 +68,19 @@ struct PopoverContentView: View {
                     Button("Eigene Grenzen ändern …") { editingLimits.toggle() }
                 } label: {
                     HStack {
-                        Text("\(BGProfile.allCases.first(where: { $0.matches(configStore.config) })?.title ?? "Eigene Grenzen") · \(configStore.config.lowerLimit)–\(configStore.config.upperLimit) %")
+                        Text(L("%@ · %lld–%lld %%", BGProfile.allCases.first(where: { $0.matches(configStore.config) })?.localizedTitle ?? L("Eigene Grenzen"), configStore.config.lowerLimit, configStore.config.upperLimit))
                         Spacer()
-                        Text("\(configStore.config.lowerLimit)–\(configStore.config.upperLimit) %")
+                        Text(L("%lld–%lld %%", configStore.config.lowerLimit, configStore.config.upperLimit))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .disabled(!statusStore.supportsChargingPlans)
                 if editingLimits {
-                    Stepper("Minimum: \(configStore.config.lowerLimit) %",
+                    Stepper(L("Minimum: %lld %%", configStore.config.lowerLimit),
                             value: $configStore.config.lowerLimit,
                             in: 5...min(95, configStore.config.upperLimit - 1))
-                    Stepper("Maximum: \(configStore.config.upperLimit) %",
+                    Stepper(L("Maximum: %lld %%", configStore.config.upperLimit),
                             value: $configStore.config.upperLimit,
                             in: max(20, configStore.config.lowerLimit + 1)...100)
                     Text("Eigene Grenzen werden automatisch gespeichert.")
@@ -100,7 +100,7 @@ struct PopoverContentView: View {
                         configStore.cancelFullCharge()
                     } else { configStore.startFullCharge() }
                 } label: {
-                    Label(configStore.config.effective(at: Date()).chargeToFullOnce ? "Vollladen beenden" : "Einmal voll laden", systemImage: "bolt")
+                    Label(L(configStore.config.effective(at: Date()).chargeToFullOnce ? "Vollladen beenden" : "Einmal voll laden"), systemImage: "bolt")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered).disabled(!chargingAvailable)
@@ -117,8 +117,8 @@ struct PopoverContentView: View {
                 .accessibilityLabel("Schutz pausieren")
             }
             HStack {
-                Button(configStore.config.enabled && configStore.config.mode != .native
-                       && !configStore.config.isPaused(at: Date()) ? "Schutz ausschalten" : "Schutz einschalten") {
+                Button(L(configStore.config.enabled && configStore.config.mode != .native
+                       && !configStore.config.isPaused(at: Date()) ? "Schutz ausschalten" : "Schutz einschalten")) {
                     let running = configStore.config.enabled && configStore.config.mode != .native
                         && !configStore.config.isPaused(at: Date())
                     configStore.setProtectionEnabled(!running)
@@ -142,7 +142,7 @@ struct PopoverContentView: View {
             }
             HStack {
                 Circle().fill(statusStore.isDaemonActive ? Color.green : Color.orange).frame(width: 5, height: 5)
-                Text(statusStore.isDaemonActive ? "Dienst verbunden" : "Dienst nicht erreichbar").font(.caption).foregroundStyle(.secondary)
+                Text(L(statusStore.isDaemonActive ? "Dienst verbunden" : "Dienst nicht erreichbar")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Übersicht") { openWindow(id: "dashboard"); NSApplication.shared.activate(ignoringOtherApps: true) }
                     .buttonStyle(.plain).font(.caption).foregroundStyle(Color.accentColor)
@@ -211,14 +211,14 @@ struct PopoverContentView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 if let last = historyStore.samples.last {
-                    Text("Zuletzt " + last.timestamp.formatted(date: Calendar.current.isDateInToday(last.timestamp) ? .omitted : .abbreviated, time: .shortened))
+                    Text(L("Zuletzt %@", last.timestamp.formatted(date: Calendar.current.isDateInToday(last.timestamp) ? .omitted : .abbreviated, time: .shortened)))
                         .font(cardsCompact ? .caption2 : .caption)
                         .foregroundStyle(.secondary)
                 }
             }
             if let last = historyStore.samples.last {
                 HStack(alignment: .top, spacing: cardsCompact ? 6 : 8) {
-                    menuMetric("Letzter Stand", value: "\(last.percent) %")
+                    menuMetric("Letzter Stand", value: L("%lld %%", last.percent))
                     if let watts = last.watts {
                         menuMetric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(watts, isDaemonActive: true))
                     }
@@ -236,7 +236,7 @@ struct PopoverContentView: View {
 
     private func menuMetric(_ title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: cardsCompact ? 2 : 5) {
-            Text(title).font(cardsCompact ? .caption2 : .caption).foregroundStyle(.secondary)
+            Text(L(title)).font(cardsCompact ? .caption2 : .caption).foregroundStyle(.secondary)
             Text(value).font((cardsCompact ? Font.subheadline : Font.callout).weight(.medium)).monospacedDigit()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
