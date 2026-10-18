@@ -10,9 +10,9 @@ Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md)
 
 Die [Abnahmematrix und das lokale Testjournal](docs/validation/README.md) halten Geräte, Testschritte, Beobachtungen und Belege fest. Die [Entwicklungs-Journey](docs/JOURNEY.md) dokumentiert Änderungen und offene Prüfungen; der [Diagnostik-Ausbauplan](docs/DIAGNOSTICS_PLAN.md) beschreibt die nächsten Schritte zu belastbarer Akku- und Mac-Auswertung. Der [Releaseablauf](docs/release-validation.md) trennt Community-Build und praktische Notarisierung. Das Journal schaltet keine Hardwarefunktionen frei.
 
-## Diagnose ab 0.4.0
+## Diagnose und Wirksamkeit ab 0.5.0
 
-Die neue Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, optionalen Langzeitverlauf und lesende Mac-Ressourcen. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). Die aktuelle App 0.4.2 enthält den Diagnoseumfang von 0.4.0, schützt Profiländerungen vor veralteten Dateiständen und folgt der macOS-Systemsprache. Diagnose-Dienst 0.4.0 erforderlich; der Download oben verweist weiterhin auf die jeweils veröffentlichte Version.
+Version 0.5.0 beantwortet in der Übersicht, was gerade wirklich gilt: gespeichertes Ziel, vom Dienst angewendetes Ziel, macOS-Limit, Steuerungsweg sowie Monitor- und Deckelzustand. Die Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, lesende Mac-Ressourcen und bei aktivierter Aufzeichnung eine Akkugesundheit über bis zu zwölf Monate. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). App und Dienst stehen in Version 0.5.0; der Download oben verweist auf diese Version.
 
 ## Was B-Guard ergänzt
 
@@ -24,6 +24,10 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Einmaliges Vollladen:** Mit weiterhin aktivem konfiguriertem Hitzeschutz und einer maximalen Dauer von acht Stunden.
 - **Lokaler Verlauf:** Ladung, Temperatur und Lade-/Entladeleistung. Ein Messpunkt pro Minute, bis zu sieben Tage. Aufzeichnung nur bei laufender App und aktuellen Messwerten; Schlaf- und Ausfallzeiten bleiben Lücken.
 - **Auswertung:** Beobachtete Zeit, Zeit ab 90 % und Zeit ab 40 °C sowie höchste gemessene Temperatur. Keine erfundenen Verschleiß- oder Lebensdauerprognosen.
+- **Wirksamkeit (ab 0.5.0):** Die Übersicht zeigt, welches Ziel gespeichert ist, welches der Dienst angewendet hat, welches macOS-Limit gilt und über welchen Weg gesteuert wird. Ein niedrigeres macOS-Limit wird als Begrenzung ausgewiesen; B-Guard ändert die Systemeinstellung nicht.
+- **Akkugesundheit über 12 Monate (ab 0.5.0):** Optionaler lokaler Tagesverlauf für Kapazitätsquote, Zyklen und Höchsttemperatur über 30 Tage, 90 Tage oder ein Jahr. Fehlende Tage bleiben sichtbare Lücken; der CSV-Export enthält die Tageswerte.
+- **Erinnerungen (ab 0.5.0):** Optionaler Wochenbericht und eine Kalibrierungserinnerung nach sechs Wochen ohne Vollladung. Die Erinnerung startet keine Kalibrierung.
+- **Wartungshinweis (ab 0.5.0):** Meldet höchstens alle 30 Tage, wenn die geschätzte Akkukapazität unter eine einstellbare Grenze fällt (Standard 80 %). Der Hinweis ist keine Hardwarediagnose; der Wert ist zusätzlich über die lokale API auslesbar.
 - **Energiefluss (ab 0.3.5):** Netzteileingang, Akku-Ladefluss und daraus geschätzte Mac-Leistung getrennt sehen. Netzteil-Nennleistung ist kein Verbrauch. Messwerte hängen von Hardware und macOS ab; fehlende Werte bleiben unbekannt. Rein lesend und ohne Dienstupdate.
 - **Lokale REST API:** Status, gespeicherte Einstellungen und Verlauf als JSON oder CSV auslesen. Optionale Steuerbefehle für Profile, Pausen und Reiseplanung. Standardmäßig aus, nur lokal und mit Bearer-Token. [Dokumentation](docs/api.md).
 - **CSV-Export:** Alle lokal vorhandenen Messwerte zum eigenen Auswerten.
@@ -31,6 +35,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
 - **Mitteilungen:** Niedriger Akkustand mit eigener Warnschwelle (5–50 %, Standard 20 %), erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 - **Drei Sprachen:** Oberfläche auf Deutsch, Englisch oder Russisch. Die App folgt automatisch der macOS-Systemsprache.
+- **Automatik (ab 0.5.0, optional):** Monitorprofil bei externem Bildschirm, Low Power Mode auf Akkubetrieb über die öffentliche macOS-Einstellung und ein Schlafassistent, der nur während einer vom Dienst ausgelösten Entladung höchstens 30 Minuten wachhält.
 
 Eigene benannte Profile mit Import/Export und wiederkehrende Zeitpläne sind ab 0.3.7 umgesetzt. Die Regeln laufen im Hintergrunddienst; manuelle Ladeaktionen haben Vorrang. Top Up benötigt separate Ladesteuerung. Einmalentladung, Halten und Kalibrierung bleiben bis zur physischen Hardware-Abnahme gesperrt.
 
@@ -52,7 +57,7 @@ Weitere Vorschauen: [Verlauf](docs/previews/light/history.png), [Menüleiste](do
 
 **Pendel:** Verwendet ausdrücklich den Netzteil-Schalter. Das erzeugt zusätzliche Lade-/Entladebewegungen. Es ist keine Garantie für eine längere Akkulebensdauer.
 
-**Externer Monitor / geschlossener Deckel:** B-Guard hält das Netzteil verbunden, sobald ein externer Bildschirm erkannt wird oder der Deckel geschlossen ist. Aktives Entladen entfällt dann. Auf Macs ohne separate SMC-Ladesperre übernimmt macOS das Ladelimit, auch wenn ein B-Guard-Profil gewählt ist; der Status zeigt diese Einschränkung. Stelle das native Limit in den macOS-Batterieeinstellungen ein. B-Guard erzeugt keine Schlafsperre mehr. Bei fehlgeschlagener Monitor-/Deckelerkennung bleibt das Netzteil vorsorglich verbunden.
+**Externer Monitor / geschlossener Deckel:** B-Guard hält das Netzteil verbunden, sobald ein externer Bildschirm erkannt wird oder der Deckel geschlossen ist. Aktives Entladen entfällt dann. Auf Macs ohne separate SMC-Ladesperre übernimmt macOS das Ladelimit, auch wenn ein B-Guard-Profil gewählt ist; der Status zeigt diese Einschränkung. Stelle das native Limit in den macOS-Batterieeinstellungen ein. Standardmäßig erzeugt B-Guard keine Schlafsperre; optional hält der Schlafassistent den Mac während einer aktiven Entladung bis zu 30 Minuten wach. Bei fehlgeschlagener Monitor-/Deckelerkennung bleibt das Netzteil vorsorglich verbunden.
 
 Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht als verfügbare Option angeboten.
 
@@ -67,6 +72,8 @@ Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht a
 Die veröffentlichte SHA-256-Prüfsumme liegt im selben Release als [`B-Guard.dmg.sha256`](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg.sha256). Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz ein-/ausschalten, zeitlich pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz ausschalten“ gibt das Laden bis zur erneuten Aktivierung frei. Zeitliche Pausen enden automatisch.
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
+
+**Update auf 0.5.0:** App 0.5.0 und Hintergrunddienst 0.5.0 verwenden. Ein älterer Dienst muss aktualisiert werden. Nach dem Ersetzen der App den Dienst in den Einstellungen über den macOS-Administratordialog aktualisieren. Bestehende Konfiguration und Verlauf bleiben erhalten. Das WidgetKit-Widget ist nicht enthalten; die App bleibt ad-hoc signiert und nicht notarisiert.
 
 **Update auf 0.4.2:** App 0.4.2 und Hintergrunddienst 0.4.0 verwenden. Die App übernimmt Deutsch, Englisch oder Russisch automatisch aus der macOS-Systemsprache. Ein älterer Hintergrunddienst muss aktualisiert werden. Nach dem Ersetzen der App den Dienst in den Einstellungen über den macOS-Administratordialog aktualisieren. Bestehende Konfiguration und Verlauf bleiben erhalten.
 

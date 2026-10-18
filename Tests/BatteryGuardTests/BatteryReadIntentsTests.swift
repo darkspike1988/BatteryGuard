@@ -266,6 +266,38 @@ final class BatteryReadIntentsTests: XCTestCase {
 
     func testBGuardShortcutsProviderMetadata() {
         let shortcuts = BGuardShortcutsProvider.appShortcuts
-        XCTAssertEqual(shortcuts.count, 2)
+        XCTAssertEqual(shortcuts.count, 3)
+    }
+
+    func testReadBatteryTargetIntentMetadata() {
+        XCTAssertFalse(ReadBatteryTargetIntent.openAppWhenRun)
+        XCTAssertEqual(ReadBatteryTargetIntent.title.key, "Wirksames Ladeziel lesen")
+    }
+
+    func testTargetJSONUsesAppliedLimitAndRejectsStaleStatus() throws {
+        let now = Date()
+        var config = BGConfig()
+        config.upperLimit = 80
+        var status = BGStatus()
+        status.updatedAt = now
+        status.daemonVersion = AppVersion.requiredDaemon
+        status.smcKeysDetected = ["CHTE"]
+        status.state = .holding
+        status.nativeChargeLimit = 80
+        status.effectiveUpperLimit = 80
+
+        let configData = try BGJSON.encoder().encode(config)
+        let statusData = try BGJSON.encoder().encode(status)
+        let json = try BatteryReadIntentPayload.targetJSON(statusData: statusData, configData: configData, at: now)
+        let payload = try JSONDecoder().decode(BatteryReadIntentPayload.TargetResponse.self, from: Data(json.utf8))
+        XCTAssertTrue(payload.available)
+        XCTAssertEqual(payload.targetUpperLimit, 80)
+        XCTAssertEqual(payload.appliedUpperLimit, 80)
+        XCTAssertEqual(payload.state, .effective)
+
+        let stale = try BatteryReadIntentPayload.targetJSON(statusData: statusData, configData: configData,
+                                                             at: now.addingTimeInterval(120))
+        let stalePayload = try JSONDecoder().decode(BatteryReadIntentPayload.TargetResponse.self, from: Data(stale.utf8))
+        XCTAssertFalse(stalePayload.available)
     }
 }

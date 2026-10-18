@@ -4,10 +4,10 @@ let view = 'overview';
 let dark = false;
 const image = document.querySelector('#app-preview');
 const alts = {
-  overview: 'B-Guard Übersicht mit Akkuwerten, Ladeprofilen und Reiseplanung. Vorschau mit Beispieldaten.',
+  overview: 'B-Guard Übersicht mit Akkuwerten, wirksamem Ladeziel, Ladeprofilen und Reiseplanung. Vorschau mit Beispieldaten.',
   history: 'B-Guard Messverlauf mit Ladekurve und Auswertung. Vorschau mit Beispieldaten.'
 };
-const sizes = { overview: [1960, 2120], history: [1580, 1520] };
+const sizes = { overview: [1960, 2560], history: [1580, 3120] };
 function refreshPreview() {
   image.src = `previews/${dark ? 'dark' : 'light'}/${view}.png`;
   image.alt = alts[view];

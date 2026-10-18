@@ -1,6 +1,6 @@
 import Foundation
 
-public enum BGProfile: String, CaseIterable, Identifiable, Sendable {
+public enum BGProfile: String, Codable, CaseIterable, Identifiable, Sendable {
     case desk, everyday, mobile
     public var id: String { rawValue }
     public var title: String {
@@ -31,6 +31,30 @@ public enum BGProfile: String, CaseIterable, Identifiable, Sendable {
     }
     public func matches(_ c: BGConfig) -> Bool {
         c.enabled && c.lowerLimit == lower && c.upperLimit == upper
+    }
+}
+
+/// Ein Monitorprofil ändert nur die Ladegrenzen, nie Pause, Reise- oder Sonderpläne.
+/// Das gespeicherte Profil bleibt unangetastet.
+public enum BGDesktopProfileRule {
+    public struct Resolution: Equatable, Sendable {
+        public var config: BGConfig
+        public var active: Bool
+    }
+
+    public static func resolve(config: BGConfig, externalDisplay: Bool, now: Date = Date()) -> Resolution {
+        guard config.desktopProfileEnabled, externalDisplay, config.enabled,
+              config.mode == .auto || config.mode == .pendulum,
+              !config.isPaused(at: now), !config.isTravelCharging(at: now),
+              config.specialChargePlan == nil, !config.chargeToFullOnce,
+              !(config.manualOverrideUntil.map { $0 > now } ?? false) else {
+            return Resolution(config: config, active: false)
+        }
+        let profile = config.desktopProfile ?? .desk
+        var updated = config
+        updated.lowerLimit = profile.lower
+        updated.upperLimit = profile.upper
+        return Resolution(config: updated.sanitized(), active: true)
     }
 }
 

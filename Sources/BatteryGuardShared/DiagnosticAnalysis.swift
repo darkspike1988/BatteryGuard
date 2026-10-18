@@ -57,7 +57,35 @@ public struct BGCapacityDay: Codable, Equatable, Identifiable, Sendable {
     public var maximum: Double
     public var firstSampledAt: Date
     public var lastSampledAt: Date
+    /// Additive Tageswerte; ältere Dateien bleiben ohne diese Felder gültig.
+    public var cycleSum: Double? = nil
+    public var cycleSamples: Int = 0
+    public var temperatureMaximum: Double? = nil
     public var mean: Double { ratioSum / Double(count) }
+    public var cycleMean: Double? {
+        guard let cycleSum, cycleSamples > 0 else { return nil }
+        return cycleSum / Double(cycleSamples)
+    }
+
+    public init(day: Date, maximumSource: BGMeasurementSource, designSource: BGMeasurementSource,
+                designCapacity: Double, osVersion: String, count: Int, ratioSum: Double,
+                minimum: Double, maximum: Double, firstSampledAt: Date, lastSampledAt: Date,
+                cycleSum: Double? = nil, cycleSamples: Int = 0, temperatureMaximum: Double? = nil) {
+        self.day = day
+        self.maximumSource = maximumSource
+        self.designSource = designSource
+        self.designCapacity = designCapacity
+        self.osVersion = osVersion
+        self.count = count
+        self.ratioSum = ratioSum
+        self.minimum = minimum
+        self.maximum = maximum
+        self.firstSampledAt = firstSampledAt
+        self.lastSampledAt = lastSampledAt
+        self.cycleSum = cycleSum
+        self.cycleSamples = cycleSamples
+        self.temperatureMaximum = temperatureMaximum
+    }
     public var isValid: Bool {
         day.timeIntervalSince1970.isFinite && firstSampledAt >= day && lastSampledAt >= firstSampledAt
             && lastSampledAt < day.addingTimeInterval(86400) && (1...1441).contains(count)
@@ -66,6 +94,53 @@ public struct BGCapacityDay: Codable, Equatable, Identifiable, Sendable {
             && minimum > 0 && maximum >= minimum && mean >= minimum - 0.001 && mean <= maximum + 0.001
             && osVersion.count <= 24 && !osVersion.isEmpty
             && osVersion.allSatisfy { $0.isASCII && ($0.isNumber || $0 == ".") }
+            && (cycleSum == nil || (cycleSum!.isFinite && cycleSum! >= 0))
+            && (0...1441).contains(cycleSamples)
+            && (temperatureMaximum == nil || (temperatureMaximum!.isFinite && (-20...120).contains(temperatureMaximum!)))
+    }
+}
+
+extension BGCapacityDay {
+    private enum CodingKeys: String, CodingKey {
+        case day, maximumSource, designSource, designCapacity, osVersion
+        case count, ratioSum, minimum, maximum, firstSampledAt, lastSampledAt
+        case cycleSum, cycleSamples, temperatureMaximum
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        day = try c.decode(Date.self, forKey: .day)
+        maximumSource = try c.decode(BGMeasurementSource.self, forKey: .maximumSource)
+        designSource = try c.decode(BGMeasurementSource.self, forKey: .designSource)
+        designCapacity = try c.decode(Double.self, forKey: .designCapacity)
+        osVersion = try c.decode(String.self, forKey: .osVersion)
+        count = try c.decode(Int.self, forKey: .count)
+        ratioSum = try c.decode(Double.self, forKey: .ratioSum)
+        minimum = try c.decode(Double.self, forKey: .minimum)
+        maximum = try c.decode(Double.self, forKey: .maximum)
+        firstSampledAt = try c.decode(Date.self, forKey: .firstSampledAt)
+        lastSampledAt = try c.decode(Date.self, forKey: .lastSampledAt)
+        cycleSum = try c.decodeIfPresent(Double.self, forKey: .cycleSum)
+        cycleSamples = try c.decodeIfPresent(Int.self, forKey: .cycleSamples) ?? 0
+        temperatureMaximum = try c.decodeIfPresent(Double.self, forKey: .temperatureMaximum)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(day, forKey: .day)
+        try c.encode(maximumSource, forKey: .maximumSource)
+        try c.encode(designSource, forKey: .designSource)
+        try c.encode(designCapacity, forKey: .designCapacity)
+        try c.encode(osVersion, forKey: .osVersion)
+        try c.encode(count, forKey: .count)
+        try c.encode(ratioSum, forKey: .ratioSum)
+        try c.encode(minimum, forKey: .minimum)
+        try c.encode(maximum, forKey: .maximum)
+        try c.encode(firstSampledAt, forKey: .firstSampledAt)
+        try c.encode(lastSampledAt, forKey: .lastSampledAt)
+        try c.encodeIfPresent(cycleSum, forKey: .cycleSum)
+        try c.encode(cycleSamples, forKey: .cycleSamples)
+        try c.encodeIfPresent(temperatureMaximum, forKey: .temperatureMaximum)
     }
 }
 
@@ -80,10 +155,15 @@ public enum BGCapacityTrend {
               let design = snapshot.measurement(.designCapacity, at: now), let designValue = design.value else { return next }
         // UTC day buckets are independent of DST and travel timezone changes.
         let day = Date(timeIntervalSince1970: floor(ratio.sampledAt.timeIntervalSince1970 / 86400) * 86400)
+        let cycles = snapshot.measurement(.cycleCount, at: now)?.value
+        let temperature = snapshot.measurement(.batteryTemperature, at: now)?.value
         var item = BGCapacityDay(day: day, maximumSource: max.source, designSource: design.source,
                                  designCapacity: designValue, osVersion: osVersion,
                                  count: 1, ratioSum: value, minimum: value, maximum: value,
                                  firstSampledAt: ratio.sampledAt, lastSampledAt: ratio.sampledAt)
+        item.cycleSamples = cycles == nil ? 0 : 1
+        item.cycleSum = cycles
+        item.temperatureMaximum = temperature
         guard item.isValid else { return next }
         if let index = next.firstIndex(where: { $0.id == item.id }) {
             let previous = next[index]
@@ -91,9 +171,35 @@ public enum BGCapacityTrend {
             item.count = previous.count + 1; item.ratioSum = previous.ratioSum + value
             item.minimum = Swift.min(previous.minimum, value); item.maximum = Swift.max(previous.maximum, value)
             item.firstSampledAt = previous.firstSampledAt
+            item.cycleSamples = previous.cycleSamples + item.cycleSamples
+            item.cycleSum = [previous.cycleSum, item.cycleSum].compactMap { $0 }.reduce(0, +)
+            if let old = previous.temperatureMaximum, let new = item.temperatureMaximum {
+                item.temperatureMaximum = Swift.max(old, new)
+            } else {
+                item.temperatureMaximum = item.temperatureMaximum ?? previous.temperatureMaximum
+            }
             next[index] = item
         } else { next.append(item) }
         return Array(next.sorted { $0.lastSampledAt < $1.lastSampledAt }.suffix(1464))
+    }
+
+    public static func csv(_ days: [BGCapacityDay]) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        var rows = ["day_utc,capacity_percent,minimum_percent,maximum_percent,samples,cycle_mean,temperature_max_c,maximum_source,design_source,design_capacity_mah,os_version"]
+        rows += days.filter(\.isValid).sorted { $0.day < $1.day }.map { day in
+            [formatter.string(from: day.day),
+             decimal(day.mean), decimal(day.minimum), decimal(day.maximum), String(day.count),
+             day.cycleMean.map(decimal) ?? "",
+             day.temperatureMaximum.map(decimal) ?? "",
+             day.maximumSource.rawValue, day.designSource.rawValue,
+             decimal(day.designCapacity), day.osVersion].joined(separator: ",")
+        }
+        return rows.joined(separator: "\n") + "\n"
+    }
+
+    private static func decimal(_ value: Double) -> String {
+        String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), value)
     }
 
     /// A descriptive delta, not an aging forecast. Mixed sources/design/OS never produce a delta.

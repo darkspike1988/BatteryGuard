@@ -112,3 +112,21 @@ Offen bleiben H01–H11 (physische Hardware), S02–S08 (Bedienung der Kurzbefeh
 - DMG `B-Guard-0.4.2-arm64.dmg` erstellt, `hdiutil verify` VALID. Veröffentlichte SHA-256 `64ffe0517f05d689b3b29c93a06f3b459344a799a42e9c9dbdd80155496e9869`.
 - App aus der eingehängten DMG gestartet und Vorschauen mit `-AppleLanguages '(ru)'` gerendert; Übersicht und Seitennavigation erscheinen vollständig russisch.
 - Die offenen N7-Punkte (physische Hardware, Kurzbefehle-Bedienung, Developer-ID/Notarisierung) bleiben unverändert blockiert und werden nicht als bestanden gezählt.
+
+## 18. Oktober 2026 · Arbeitsstand 0.5.0: P0/P1 ausgebaut
+
+Nutzerziel: die zuvor recherchierten P0- und P1-Funktionen bauen. App und Dienst stehen in Version 0.5.0; 0.5.0 wurde am 18. Oktober 2026 veröffentlicht. App und Dienst wurden anschließend auf dem lokalen Mac installiert; eine physische Hardwareabnahme der neuen Automatikpfade steht weiterhin aus.
+
+- **P0 Wirksamkeits-Panel:** `BGEffectiveness` wertet Ziel, angewendetes Ziel, macOS-Limit, Steuerungsweg, Monitor- und Deckelzustand aus. Die Übersicht zeigt zusätzlich die Zustände wirksam, begrenzt, Monitor-/Deckelschutz, inaktiv, nicht unterstützt, Dienst aus und Dienst veraltet. Das Panel verwendet ausschließlich Statusfelder des Dienstes.
+- **P0 Akkugesundheit 12 Monate:** `BGCapacityDay` speichert additiv mittleren Zyklusstand und Höchsttemperatur; ältere Dateien bleiben ohne diese Felder lesbar. Die Verlaufsansicht bietet Kapazitätsquote, Zyklen und Temperatur über 30/90/365 Tage, sichtbare Lücken und einen CSV-Export. Die Abweichung bleibt eine beschreibende Differenz, keine Lebensdauerprognose.
+- **P0 Kalibrierungs-Erinnerung:** lokal, standardmäßig an, frühestens nach sechs Wochen ohne Vollladung, Wiederholung nach 14 Tagen. Es wird keine Kalibrierung automatisch gestartet; der gesperrte Assistent bleibt gesperrt.
+- **Wartungshinweis:** `BatteryHealthAlertPolicy` meldet lokal, wenn die geschätzte Akkukapazität unter eine Grenze von 50–95 % fällt (Standard 80 %). Wiederholung höchstens alle 30 Tage; steigt der Wert wieder darüber, wird die Erinnerung zurückgesetzt. Der Text nennt die Schätzung aus Design- und Maximalkapazität ausdrücklich als keine Hardwarediagnose. Eine zentrale IT-Benachrichtigung per Webhook wurde nicht gebaut; ein Zielsystem und die Secret-Ablage sind offen.
+- **P1 Monitorprofil:** `BGDesktopProfileRule` wendet bei externem Monitor ein gewähltes Profil an, ohne Pause, Reise, Sonderplan oder Vollladen zu überstimmen und ohne das gespeicherte Profil zu verändern.
+- **P1 Low Power Mode:** `LowPowerModeController` schaltet den öffentlichen Modus über `pmset` auf Akkubetrieb an und am Netzteil aus; nur bei ausdrücklicher Option, mit Fehlerwiederholung und Dry-Run-Sperre.
+- **P1 Schlafassistent:** `DischargeSleepGuard` hält den automatischen Schlaf höchstens 30 Minuten, ausschließlich während einer vom Dienst ausgelösten Entladung. Ohne Option entsteht keine Assertion.
+- **P1 Wochenbericht:** lokale Wochenzusammenfassung in der Verlaufsansicht und optional als Mitteilung; nur aus lückenlos aufgezeichneten Minuten, ohne Nutzungsbewertung.
+- **P1 Kurzbefehle:** wirksames Ladeziel gelesen; Profilwahl, Top-Up, Pausieren und Fortsetzen als App-Intents ergänzt.
+- **Nicht enthalten:** WidgetKit (SwiftPM erzeugt keine `.appex`-Erweiterung) und Notarisierung (weiterhin keine Developer-ID). Beides wird nicht als umgesetzt gezählt.
+- **Prüfungen:** `swift test` mit 232 Tests in 35 Suiten bestanden; `scripts/build-app.sh` erzeugte App-Bundle und ZIP ohne Fehler; Vorschauen hell, dunkel, deutsch, englisch, russisch, Monitor- und macOS-Modus gerendert und gesichtet. Dabei zwei Layoutfehler korrigiert: lange russische Picker-Beschriftungen wurden ausgeblendet, Dauerangaben lokalisiert.
+- **Installation:** App 0.5.0 nach `/Applications/B-Guard.app` kopiert und gestartet; Dienst 0.5.0 unter `/usr/local/libexec/batteryguardd` stimmt bytegenau mit dem Build überein. Bestehende Konfiguration (75–80 %, Automatik aktiv) und Verlauf blieben erhalten.
+- **Offen:** physische Prüfung von Monitorprofil, Low Power Mode, Schlafassistent und Langzeitaufzeichnung, Bedienung der neuen Kurzbefehle, WidgetKit, Developer-ID/Notarisierung. Eine zentrale IT-Benachrichtigung per Webhook ist nicht gebaut; dafür fehlen Zielsystem und Secret-Ablage.

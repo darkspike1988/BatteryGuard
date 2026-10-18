@@ -48,6 +48,52 @@ public enum BatteryReadIntentPayload {
 
     public typealias PowerFlowPayload = PowerFlowResponse
 
+    public struct TargetResponse: Codable, Equatable, Sendable {
+        public let available: Bool
+        public let targetUpperLimit: Int?
+        public let appliedUpperLimit: Int?
+        public let nativeChargeLimit: Int?
+        public let controlPath: BGControlPath?
+        public let state: BGEffectivenessState?
+        public let desktopProfileActive: Bool?
+
+        public init(available: Bool, targetUpperLimit: Int? = nil, appliedUpperLimit: Int? = nil,
+                    nativeChargeLimit: Int? = nil, controlPath: BGControlPath? = nil,
+                    state: BGEffectivenessState? = nil, desktopProfileActive: Bool? = nil) {
+            self.available = available
+            self.targetUpperLimit = targetUpperLimit
+            self.appliedUpperLimit = appliedUpperLimit
+            self.nativeChargeLimit = nativeChargeLimit
+            self.controlPath = controlPath
+            self.state = state
+            self.desktopProfileActive = desktopProfileActive
+        }
+    }
+
+    public static func targetJSON(statusData: Data?, configData: Data?, at: Date = Date()) throws -> String {
+        guard let statusData, let configData,
+              let status = try? BGJSON.decoder().decode(BGStatus.self, from: statusData),
+              let config = try? BGJSON.decoder().decode(BGConfig.self, from: configData) else {
+            return String(decoding: try BGJSON.encoder().encode(TargetResponse(available: false)), as: UTF8.self)
+        }
+        let age = at.timeIntervalSince(status.updatedAt)
+        let fresh = (-5...60).contains(age)
+            && status.daemonVersion.compare(AppVersion.requiredDaemon, options: .numeric) != .orderedAscending
+        guard fresh else {
+            return String(decoding: try BGJSON.encoder().encode(TargetResponse(available: false)), as: UTF8.self)
+        }
+        let result = BGEffectiveness.evaluate(config: config, status: status,
+                                              daemonActive: true, daemonCurrent: true, now: at)
+        let payload = TargetResponse(available: true,
+                                     targetUpperLimit: result.targetUpperLimit,
+                                     appliedUpperLimit: result.appliedUpperLimit,
+                                     nativeChargeLimit: result.nativeChargeLimit,
+                                     controlPath: result.controlPath,
+                                     state: result.state,
+                                     desktopProfileActive: status.desktopProfileActive)
+        return String(decoding: try BGJSON.encoder().encode(payload), as: UTF8.self)
+    }
+
     public static func statusJSON(data: Data?, at: Date = Date()) throws -> String {
         guard let data else {
             let payload = StatusResponse(available: false, status: nil)
@@ -131,6 +177,21 @@ public struct ReadPowerFlowIntent: AppIntent {
 }
 
 @available(macOS 14.0, *)
+public struct ReadBatteryTargetIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Wirksames Ladeziel lesen"
+    public static let openAppWhenRun: Bool = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let statusData = try? Data(contentsOf: URL(fileURLWithPath: BGPaths.status))
+        let configData = try? Data(contentsOf: URL(fileURLWithPath: BGPaths.config))
+        let json = try BatteryReadIntentPayload.targetJSON(statusData: statusData, configData: configData)
+        return .result(value: json)
+    }
+}
+
+@available(macOS 14.0, *)
 public struct BGuardShortcutsProvider: AppShortcutsProvider {
     public static var appShortcuts: [AppShortcut] {
             AppShortcut(
@@ -150,6 +211,15 @@ public struct BGuardShortcutsProvider: AppShortcutsProvider {
                 ],
                 shortTitle: "Energiefluss",
                 systemImageName: "bolt.horizontal"
+            )
+            AppShortcut(
+                intent: ReadBatteryTargetIntent(),
+                phrases: [
+                    "\(.applicationName) Ladeziel",
+                    "Wirksames Ladeziel mit \(.applicationName) lesen"
+                ],
+                shortTitle: "Ladeziel",
+                systemImageName: "target"
             )
     }
 }

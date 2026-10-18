@@ -88,6 +88,48 @@ public struct ReadChargingConfigurationIntent: AppIntent {
     }
 }
 
+public struct SetChargingProfileIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Ladeprofil setzen"
+    public static let openAppWhenRun = false
+    @Parameter(title: "Profil") public var profile: BGuardIntentProfile
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .profile, profile: profile.rawValue))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+public struct StartTopUpIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Top-Up bis zum Abstecken"
+    public static let openAppWhenRun = false
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .topUp))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+public struct PauseChargingIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Ladeschutz pausieren"
+    public static let openAppWhenRun = false
+    @Parameter(title: "Dauer in Minuten", default: 60) public var minutes: Int
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .pause, minutes: minutes))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+public struct ResumeChargingIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Ladeschutz fortsetzen"
+    public static let openAppWhenRun = false
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .resume))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
 public struct SavedChargingProfileEntity: AppEntity {
     public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Gespeichertes Ladeprofil")
     public static let defaultQuery = SavedChargingProfileQuery()

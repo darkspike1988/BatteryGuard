@@ -70,10 +70,11 @@ final class HistoryStore {
         isPreview = preview
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         capacityRepository = CapacityTrendRepository(url: base.appendingPathComponent("BatteryGuard/capacity-days.json"))
-        longTermCapacityEnabled = preview ? false : UserDefaults.standard.bool(forKey: "BGuard.longTermCapacityEnabled")
+        longTermCapacityEnabled = preview ? !emptyPreview : UserDefaults.standard.bool(forKey: "BGuard.longTermCapacityEnabled")
         repository = HistoryRepository(url: base.appendingPathComponent("BatteryGuard/history.json"))
         if preview {
             samples = emptyPreview ? [] : Self.previewSamples()
+            capacityDays = emptyPreview ? [] : Self.previewCapacityDays()
         } else {
             Task { [weak self, capacityRepository] in
                 do { self?.capacityDays = try await capacityRepository.load() }
@@ -106,9 +107,25 @@ final class HistoryStore {
                 let updated = try await repository.record(status)
                 if self?.samples != updated { self?.samples = updated }
                 self?.errorMessage = await repository.recoveryNotice
+                NotificationManager.shared.checkWeeklyReport(samples: updated)
             } catch {
                 self?.errorMessage = L("Verlauf konnte nicht gespeichert werden: %@", error.localizedDescription)
             }
+        }
+    }
+
+    private static func previewCapacityDays() -> [BGCapacityDay] {
+        let now = Date()
+        return (0..<180).map { index in
+            let day = Date(timeIntervalSince1970: floor(now.timeIntervalSince1970 / 86400) * 86400
+                - Double(179 - index) * 86400)
+            let ratio = 96.5 + sin(Double(index) / 21) * 1.2 - Double(index) / 900
+            return BGCapacityDay(day: day, maximumSource: .rawMaxCapacity, designSource: .designCapacity,
+                                 designCapacity: 5000, osVersion: "27.0",
+                                 count: 900, ratioSum: ratio * 900, minimum: ratio - 0.4, maximum: ratio + 0.4,
+                                 firstSampledAt: day, lastSampledAt: day.addingTimeInterval(80_000),
+                                 cycleSum: Double(120 + index), cycleSamples: 1,
+                                 temperatureMaximum: 30 + Double(index % 7))
         }
     }
 

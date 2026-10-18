@@ -107,6 +107,7 @@ struct OverviewView: View {
                     Label(notice, systemImage: "exclamationmark.triangle")
                         .font(.callout).foregroundStyle(.orange)
                 }
+                EffectivenessView(statusStore: statusStore, config: configStore.config)
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
                     metric("Kapazitätsquote", value: statusStore.status.capacityRatioText(), symbol: "battery.100")
@@ -130,20 +131,6 @@ struct OverviewView: View {
                              ? "Im macOS-Modus bleibt B-Guard ein Beobachter. Die Steuerung kannst du in den Einstellungen aktivieren."
                              : "Ein Profil ändert nur deinen Ladebereich. Hitzeschutz und weitere Einstellungen bleiben erhalten."))
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                if let nativeLimit = statusStore.status.nativeChargeLimit,
-                   nativeLimit < (configStore.config.effective(at: Date()).chargeToFullOnce ? 100 : configStore.config.upperLimit),
-                   configStore.config.mode != .native {
-                    BGPanel {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Label("macOS begrenzt zusätzlich auf \(nativeLimit) %", systemImage: "info.circle").font(.callout.weight(.medium))
-                            Text("Für ein höheres Ziel oder Vollladen musst du das native Limit in den Batterieeinstellungen anheben. B-Guard verändert diese Systemeinstellung nicht.")
-                                .font(.caption).foregroundStyle(.secondary)
-                            Button("Batterieeinstellungen öffnen") {
-                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)
-                            }.font(.caption)
-                        }
                     }
                 }
                 ChargingActionsView(configStore: configStore, canControl: canControl)

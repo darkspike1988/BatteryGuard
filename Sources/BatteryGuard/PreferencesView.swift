@@ -23,6 +23,10 @@ struct PreferencesView: View {
     @AppStorage(LowBatteryWarningPolicy.userDefaultsKey) private var lowBatteryThreshold = LowBatteryWarningPolicy.defaultThreshold
     @AppStorage("bg.notifyLimit") private var notifyLimit = false
     @AppStorage("bg.notifyHeat") private var notifyHeat = true
+    @AppStorage("bg.notifyCalibration") private var notifyCalibration = true
+    @AppStorage("bg.notifyWeekly") private var notifyWeekly = false
+    @AppStorage("bg.notifyHealth") private var notifyHealth = true
+    @AppStorage("bg.healthThreshold") private var healthThreshold = 80
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
 
@@ -99,6 +103,26 @@ struct PreferencesView: View {
                 .disabled(!canConfigure)
 
             Section {
+                Toggle("Bei externem Monitor das Monitorprofil anwenden", isOn: $configStore.config.desktopProfileEnabled)
+                if configStore.config.desktopProfileEnabled {
+                    Picker("Monitorprofil", selection: Binding(
+                        get: { configStore.config.desktopProfile ?? .desk },
+                        set: { configStore.config.desktopProfile = $0 }
+                    )) {
+                        ForEach(BGProfile.allCases) { Text($0.localizedTitle).tag($0) }
+                    }
+                    Text("Ändert nur die Ladegrenzen, solange ein externer Monitor verbunden ist. Pause, Reise- und Sonderpläne bleiben vorrangig; dein gespeichertes Profil wird nicht überschrieben.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Toggle("Low Power Mode auf Akkubetrieb automatisch aktivieren", isOn: $configStore.config.lowPowerModeOnBattery)
+                Text("Nutzt die öffentliche macOS-Einstellung über pmset: an bei Akkubetrieb, aus am Netzteil. B-Guard schreibt dafür keine privaten SMC-Schlüssel.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Systemschlaf beim aktiven Entladen bis zu 30 Minuten verhindern", isOn: $configStore.config.preventSleepWhileDischarging)
+                Text("Gilt nur, solange B-Guard den Adapter selbst getrennt hat. Bewusster Schlaf und Deckelschließen bleiben möglich; die Sperre endet spätestens nach 30 Minuten.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Automatik") }
+
+            Section {
                 SavedProfilesView(configStore: configStore)
             } header: { Text("Eigene Profile") }
 
@@ -147,6 +171,25 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Beim Erreichen des Ladelimits", isOn: $notifyLimit)
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
+                Toggle("Wartungshinweis bei niedriger Akkukapazität", isOn: $notifyHealth)
+                    .help("Meldet höchstens alle 30 Tage, wenn die geschätzte Kapazität unter die Grenze fällt. Das ist kein Hardwaretest.")
+                if notifyHealth {
+                    Stepper(
+                        L("Hinweis unter %lld %%", BatteryHealthAlertPolicy.clampThreshold(healthThreshold)),
+                        value: Binding(
+                            get: { BatteryHealthAlertPolicy.clampThreshold(healthThreshold) },
+                            set: { healthThreshold = BatteryHealthAlertPolicy.clampThreshold($0) }
+                        ),
+                        in: BatteryHealthAlertPolicy.validRange,
+                        step: 5
+                    )
+                }
+                Text("Die geschätzte Kapazität stammt aus Design- und Maximalkapazität. Ein Wert unter der Grenze kann auf einen notwendigen Akkutausch oder eine Wartung hindeuten, ist aber keine Diagnose. Unternehmen können den Wert zusätzlich über die lokale API auslesen.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Sechs Wochen ohne Vollladung", isOn: $notifyCalibration)
+                    .help("Erinnert höchstens alle zwei Wochen. Eine gelegentliche Vollladung kann die Ladestandsschätzung unterstützen; sie ist kein Gesundheitstest und wird nicht automatisch gestartet.")
+                Toggle("Wochenbericht", isOn: $notifyWeekly)
+                    .help("Ein lokaler Hinweis pro Woche mit aufgezeichneter Zeit, Ladung über 90 % und Temperatur über 40 °C. Es werden keine Daten gesendet.")
                 LabeledContent("macOS-Freigabe", value: notificationPermissionDescription)
                 if notificationAuthorization == .notDetermined {
                     Button(L(requestingNotifications ? "Freigabe wird angefragt …" : "Mitteilungen erlauben")) {

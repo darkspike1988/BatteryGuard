@@ -1,8 +1,21 @@
 # B-Guard Roadmap
 
-Stand: 18. Oktober 2026 · Veröffentlicht: 0.4.2 · Diagnose-Dienst: 0.4.0
+Stand: 18. Oktober 2026 · Veröffentlicht: App und Dienst 0.5.0
 
 Diese Roadmap führt die bisherige Umsetzungshistorie fort. Die zwei früher dokumentierten Fehler bei konkurrierenden Änderungen sind seit 0.3.2 korrigiert; der weitere Funktionsausbau bleibt geplant.
+
+## P0/P1-Ausbau im Arbeitsstand 0.5.0
+
+Die zuvor recherchierten P0- und P1-Funktionen sind umgesetzt und als 0.5.0 veröffentlicht, aber nicht vollständig physisch abgenommen. [Änderungen und Prüfstand](docs/release-notes-0.5.0.md).
+
+- Wirksamkeits-Panel „Was gilt gerade wirklich?“ mit Ziel, angewendetem Ziel, macOS-Limit, Steuerungsweg, Monitor-/Deckelzustand und Zuständen für pausiert, nicht unterstützt sowie fehlenden/veralteten Dienst.
+- Akkugesundheit über 12 Monate mit Tageswerten für Kapazitätsquote, Zyklen und Höchsttemperatur, sichtbaren Lücken, drei Zeiträumen und CSV-Export.
+- Kalibrierungs-Erinnerung ohne automatische Kalibrierung; optionaler lokaler Wochenbericht.
+- Wartungshinweis unter einer einstellbaren Kapazitätsgrenze (Standard 80 %, höchstens alle 30 Tage), ausdrücklich ohne Hardwarediagnose.
+- Automatisches Monitorprofil, Low Power Mode über `pmset` und optionaler Schlafassistent für höchstens 30 Minuten während einer aktiven Entladung.
+- Zusätzliche App-Intents für Profilwahl, Top-Up, Pausieren und Fortsetzen.
+- **Nicht umgesetzt:** WidgetKit-Widget (SwiftPM erzeugt keine `.appex`-Erweiterung) und Notarisierung/Developer-ID (extern blockiert). Beide bleiben offen.
+- **Prüfstand:** 232 Tests in 35 Suiten bestanden; Release-Build über `scripts/build-app.sh`; Vorschauen in Deutsch, Englisch, Russisch, Hell, Dunkel, Monitor- und macOS-Modus gesichtet. App und Dienst 0.5.0 sind auf dem lokalen Mac installiert; die physische Hardwareabnahme der neuen Automatikpfade steht aus.
 
 ## Diagnoseausbau 0.4.0
 
@@ -14,7 +27,7 @@ Diese Roadmap beschreibt eigene B-Guard-Implementierungen und deren Abnahmekrite
 
 ### Aktueller Paketstand und nächste Abnahme
 
-| Paket | Softwarestand 0.4.2 | Noch offen |
+| Paket | Softwarestand 0.5.0 (unveröffentlicht) | Noch offen |
 | --- | --- | --- |
 | P1 | Energiefluss und optionaler Hardware-Ladestand implementiert | Weitere physische Quellen-/Zustandsvergleiche |
 | P2 | Lesende und steuernde App Intents experimentell implementiert | Auffindbarkeit und Ausführung in Apples Kurzbefehle-App |

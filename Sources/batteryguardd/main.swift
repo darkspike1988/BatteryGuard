@@ -15,6 +15,8 @@ final class DaemonRunner: @unchecked Sendable {
     private var powerNotifier: io_object_t = 0
     private let configServer = ConfigServer()
     private let wakeUntilLimit = WakeUntilLimitGuard()
+    private let lowPowerMode = LowPowerModeController()
+    private let dischargeSleep = DischargeSleepGuard()
     private var configurationNotice: String?
 
     public init(controller: BatteryController = BatteryController(), dryRun: Bool = false, isOnce: Bool = false) {
@@ -131,13 +133,18 @@ final class DaemonRunner: @unchecked Sendable {
         }
         let storedConfig = loadConfig()
         let now = Date()
-        let config = storedConfig
+        let desktop = DesktopEnvironment.snapshot()
+        let desktopProfile = BGDesktopProfileRule.resolve(config: storedConfig,
+                                                          externalDisplay: desktop.externalDisplayConnected,
+                                                          now: now)
+        let config = desktopProfile.config
         let battery = BatteryReader.read(smcClient: controller.smc)
 
         let decision = controller.step(
             config: config,
             battery: battery,
             dryRun: dryRun,
+            desktop: desktop,
             logger: { [weak self] msg in
                 self?.log(msg)
             }
@@ -146,6 +153,11 @@ final class DaemonRunner: @unchecked Sendable {
         if !dryRun {
             wakeUntilLimit.reconcile(config: config, battery: battery, now: now,
                 controlSupported: controller.smc.hasChargeControl && decision.state != .unsupported)
+        }
+        dischargeSleep.reconcile(config: config, state: decision.state, now: now, dryRun: dryRun)
+        if !isOnce {
+            lowPowerMode.reconcile(config: config, pluggedIn: battery.pluggedIn,
+                                   dryRun: dryRun, logger: { [weak self] msg in self?.log(msg) })
         }
 
         if !dryRun, let snapshot = storedConfig.calibrationPlan,
@@ -170,9 +182,16 @@ final class DaemonRunner: @unchecked Sendable {
             resetChargeToFullOnceInConfig(snapshot: storedConfig, at: now)
         }
 
+        let effective = config.effective(at: now)
         var status = BGStatus()
         status.measurements = battery.measurements
         status.nativeChargeLimit = controller.smc.readNativeChargeLimit()
+        status.effectiveLowerLimit = effective.lowerLimit
+        status.effectiveUpperLimit = effective.chargeToFullOnce ? 100 : effective.upperLimit
+        status.externalDisplayConnected = desktop.externalDisplayConnected
+        status.lidClosed = desktop.lidClosed
+        status.adapterDisconnectAllowed = desktop.allowsAdapterDisconnect
+        status.desktopProfileActive = desktopProfile.active
         status.percent = battery.percent
         status.percentAvailable = battery.percentAvailable
         status.externalPowerAvailable = battery.externalPowerAvailable
@@ -190,7 +209,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.4.0"
+        status.daemonVersion = "0.5.0"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
@@ -229,6 +248,7 @@ final class DaemonRunner: @unchecked Sendable {
             case 0xe0000280 /* kIOMessageSystemWillSleep */:
                 runner.sleeping = true
                 runner.wakeUntilLimit.release()
+                runner.dischargeSleep.release()
                 if !runner.dryRun { runner.controller.restoreNormal(logger: { runner.log($0) }) }
                 runner.log("Schlafmodus: Normalbetrieb wiederhergestellt, Steuerung pausiert.")
                 IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))

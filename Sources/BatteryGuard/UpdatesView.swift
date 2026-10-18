@@ -7,6 +7,13 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.5.0", title: "Was wirklich gilt", changes: [
+            "Neues Panel zeigt Ziel, tatsächlich angewendeten Wert, macOS-Limit und erkannten Steuerungsweg.",
+            "Akkugesundheit bis zwölf Monate mit Kapazitätsquote, Zyklen und Temperatur; Lücken bleiben sichtbar.",
+            "Monitorprofil, Low Power Mode und ein optionaler, zeitlich begrenzter Schlafassistent beim Entladen.",
+            "Kalibrierungserinnerung und lokaler Wochenbericht; neue Kurzbefehle für Profil, Top-Up, Pause und wirksames Ziel.",
+            "Hintergrunddienst 0.5.0 erforderlich. Hardware-, Kurzbefehle- und Notarisierungsabnahmen bleiben offen."
+        ]),
         .init(version: "0.4.2", title: "Drei Sprachen, eine App", changes: [
             "Oberfläche auf Deutsch, Englisch und Russisch; die App folgt der macOS-Systemsprache.",
             "Statusmeldungen des Hintergrunddienstes erscheinen in der gewählten Sprache.",

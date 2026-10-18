@@ -20,6 +20,26 @@ private struct HistoryPoint: Identifiable {
     let segment: Int
 }
 
+private enum LongTermMetric: String, CaseIterable, Identifiable {
+    case capacity = "Kapazitätsquote", cycles = "Zyklen", temperature = "Temperatur"
+    var id: String { rawValue }
+    var unit: String { switch self { case .capacity: "%"; case .cycles: L("Zyklen"); case .temperature: "°C" } }
+    func value(_ day: BGCapacityDay) -> Double? {
+        switch self {
+        case .capacity: day.mean
+        case .cycles: day.cycleMean
+        case .temperature: day.temperatureMaximum
+        }
+    }
+}
+
+private struct LongTermPoint: Identifiable {
+    var id: Date { day }
+    let day: Date
+    let value: Double
+    let segment: Int
+}
+
 struct HistoryView: View {
     let history: HistoryStore
     let currentConfig: BGConfig
@@ -28,6 +48,8 @@ struct HistoryView: View {
     @State private var selectedTime: Date?
     @State private var exportMessage: String?
     @State private var exportFailed = false
+    @State private var longTermMetric: LongTermMetric = .capacity
+    @State private var longTermDays = 365
 
     private var filtered: [BGHistorySample] {
         let cutoff = Date().addingTimeInterval(-Double(hours) * 3600)
@@ -65,7 +87,7 @@ struct HistoryView: View {
                         HStack {
                             Picker("Messwert", selection: $metric) {
                                 ForEach(HistoryMetric.allCases) { Text(L($0.rawValue)).tag($0) }
-                            }.pickerStyle(.segmented).frame(maxWidth: 280)
+                            }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 280)
                             Spacer()
                             Picker("Zeitraum", selection: $hours) {
                                 Text("24 Stunden").tag(24)
@@ -121,7 +143,9 @@ struct HistoryView: View {
                         }
                     }
                 }
+                longTermPanel
                 summaryPanel
+                weeklyPanel
                 Text("Lücken bedeuten, dass keine Messwerte aufgezeichnet wurden, etwa im Ruhezustand. Sie werden nicht als durchgehende Nutzung gerechnet. Eine Ladelimit-Linie zeigt den aktuell eingestellten B-Guard-Zielwert.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if let exportMessage {
@@ -213,6 +237,141 @@ struct HistoryView: View {
         return (lower - margin)...(upper + margin)
     }
 
+    private var longTermPoints: [LongTermPoint] {
+        let cutoff = Date().addingTimeInterval(-Double(longTermDays) * 86400)
+        var segment = 0
+        var previous: Date?
+        return history.capacityDays
+            .filter { $0.isValid && $0.day >= cutoff }
+            .sorted { $0.day < $1.day }
+            .compactMap { day in
+                guard let value = longTermMetric.value(day), value.isFinite else { return nil }
+                if let previous, day.day.timeIntervalSince(previous) > 1.5 * 86400 { segment += 1 }
+                previous = day.day
+                return LongTermPoint(day: day.day, value: value, segment: segment)
+            }
+    }
+
+    private var longTermPanel: some View {
+        let points = longTermPoints
+        return BGPanel {
+            VStack(alignment: .leading, spacing: 17) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Akkugesundheit über 12 Monate").font(.headline)
+                        Text("Tageswerte aus den verfügbaren Messungen. Lücken bleiben sichtbar und werden nicht interpoliert.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button { exportCapacityCSV() } label: { Label("CSV exportieren", systemImage: "square.and.arrow.up") }
+                        .buttonStyle(.bordered).disabled(history.capacityDays.isEmpty)
+                }
+                Toggle("Tägliche Tageswerte lokal aufzeichnen", isOn: Binding(
+                    get: { history.longTermCapacityEnabled },
+                    set: { history.longTermCapacityEnabled = $0 }))
+                    .font(.callout)
+                if let error = history.capacityError {
+                    Label(error, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange)
+                }
+                if !history.longTermCapacityEnabled {
+                    ContentUnavailableView("Langzeitverlauf ist aus",
+                        systemImage: "calendar.badge.clock",
+                        description: Text("Aktiviere die Aufzeichnung, damit B-Guard höchstens ein Jahr lang einen Tageswert für Kapazitätsquote, Zyklen und Temperatur speichert. Die Datei bleibt auf diesem Mac."))
+                        .frame(height: 180)
+                } else if points.count < 2 {
+                    ContentUnavailableView("Noch keine zwei Tageswerte",
+                        systemImage: "chart.xyaxis.line",
+                        description: Text("Sobald an zwei Tagen aktuelle Messwerte vorliegen, erscheint hier die erste Linie. Der Verlauf wächst nur, während die App läuft."))
+                        .frame(height: 180)
+                } else {
+                    HStack {
+                        Picker("Messwert", selection: $longTermMetric) {
+                            ForEach(LongTermMetric.allCases) { Text(L($0.rawValue)).tag($0) }
+                        }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 330)
+                        Spacer()
+                        Picker("Zeitraum", selection: $longTermDays) {
+                            Text("30 Tage").tag(30)
+                            Text("90 Tage").tag(90)
+                            Text("12 Monate").tag(365)
+                        }.labelsHidden().frame(width: 130)
+                    }
+                    longTermChart(points)
+                    longTermSummary(points)
+                }
+            }
+        }
+    }
+
+    private func longTermChart(_ points: [LongTermPoint]) -> some View {
+        let segmentCounts = Dictionary(grouping: points, by: \.segment).mapValues { $0.count }
+        return Chart {
+            ForEach(points) { point in
+                LineMark(x: .value("Tag", point.day), y: .value(longTermMetric.unit, point.value),
+                         series: .value("Abschnitt", point.segment))
+                    .foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth: 2))
+                if segmentCounts[point.segment] == 1 {
+                    PointMark(x: .value("Tag", point.day), y: .value(longTermMetric.unit, point.value))
+                        .foregroundStyle(Color.accentColor).symbolSize(18)
+                }
+            }
+        }
+        .chartYScale(domain: longTermDomain(points))
+        .chartXAxis { AxisMarks(values: .automatic(desiredCount: 6)) }
+        .chartYAxis { AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) }
+        .frame(height: 240)
+        .accessibilityLabel(L("%@ über %lld Tage", L(longTermMetric.rawValue), longTermDays))
+    }
+
+    private func longTermSummary(_ points: [LongTermPoint]) -> some View {
+        let values = points.map(\.value)
+        let minimum = values.min() ?? 0
+        let maximum = values.max() ?? 0
+        var parts = [L("%d Tageswerte", points.count),
+                     L("Minimum %.1f %@ · Maximum %.1f %@", minimum, longTermMetric.unit, maximum, longTermMetric.unit)]
+        if longTermMetric == .capacity {
+            let cutoff = Date().addingTimeInterval(-Double(longTermDays) * 86400)
+            let days = history.capacityDays.filter { $0.isValid && $0.day >= cutoff }
+            if let delta = BGCapacityTrend.change(days) {
+                parts.append(L("Veränderung %.1f Prozentpunkte", delta))
+            } else {
+                parts.append(L("Kein belastbarer Vergleich: Quellen, Designkapazität oder Systemversion wechselten."))
+            }
+        }
+        return Text(parts.joined(separator: " · "))
+            .font(.caption).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func longTermDomain(_ points: [LongTermPoint]) -> ClosedRange<Double> {
+        let values = points.map(\.value)
+        guard let minimum = values.min(), let maximum = values.max() else { return 0...1 }
+        switch longTermMetric {
+        case .capacity:
+            return max(0, minimum - 5)...min(110, max(maximum + 5, minimum + 1))
+        case .cycles:
+            let margin = max((maximum - minimum) * 0.15, 5)
+            return max(0, minimum - margin)...(maximum + margin)
+        case .temperature:
+            let margin = max((maximum - minimum) * 0.15, 2)
+            return (minimum - margin)...(maximum + margin)
+        }
+    }
+
+    private func exportCapacityCSV() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.commaSeparatedText]
+        panel.nameFieldStringValue = "B-Guard-Akkuverlauf-\(Date().formatted(.iso8601.year().month().day().dateSeparator(.dash))).csv"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try BGCapacityTrend.csv(history.capacityDays).write(to: url, atomically: true, encoding: .utf8)
+            exportFailed = false
+            exportMessage = L("Tageswerte als %@ gespeichert.", url.lastPathComponent)
+        } catch {
+            exportFailed = true
+            exportMessage = L("Export fehlgeschlagen: %@", error.localizedDescription)
+        }
+    }
+
     private var summaryPanel: some View {
         let summary = BGHistory.summary(filtered)
         return BGPanel {
@@ -233,6 +392,33 @@ struct HistoryView: View {
         }
     }
 
+    private var weeklyPanel: some View {
+        let report = BGHistory.weeklyReport(history.samples, now: Date())
+        return BGPanel {
+            VStack(alignment: .leading, spacing: 15) {
+                HStack {
+                    Text("Wochenbericht").font(.headline)
+                    Spacer()
+                    Text(L("%@ bis %@", report.from.formatted(date: .abbreviated, time: .omitted),
+                           report.to.formatted(date: .abbreviated, time: .omitted)))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                HStack(alignment: .top, spacing: 24) {
+                    statistic("Aufgezeichnet", value: duration(report.summary.observedSeconds))
+                    statistic("Ab 90 % Ladung", value: duration(report.summary.highChargeSeconds))
+                    statistic("Ab 40 °C", value: duration(report.summary.hotSeconds))
+                }
+                HStack(spacing: 24) {
+                    Text(L("Volllade-Tage: %lld", report.fullChargeDays)).font(.callout)
+                    Text(L("Höchster Zyklusstand: %@", report.highestCycleCount.map(String.init) ?? "—"))
+                        .font(.callout)
+                }.foregroundStyle(.secondary)
+                Text("Der Bericht rechnet nur mit lückenlos aufgezeichneten Minuten. Er bewertet deine Nutzung nicht und ersetzt keine Diagnose.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
     private func statistic(_ label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(value).font(.system(size: 26, weight: .light)).monospacedDigit()
@@ -241,9 +427,9 @@ struct HistoryView: View {
     }
 
     private func duration(_ seconds: TimeInterval) -> String {
-        if seconds < 60 { return "0 min" }
-        if seconds < 3600 { return "\(Int(seconds / 60)) min" }
-        return String(format: "%.1f h", seconds / 3600)
+        if seconds < 60 { return L("0 min") }
+        if seconds < 3600 { return L("%lld min", Int(seconds / 60)) }
+        return L("%.1f h", seconds / 3600)
     }
 
     private func exportCSV() {

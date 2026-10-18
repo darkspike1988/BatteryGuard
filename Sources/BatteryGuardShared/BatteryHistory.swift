@@ -59,6 +59,16 @@ public enum BGHistory {
         return rows.joined(separator: "\n") + "\n"
     }
 
+    public static func weeklyReport(_ samples: [BGHistorySample], now: Date) -> BGWeeklyReport {
+        let cutoff = now.addingTimeInterval(-7 * 86400)
+        let recent = samples.filter { $0.timestamp >= cutoff && $0.timestamp <= now }
+        let days = Set(recent.filter { $0.percent >= 99 }
+            .map { Int(floor($0.timestamp.timeIntervalSince1970 / 86400)) })
+        return BGWeeklyReport(from: cutoff, to: now, sampleCount: recent.count,
+                              summary: summary(recent), fullChargeDays: days.count,
+                              highestCycleCount: recent.compactMap(\.cycles).max())
+    }
+
     /// Zeitgewichtete Auswertung. Lücken über zwei Minuten werden nicht überbrückt.
     public static func summary(_ samples: [BGHistorySample]) -> BGHistorySummary {
         var result = BGHistorySummary()
@@ -82,4 +92,19 @@ public struct BGHistorySummary: Equatable, Sendable {
     public var hotSeconds: TimeInterval = 0
     public var peakTemperature: Double? = nil
     public init() {}
+}
+
+public struct BGWeeklyReport: Equatable, Sendable {
+    public var from: Date
+    public var to: Date
+    public var sampleCount: Int
+    public var summary: BGHistorySummary
+    public var fullChargeDays: Int
+    public var highestCycleCount: Int?
+    public init(from: Date, to: Date, sampleCount: Int, summary: BGHistorySummary,
+                fullChargeDays: Int, highestCycleCount: Int?) {
+        self.from = from; self.to = to; self.sampleCount = sampleCount
+        self.summary = summary; self.fullChargeDays = fullChargeDays
+        self.highestCycleCount = highestCycleCount
+    }
 }

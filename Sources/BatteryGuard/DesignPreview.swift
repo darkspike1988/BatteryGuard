@@ -19,12 +19,17 @@ enum DesignPreview {
         if args.contains("--native") {
             config.config.mode = .native
             status.status.nativeChargeLimit = 80
+            status.status.effectiveUpperLimit = 80
             status.status.state = .disabled
         }
         if args.contains("--desktop") {
             config.activateProfile(.desk)
             status.status.nativeChargeLimit = 80
+            status.status.effectiveUpperLimit = 60
             status.status.state = .disabled
+            status.status.externalDisplayConnected = true
+            status.status.adapterDisconnectAllowed = false
+            status.status.desktopProfileActive = true
             status.status.message = "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit."
         }
         if args.contains("--offline") { status.isDaemonActive = false }
@@ -59,10 +64,10 @@ enum DesignPreview {
                 updater.message = "B-Guard 0.4.0 ist verfügbar."
             }
             try renderView(DashboardView(statusStore: status, configStore: config, historyStore: history, services: services, updates: updater, api: api)
-                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: args.contains("--small") ? 780 : 980, height: args.contains("--small") ? 600 : 1060),
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: args.contains("--small") ? 780 : 980, height: args.contains("--small") ? 600 : 1280),
                            to: directory.appendingPathComponent("overview.png"))
             try renderView(HistoryView(history: history, currentConfig: config.config)
-                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 790, height: 760),
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 790, height: 1560),
                            to: directory.appendingPathComponent("history.png"))
             try renderView(DiagnosticsView(statusStore: status, history: history)
                 .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 840, height: 1600),
@@ -71,7 +76,7 @@ enum DesignPreview {
                 .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 370, height: 575),
                            to: directory.appendingPathComponent("menu.png"))
             try renderView(PreferencesView(statusStore: status, configStore: config, services: services, updates: updater, api: api)
-                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 660, height: 1060),
+                .defaultAppStorage(updatePreferences).environment(\.colorScheme, theme), size: NSSize(width: 660, height: 2400),
                            to: directory.appendingPathComponent("settings.png"))
             try renderView(SetupView(close: {}).defaultAppStorage(updatePreferences).environment(\.colorScheme, theme),
                            size: NSSize(width: 480, height: 340),

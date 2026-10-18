@@ -445,6 +445,7 @@ public final class BatteryController: @unchecked Sendable {
         config: BGConfig,
         battery: BatteryInfo,
         dryRun: Bool,
+        desktop: DesktopEnvironment.Snapshot? = nil,
         logger: ((String) -> Void)? = nil
     ) -> ControllerDecision {
         lock.lock()
@@ -476,7 +477,7 @@ public final class BatteryController: @unchecked Sendable {
             previousDecision: previousDecision,
             hasChargeControl: smc.hasChargeControl,
             hasDischargeControl: smc.hasDischargeControl,
-            allowsAdapterDisconnect: DesktopEnvironment.allowsAdapterDisconnect()
+            allowsAdapterDisconnect: (desktop ?? DesktopEnvironment.snapshot()).allowsAdapterDisconnect
         )
 
         var controlFailed = false

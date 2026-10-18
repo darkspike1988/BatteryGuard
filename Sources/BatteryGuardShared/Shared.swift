@@ -61,6 +61,14 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var scheduledTasks: [BGScheduledTask] = []
     public var scheduleHistory: [BGScheduleRun] = []
     public var manualOverrideUntil: Date? = nil
+    /// Solange ein externer Monitor verbunden ist, gilt das gewählte Profil nur für die Ladegrenzen.
+    /// Es ändert weder das gespeicherte Profil noch Pause, Reise- oder Sonderpläne.
+    public var desktopProfileEnabled: Bool = false
+    public var desktopProfile: BGProfile? = nil
+    /// Low Power Mode folgt dem Netzteilzustand (nur wenn ausdrücklich aktiviert).
+    public var lowPowerModeOnBattery: Bool = false
+    /// Systemschlaf während aktivem Entladen kurzzeitig verhindern (opt-in, zeitlich begrenzt).
+    public var preventSleepWhileDischarging: Bool = false
 
     public init() {}
 
@@ -90,6 +98,12 @@ public struct BGConfig: Codable, Equatable, Sendable {
         scheduledTasks = try c.decodeIfPresent([BGScheduledTask].self, forKey: .scheduledTasks) ?? []
         scheduleHistory = try c.decodeIfPresent([BGScheduleRun].self, forKey: .scheduleHistory) ?? []
         manualOverrideUntil = try c.decodeIfPresent(Date.self, forKey: .manualOverrideUntil)
+        desktopProfileEnabled = try c.decodeIfPresent(Bool.self, forKey: .desktopProfileEnabled) ?? d.desktopProfileEnabled
+        if let rawProfile = try c.decodeIfPresent(String.self, forKey: .desktopProfile) {
+            desktopProfile = BGProfile(rawValue: rawProfile)
+        } else { desktopProfile = nil }
+        lowPowerModeOnBattery = try c.decodeIfPresent(Bool.self, forKey: .lowPowerModeOnBattery) ?? d.lowPowerModeOnBattery
+        preventSleepWhileDischarging = try c.decodeIfPresent(Bool.self, forKey: .preventSleepWhileDischarging) ?? d.preventSleepWhileDischarging
         do {
             if let decoded = try c.decodeIfPresent(BGSpecialChargePlan.self, forKey: .specialChargePlan) {
                 specialChargePlan = decoded.isValid ? decoded : nil
@@ -137,6 +151,13 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var configurationNotice: String? = nil
     /// Nur lesend erkannter nativer macOS-SMC-Grenzwert, falls verfügbar.
     public var nativeChargeLimit: Int? = nil
+    /// Tatsächlich angewandte Grenzen nach Pause, Reise, Sonderplan und Monitorprofil.
+    public var effectiveLowerLimit: Int? = nil
+    public var effectiveUpperLimit: Int? = nil
+    public var externalDisplayConnected: Bool? = nil
+    public var lidClosed: Bool? = nil
+    public var adapterDisconnectAllowed: Bool? = nil
+    public var desktopProfileActive: Bool? = nil
     public var percent: Int = 0
     public var percentAvailable: Bool? = nil
     public var externalPowerAvailable: Bool? = nil

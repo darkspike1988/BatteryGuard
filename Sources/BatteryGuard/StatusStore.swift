@@ -107,6 +107,13 @@ final class StatusStore: Sendable {
         )
         var s = BGStatus()
         s.nativeChargeLimit = 100
+        s.effectiveLowerLimit = 75
+        s.effectiveUpperLimit = 80
+        s.externalDisplayConnected = false
+        s.lidClosed = false
+        s.adapterDisconnectAllowed = true
+        s.desktopProfileActive = false
+        s.smcKeysDetected = ["CHTE"]
         s.percent = 78
         s.pluggedIn = true
         s.isChargingHardware = false
