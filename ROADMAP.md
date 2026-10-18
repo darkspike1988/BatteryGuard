@@ -1,6 +1,6 @@
 # B-Guard Roadmap
 
-Stand: 18. Oktober 2026 · Veröffentlicht: 0.4.1 · Diagnose-Dienst: 0.4.0
+Stand: 18. Oktober 2026 · Veröffentlicht: 0.4.2 · Diagnose-Dienst: 0.4.0
 
 Diese Roadmap führt die bisherige Umsetzungshistorie fort. Die zwei früher dokumentierten Fehler bei konkurrierenden Änderungen sind seit 0.3.2 korrigiert; der weitere Funktionsausbau bleibt geplant.
 
@@ -14,7 +14,7 @@ Diese Roadmap beschreibt eigene B-Guard-Implementierungen und deren Abnahmekrite
 
 ### Aktueller Paketstand und nächste Abnahme
 
-| Paket | Softwarestand 0.4.1 | Noch offen |
+| Paket | Softwarestand 0.4.2 | Noch offen |
 | --- | --- | --- |
 | P1 | Energiefluss und optionaler Hardware-Ladestand implementiert | Weitere physische Quellen-/Zustandsvergleiche |
 | P2 | Lesende und steuernde App Intents experimentell implementiert | Auffindbarkeit und Ausführung in Apples Kurzbefehle-App |
@@ -240,3 +240,7 @@ Konkrete Ergebnisse und externe Grenzen: [Nachtbericht](docs/NIGHT_RESULTS.md). 
 ## Profil-Dateikonflikte · 0.4.1 · 6. Oktober 2026
 
 Veraltete Profilfenster überschreiben keine zwischenzeitlichen Änderungen mehr. Bytegenauer Dateistand, gemeinsame Dateisperre, nichtblockierende Konfliktmeldung und Neuladen in der Oberfläche ergänzt. Import sichert unter derselben Sperre; Lesefehler und fehlende Dateien werden unterschieden. Neue Regressionen für mehrere Stores, externe Beschädigung/Löschung, veralteten Import, Exportfehler und Leserechte. Zusammen mit dem Diagnoseumfang 0.4.0; Dienst 0.4.0 erforderlich. Alle oben offenen System-/Hardwareabnahmen bleiben bestehen.
+
+## Drei Sprachen · 0.4.2 · 18. Oktober 2026
+
+Die App folgt der macOS-Systemsprache und erscheint auf Deutsch, Englisch oder Russisch. Alle sichtbaren Texte, Fehlermeldungen, Benachrichtigungen, App-Intent-Beschreibungen und die Versionshistorie sind übersetzt; Statusmeldungen des Dienstes werden bei der Anzeige lokalisiert. Deutsche Texte bleiben Quellsprache und Fallback. Hintergrunddienst 0.4.0 bleibt erforderlich. Alle oben offenen System-/Hardwareabnahmen und die Notarisierung bleiben bestehen.

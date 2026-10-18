@@ -104,3 +104,11 @@ Offen bleiben H01–H11 (physische Hardware), S02–S08 (Bedienung der Kurzbefeh
 - Vorschauen mit `-AppleLanguages '(en)'` und `'(ru)'` gerendert und gesichtet: Übersicht, Menüfenster, Einstellungen, Diagnose, Verlauf, Updates und Einrichtung erscheinen vollständig übersetzt.
 - Updateprüfung bleibt wie zuvor standardmäßig aktiv und in den Einstellungen abschaltbar.
 - Build ohne Warnungen erfolgreich; 219 Tests bestanden (216 bestehende plus 3 Lokalisierungstests). Keine neue Hardwarewirkung geprüft.
+
+## 18. Oktober 2026 · Version 0.4.2 veröffentlicht
+
+- App 0.4.2 enthält die Lokalisierung; Hintergrunddienst bleibt 0.4.0. Ein älterer Dienst muss über den macOS-Administratordialog aktualisiert werden.
+- Community-Build ohne Warnungen, gültige ad-hoc-Signatur (`com.batteryguard.app`, `arm64`, macOS 14.0+), fünf App-Intents und `Metadata.appintents` vorhanden.
+- DMG `B-Guard-0.4.2-arm64.dmg` erstellt, `hdiutil verify` VALID. Veröffentlichte SHA-256 `64ffe0517f05d689b3b29c93a06f3b459344a799a42e9c9dbdd80155496e9869`.
+- App aus der eingehängten DMG gestartet und Vorschauen mit `-AppleLanguages '(ru)'` gerendert; Übersicht und Seitennavigation erscheinen vollständig russisch.
+- Die offenen N7-Punkte (physische Hardware, Kurzbefehle-Bedienung, Developer-ID/Notarisierung) bleiben unverändert blockiert und werden nicht als bestanden gezählt.

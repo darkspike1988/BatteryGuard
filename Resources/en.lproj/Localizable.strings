@@ -247,6 +247,7 @@
 "Download geprüft. Öffne die DMG im Downloads-Ordner und ersetze B-Guard in Programme." = "Download verified. Open the DMG in Downloads and replace B-Guard in Applications.";
 "Download im Finder zeigen" = "Show download in Finder";
 "Download wird abgebrochen …" = "Cancelling download …";
+"Drei Sprachen, eine App" = "Three languages, one app";
 "Du verwendest die aktuelle oder eine neuere Version." = "You are using the current or a newer version.";
 "Durch manuelle Aktion übersprungen" = "Skipped due to manual action";
 "Eigene Grenzen" = "Custom limits";
@@ -581,6 +582,7 @@
 "Nächster Termin: %@" = "Next occurrence: %@";
 "OK" = "OK";
 "Oberes Ladelimit (Laden stoppen)" = "Upper charge limit (stop charging)";
+"Oberfläche auf Deutsch, Englisch und Russisch; die App folgt der macOS-Systemsprache." = "Interface in German, English and Russian; the app follows the macOS system language.";
 "Oberhalb des Limits aktiv entladen" = "Actively discharge above the limit";
 "Ohne separate Ladesperre übernimmt macOS im Monitorbetrieb das Limit." = "Without a separate charge lock, macOS takes over the limit in monitor mode.";
 "Optional bis zum Limit wachhalten, höchstens zwei Stunden; Diagnoseexport ohne persönliche Daten." = "Optional keep-awake until the limit, at most two hours; diagnostics export without personal data.";
@@ -661,6 +663,7 @@
 "Starten bei (Unteres Limit)" = "Start at (lower limit)";
 "Status" = "Status";
 "Status: Herkunft unbekannt" = "Status: origin unknown";
+"Statusmeldungen des Hintergrunddienstes erscheinen in der gewählten Sprache." = "Background service status messages appear in the selected language.";
 "Steuerbefehle über API erlauben" = "Allow control commands via API";
 "Steuert die Ladeelektronik." = "Controls the charging circuitry.";
 "Steuert die Ladelektronik." = "Controls the charging electronics.";
@@ -762,6 +765,7 @@
 "Wähle das Menüleistensymbol und die Zusatzanzeige. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung." = "Choose the menu bar icon and additional display. Battery power is charge/discharge flow, not total Mac power.";
 "Wähle einen Messpunkt über die Kurve, die Buttons oder ⌥← / ⌥→." = "Select a measurement via the curve, the buttons or ⌥← / ⌥→.";
 "Wöchentlich" = "Weekly";
+"Zahlenformat und Platzhalter bleiben konsistent; Hintergrunddienst 0.4.0 bleibt erforderlich." = "Number formatting and placeholders stay consistent; background service 0.4.0 is still required.";
 "Zeit" = "Time";
 "Zeitlimit abgelaufen." = "Time limit expired.";
 "Zeitlimit für Entladen abgelaufen." = "Time limit for discharging expired.";

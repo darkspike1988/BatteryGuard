@@ -7,6 +7,11 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.4.2", title: "Drei Sprachen, eine App", changes: [
+            "Oberfläche auf Deutsch, Englisch und Russisch; die App folgt der macOS-Systemsprache.",
+            "Statusmeldungen des Hintergrunddienstes erscheinen in der gewählten Sprache.",
+            "Zahlenformat und Platzhalter bleiben konsistent; Hintergrunddienst 0.4.0 bleibt erforderlich."
+        ]),
         .init(version: "0.4.1", title: "Gespeicherte Profile schützen", changes: [
             "Gleichzeitige Profiländerungen werden erkannt, statt neuere Daten zu überschreiben.",
             "Profile direkt neu laden; Lesefehler von beschädigten Daten unterscheiden.",

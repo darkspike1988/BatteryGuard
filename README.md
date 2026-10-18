@@ -12,7 +12,7 @@ Die [Abnahmematrix und das lokale Testjournal](docs/validation/README.md) halten
 
 ## Diagnose ab 0.4.0
 
-Die neue Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, optionalen Langzeitverlauf und lesende Mac-Ressourcen. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). Die aktuelle App 0.4.1 enthält den Diagnoseumfang von 0.4.0 und schützt Profiländerungen vor veralteten Dateiständen. Diagnose-Dienst 0.4.0 erforderlich; der Download oben verweist weiterhin auf die jeweils veröffentlichte Version.
+Die neue Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, optionalen Langzeitverlauf und lesende Mac-Ressourcen. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). Die aktuelle App 0.4.2 enthält den Diagnoseumfang von 0.4.0, schützt Profiländerungen vor veralteten Dateiständen und folgt der macOS-Systemsprache. Diagnose-Dienst 0.4.0 erforderlich; der Download oben verweist weiterhin auf die jeweils veröffentlichte Version.
 
 ## Was B-Guard ergänzt
 
@@ -67,6 +67,8 @@ Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht a
 Die veröffentlichte SHA-256-Prüfsumme liegt im selben Release als [`B-Guard.dmg.sha256`](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg.sha256). Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz ein-/ausschalten, zeitlich pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz ausschalten“ gibt das Laden bis zur erneuten Aktivierung frei. Zeitliche Pausen enden automatisch.
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
+
+**Update auf 0.4.2:** App 0.4.2 und Hintergrunddienst 0.4.0 verwenden. Die App übernimmt Deutsch, Englisch oder Russisch automatisch aus der macOS-Systemsprache. Ein älterer Hintergrunddienst muss aktualisiert werden. Nach dem Ersetzen der App den Dienst in den Einstellungen über den macOS-Administratordialog aktualisieren. Bestehende Konfiguration und Verlauf bleiben erhalten.
 
 **Update auf 0.4.1:** App 0.4.1 und Hintergrunddienst 0.4.0 verwenden. Ein älterer Hintergrunddienst muss aktualisiert werden. Nach dem Ersetzen der App den Dienst in den Einstellungen über den macOS-Administratordialog aktualisieren. Bestehende Konfiguration und Verlauf bleiben erhalten.
 

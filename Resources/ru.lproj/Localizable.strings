@@ -247,6 +247,7 @@
 "Download geprüft. Öffne die DMG im Downloads-Ordner und ersetze B-Guard in Programme." = "Загрузка проверена. Открой DMG в папке «Загрузки» и замени B-Guard в «Программах».";
 "Download im Finder zeigen" = "Показать загрузку в Finder";
 "Download wird abgebrochen …" = "Отмена загрузки …";
+"Drei Sprachen, eine App" = "Три языка, одно приложение";
 "Du verwendest die aktuelle oder eine neuere Version." = "Ты используешь текущую или более новую версию.";
 "Durch manuelle Aktion übersprungen" = "Пропущено из-за ручного действия";
 "Eigene Grenzen" = "Свои пределы";
@@ -581,6 +582,7 @@
 "Nächster Termin: %@" = "Следующий запуск: %@";
 "OK" = "OK";
 "Oberes Ladelimit (Laden stoppen)" = "Верхний предел зарядки (остановить зарядку)";
+"Oberfläche auf Deutsch, Englisch und Russisch; die App folgt der macOS-Systemsprache." = "Интерфейс на немецком, английском и русском; приложение следует языку macOS.";
 "Oberhalb des Limits aktiv entladen" = "Активно разряжать выше предела";
 "Ohne separate Ladesperre übernimmt macOS im Monitorbetrieb das Limit." = "Без отдельной блокировки зарядки macOS принимает на себя предел в режиме монитора.";
 "Optional bis zum Limit wachhalten, höchstens zwei Stunden; Diagnoseexport ohne persönliche Daten." = "Необязательное бодрствование до предела, не более двух часов; экспорт диагностики без личных данных.";
@@ -661,6 +663,7 @@
 "Starten bei (Unteres Limit)" = "Начать при (нижний предел)";
 "Status" = "Статус";
 "Status: Herkunft unbekannt" = "Статус: источник неизвестен";
+"Statusmeldungen des Hintergrunddienstes erscheinen in der gewählten Sprache." = "Сообщения фоновой службы отображаются на выбранном языке.";
 "Steuerbefehle über API erlauben" = "Разрешить команды управления через API";
 "Steuert die Ladeelektronik." = "Управляет зарядной электроникой.";
 "Steuert die Ladelektronik." = "Управляет электроникой зарядки.";
@@ -762,6 +765,7 @@
 "Wähle das Menüleistensymbol und die Zusatzanzeige. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung." = "Выбери значок строки меню и дополнительное отображение. Мощность аккумулятора — поток заряда/разряда, а не общая мощность Mac.";
 "Wähle einen Messpunkt über die Kurve, die Buttons oder ⌥← / ⌥→." = "Выбери измерение на графике, кнопками или ⌥← / ⌥→.";
 "Wöchentlich" = "Еженедельно";
+"Zahlenformat und Platzhalter bleiben konsistent; Hintergrunddienst 0.4.0 bleibt erforderlich." = "Форматирование чисел и заполнители остаются согласованными; по-прежнему требуется фоновая служба 0.4.0.";
 "Zeit" = "Время";
 "Zeitlimit abgelaufen." = "Срок истёк.";
 "Zeitlimit für Entladen abgelaufen." = "Срок разрядки истёк.";
