@@ -1,6 +1,8 @@
 # Abnahme und Testjournal
 
-Stand: 5. Oktober 2026 · Basis: B-Guard 0.3.7.
+Stand: 18. Oktober 2026 · Basis: B-Guard 0.4.1.
+
+Erste reale Session: [2026-10-18-mac01](sessions/2026-10-18-mac01/report.md) — 2 `passed` (R01 Community-Build, S01 Kurzbefehle entdeckt), 22 `blocked`, 1 `not_run`. Die bestandenen Fälle belegen den lokalen Community-Build und die Auffindbarkeit der App Intents, keine physische Hardwarewirkung.
 
 Diese Abnahme dokumentiert genau eine Geräte-/Software-/Anschlusskombination pro Session. Sie schaltet keine Hardwarefunktion frei. Ein bestandenes Simulationsergebnis ist keine Hardware-Abnahme. Änderungen an macOS/Firmware, App/Dienst oder Anschluss erzeugen eine neue Session; frühere Ergebnisse bleiben historische Belege.
 

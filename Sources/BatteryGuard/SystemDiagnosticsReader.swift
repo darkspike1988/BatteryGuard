@@ -11,6 +11,10 @@ final class SystemDiagnosticsReader {
 
     func reset() { previousTicks = nil; previousUptime = nil; lastSnapshot = nil }
 
+    nonisolated static func modelIdentifier(from bytes: [CChar]) -> String {
+        String(decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+    }
+
     func read(now: Date = Date()) -> BGSystemSnapshot {
         let uptime = ProcessInfo.processInfo.systemUptime
         if let previousUptime, uptime - previousUptime < 10, let lastSnapshot { return lastSnapshot }
@@ -56,7 +60,7 @@ final class SystemDiagnosticsReader {
         let modelResult = modelBytes.withUnsafeMutableBytes {
             sysctlbyname("hw.model", $0.baseAddress, &modelSize, nil, 0)
         }
-        let model = modelResult == 0 ? String(cString: modelBytes) : nil
+        let model = modelResult == 0 ? Self.modelIdentifier(from: modelBytes) : nil
         let thermal: BGThermalState
         switch ProcessInfo.processInfo.thermalState {
         case .nominal: thermal = .nominal

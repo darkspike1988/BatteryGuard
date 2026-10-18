@@ -1,20 +1,20 @@
 # B-Guard Roadmap
 
-Stand: 6. Oktober 2026 · Veröffentlicht: 0.4.1 · Diagnose-Dienst: 0.4.0
+Stand: 18. Oktober 2026 · Veröffentlicht: 0.4.1 · Diagnose-Dienst: 0.4.0
 
-Der aktuelle [Schlachtplan mit Review, Marktanalyse und AlDente-Pro-Abgleich](docs/STRATEGY.md) ergänzt diese bisherige Umsetzungshistorie. Die zwei dort beschriebenen Fehler bei konkurrierenden Änderungen sind in 0.3.2 korrigiert; weitere Pro-Funktionen bleiben geplant.
+Diese Roadmap führt die bisherige Umsetzungshistorie fort. Die zwei früher dokumentierten Fehler bei konkurrierenden Änderungen sind seit 0.3.2 korrigiert; der weitere Funktionsausbau bleibt geplant.
 
 ## Diagnoseausbau 0.4.0
 
 Messvertrag und erste Akku-/Mac-Diagnose implementiert; Langzeitverlauf, Ressourcen, Hinweise und Prüffragen zunächst mit begrenztem Umfang. [Paketstand D0–D6 und nächste Schritte](docs/DIAGNOSTICS_PLAN.md), [Datenvertrag und Abnahmegrenzen](docs/diagnostics-0.4.md), [Journey](docs/JOURNEY.md). Physische Gerätevalidierung bleibt Voraussetzung für belastbare Freigabe.
 
-## Nächste Umsetzung: Funktionsumfang aus AlDente Pro
+## Nächste Umsetzung: eigener Funktionsausbau
 
-Diese Roadmap beschreibt eigene B-Guard-Implementierungen anhand der [offiziellen Funktionsseite](https://apphousekitchen.com/aldente-overview/features/) und der [Preisübersicht](https://apphousekitchen.com/de/aldente/preisgestaltung/), geprüft am 4. Oktober 2026. Die Pakete beschreiben Zielumfang und Abnahme; der aktuelle Softwarestand steht in der folgenden Tabelle. Es gibt keine festen Veröffentlichungstermine. B-Guard bleibt kostenlos und MIT Open Source. Die weiter unten dokumentierte Umsetzungshistorie bleibt erhalten. Für die nächste Arbeit gilt die Reihenfolge hier; sie aktualisiert die ältere Reihenfolge in [STRATEGY.md](docs/STRATEGY.md).
+Diese Roadmap beschreibt eigene B-Guard-Implementierungen und deren Abnahmekriterien, Stand 18. Oktober 2026. Die Pakete beschreiben Zielumfang und Abnahme; der aktuelle Softwarestand steht in der folgenden Tabelle. Es gibt keine festen Veröffentlichungstermine. B-Guard bleibt kostenlos und MIT Open Source. Die weiter unten dokumentierte Umsetzungshistorie bleibt erhalten.
 
 ### Aktueller Paketstand und nächste Abnahme
 
-| Paket | Softwarestand 0.3.7 | Noch offen |
+| Paket | Softwarestand 0.4.1 | Noch offen |
 | --- | --- | --- |
 | P1 | Energiefluss und optionaler Hardware-Ladestand implementiert | Weitere physische Quellen-/Zustandsvergleiche |
 | P2 | Lesende und steuernde App Intents experimentell implementiert | Auffindbarkeit und Ausführung in Apples Kurzbefehle-App |
@@ -108,7 +108,7 @@ Für den weiteren Ausbau zur belastbaren Akku- und Mac-Diagnostik gilt der separ
 
 - Offene REST-Abnahme: acht langsame Verbindungen, Ablehnung der neunten, Freigabe nach Deadline und keine nachträgliche gespeicherte Aktion.
 - macOS-CI für relevante Tests, Release-Build, Shell- und Bundleprüfung; Diagnoseexport ohne Token, Seriennummern, persönliche Pfade oder genaue Reisezeiten.
-- Developer-ID/Notarisierung separat praktisch abnehmen, sobald ein Zertifikat verfügbar ist. E-Mail-Support ist kein kopierbares Softwaremerkmal; Issues und Diagnose bleiben der aktuelle Supportweg.
+- Developer-ID/Notarisierung separat praktisch abnehmen, sobald ein Zertifikat verfügbar ist. E-Mail-Support gehört nicht zum Funktionsumfang der App; Issues und Diagnose bleiben der aktuelle Supportweg.
 - `agy` mit `gemini-3.8-flash-high` und effort high für kleine isolierte Programmieraufträge verwenden; Streaming-Fortschritt kontrollieren, anschließend Code selbst reviewen und erforderliche Tests ausführen. Agenten veröffentlichen oder installieren nicht eigenständig.
 - Pro freigegebenem Paket: Roadmap und Changelog aktualisieren, App-/Dienstversion passend setzen, Einstellungen und Verlauf erhalten, DMG bauen/verifizieren und GitHub/Website aktualisieren. Hardwarewirkung nur dort zusagen, wo sie belegt ist.
 
@@ -176,7 +176,7 @@ Keine garantierten Lebensdauer- oder Verschleißprognosen, keine Telemetrie und 
 - Umsetzung durch Codex nach zwei agy-Aufträgen mit `gemini-3.8-flash-high` / high: beide endeten per Timeout ohne Codeänderungen. Keine ungeprüften Agentenänderungen übernommen.
 - Validierung: 90 Tests in 13 Suiten erfolgreich. Hintergrunddienst 0.3.2 erforderlich. Bestehende Einstellungen bleiben erhalten.
 
-## Komfort aus dem Pro-Funktionsvergleich · umgesetzt in 0.3.3
+## Komfortfunktionen · umgesetzt in 0.3.3
 
 - Konfigurierbare Menüleiste: Symbol, Prozent, Temperatur oder Akku-Leistung mit monochromem Ladering, gespeichertem Modus und VoiceOver-Zusammenfassung.
 - Optional zuschaltbare Messwerte im Menüfenster: Temperatur, Akku-Leistung und Gesundheit. Alle Steueraktionen bleiben erreichbar; lange Menüs sind scrollbar.

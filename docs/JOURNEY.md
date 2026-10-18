@@ -68,3 +68,28 @@ Weitere Informationen und Datenvertrag: [diagnostics-0.4.md](diagnostics-0.4.md)
 ## 6. Oktober 2026 · 0.4.1
 
 Diagnose-Erweiterung aus dem bereits zusammengeführten 0.4.0-Stand erhalten. Veraltete Profilfenster können fremde Änderungen nicht mehr still überschreiben; Sperre, Dateistandprüfung, Neuladen und Import-Sicherung ergänzt. Kapazitätsdateien vor großen Allokationen begrenzt lesen; fehlende Pfade von Zugriffsfehlern unterscheiden. 315 Swift-Tests und acht Journaltests lokal bestanden, vollständige macOS-CI erfolgreich. [Konkreter Review und Releasebelege](review-2026-10-06.md). Dienstupdate auf 0.4.0 und ursprüngliche System-/Hardwareabnahmen weiterhin offen.
+
+## 18. Oktober 2026 · Arbeits-Roadmap N1–N6
+
+Basis-Commit `8e194edd97ef05769f377b7e4295fc59c2c8075d`; App 0.4.1, Dienst 0.4.0 auf dem Referenz-Mac (MacBookPro18,3, macOS 27.0/26A428).
+
+Nutzerziel: prüfen, ob B-Guard fertig ist, und die daraus abgeleitete Roadmap ohne weitere Rückfragen abarbeiten. Die Arbeit ist in [ROADMAP-2026-10-18.md](ROADMAP-2026-10-18.md) mit Befunden dokumentiert.
+
+- N1: Veraltete `String(cString:)`-API in `SystemDiagnosticsReader` durch begrenzte UTF-8-Dekodierung ersetzt; vier Regressionstests für Nullterminierung, frühen Nullbyte, vollen Puffer und leeren Puffer. `swift test`: 216 Tests in 31 Suiten bestanden. `swift build -c release`: ohne Warnungen und Fehler.
+- N2: Der laufende Dienst war 0.3.2 und wurde auf 0.4.0 aktualisiert. `config.json` blieb erhalten (75–80 %, Auto, aktiv); `status.json` meldet Schema v1, native Grenze 80 und nur `CHIE`. Der Zustand `disabled` ist auf diesem Gerät erwartet, weil ein externer Monitor verbunden ist und keine separate Ladesperre existiert.
+- N3: `ConfigServer`, `ConfigIPC`, `UpdateStore`, die SMC-Schreib-/Readback-Pfade und die `Controller`-Zustandsübergänge vollständig gelesen. Keine funktionalen Mängel. Bewusst akzeptierte Randfälle: fehlender Rollback zwischen `CH0B`/`CH0C`, kosmetische LED-Fehler ohne Einfluss auf den Ladezustand, Planauswertung mit Rohkonfiguration vor `config.effective(at:)`.
+- N4: Vorschauen für hell, dunkel, klein (780 × 600), leeren Verlauf, Offline, Schreibtischprofil, Hitzeschutz sowie Menüfenster mit Karten gerendert und gesichtet. Keine horizontalen Abschneidungen oder fehlenden Zustände; Kontrast in Dunkelansicht geprüft. Die scheinbaren Randabschneidungen im Menü-Render entstehen durch die vom Renderer erzwungene feste Höhe, nicht durch das Layout.
+- N5: Erste Journalsession `2026-10-18-mac01` mit tatsächlicher Umgebung angelegt. Zum Zeitpunkt der Anlage 25 Fälle erfasst: 23 `blocked`, 2 `not_run`, 0 `passed`, 0 Simulationen. [Bericht](validation/sessions/2026-10-18-mac01/report.md). Das Journal belegt ausdrücklich keine Hardware-, System- oder Release-Abnahme.
+- N6: Dieser Eintrag, Roadmap-Kopf/Paketstand und der Validierungs-README-Stand nachgezogen.
+- N7, R01: Release-Build ohne Warnungen, gültige ad-hoc-Signatur, fünf App-Intents, DMG und SHA-256-Prüfsumme belegt; `hdiutil verify` VALID. [Beleg](validation/sessions/2026-10-18-mac01/R01-community-build.txt).
+- N7, S01: „Akkustatus lesen“ und „Ladeaktion ausführen“ im Aktionskatalog der Kurzbefehle-App gefunden. [Beleg](validation/sessions/2026-10-18-mac01/S01-shortcuts-discovery.txt).
+- N7, offizielle DMG: Release-Asset v0.4.1 geprüft; App-Version 0.4.1, `arm64`, macOS 14.0+, ad-hoc signiert. Veröffentlichte SHA-256 `0e5a74f5…` stimmt, `hdiutil verify` VALID.
+
+Offen bleiben H01–H11 (physische Hardware), S02–S08 (Bedienung der Kurzbefehle), T01 (Zeitplan/Sleep), U01 (Tastatur/VoiceOver), R02–R04 (Developer-ID, Notarisierung, sauberes Testkonto, Update/Entfernen) sowie die gesperrten LED- und Kalibrierungsmodi. Es ist nur eine Apple-Development-Identität vorhanden. R01 belegt den lokalen Community-Build, nicht die Notarisierung.
+
+## 18. Oktober 2026 · Öffentliche Darstellung bereinigt
+
+- README und ROADMAP von Wettbewerbs- und Fremdcode-Bezügen befreit; die technische Referenzliste ist neutral als Hardwarequellen benannt, der Anwendungscode bleibt eine eigenständige Swift-Implementierung.
+- Reine Wettbewerbs-, Preis- und Fremdcode-Recherchen aus dem öffentlichen Repo entfernt und lokal unter `~/BatteryGuard-private/` aufbewahrt: `STRATEGY.md`, `competitors-commercial.md`, `competitors-opensource.md`, `research-oss.md`, `competitive-features-2026-10-04.md`, `market-pricing-2026-10-04.md`. Die Git-Historie bleibt unverändert.
+- Website und offizieller Download geprüft: `https://darkspike1988.github.io/BatteryGuard/` liefert HTTP 200, zeigt Version 0.4.1 und verlinkt `releases/latest/download/B-Guard.dmg`; das Release-Asset ist vorhanden und seine Prüfsumme stimmt.
+- Verbleibende N7-Blöcke sind oben dokumentiert; es wird keine Abnahme vorgetäuscht.

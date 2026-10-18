@@ -4,7 +4,7 @@ Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen
 
 [Website](https://darkspike1988.github.io/BatteryGuard/) · [DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg) · [GitHub](https://github.com/darkspike1988/BatteryGuard)
 
-Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md). Der [Schlachtplan](docs/STRATEGY.md) enthält die aktuelle Review, Marktanalyse, Bezahlmodelle und den Abgleich mit AlDente Pro.
+Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md).
 
 ## Abnahme, Journey und Ausbauplan
 
@@ -63,7 +63,7 @@ Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht a
 2. DMG öffnen und **B-Guard auf „Programme“ ziehen**.
 3. B-Guard aus Programme öffnen und **„B-Guard einrichten“** wählen. macOS fragt einmal nach einem Administratorpasswort für den Hintergrunddienst.
 
-Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz ein-/ausschalten, zeitlich pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz ausschalten“ gibt das Laden bis zur erneuten Aktivierung frei. Zeitliche Pausen enden automatisch.
+Die veröffentlichte SHA-256-Prüfsumme liegt im selben Release als [`B-Guard.dmg.sha256`](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg.sha256). Voraussetzungen: **Apple Silicon und macOS 14 oder neuer**. Die Menüleiste bietet Ladeprofil-Auswahl, eigene Ladegrenzen, Schutz ein-/ausschalten, zeitlich pausieren und Beenden. Eine Profilwahl aktiviert B-Guard im Auto-Modus, falls zuvor nur macOS beobachtet wurde, und beendet laufendes Vollladen. Zukünftige Reisepläne bleiben erhalten. „Beenden“ schließt die App; der Dienst läuft weiter. „Schutz ausschalten“ gibt das Laden bis zur erneuten Aktivierung frei. Zeitliche Pausen enden automatisch.
 
 Diese Community-Version ist ad-hoc signiert und **nicht notarisiert**. macOS kann den ersten Start blockieren. Falls du der heruntergeladenen App vertraust, lässt sie sich nach einem Öffnungsversuch unter **Systemeinstellungen → Datenschutz & Sicherheit → Dennoch öffnen** freigeben. [Anleitung von Apple](https://support.apple.com/102445). Für eine Installation ohne diese zusätzliche Freigabe werden Developer-ID-Signierung und Notarisierung benötigt.
 
@@ -126,9 +126,9 @@ sudo ./scripts/uninstall-daemon.sh
 
 `--purge` am Daemon-Uninstaller löscht zusätzlich die Systemkonfiguration und Dienstlogs, aber nicht den Benutzerverlauf. Ohne Dienst übernimmt macOS wieder die Ladesteuerung.
 
-## Lizenz und Inspiration
+## Lizenz und technische Referenzen
 
-MIT. Hardware-Erkenntnisse der Community: [actuallymentor/battery](https://github.com/actuallymentor/battery), [charlie0129/batt](https://github.com/charlie0129/batt), [mhaeuser/Battery-Toolkit](https://github.com/mhaeuser/Battery-Toolkit), [robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [isliliming/power-flow-lite](https://github.com/isliliming/power-flow-lite) (dokumentieren praktische Einheiten, keinen offiziellen Apple-Vertrag). Der Anwendungscode ist eine eigenständige Swift-Implementierung.
+MIT. Die folgenden öffentlichen Projekte dokumentieren praktische Einheiten und beobachtetes Hardwareverhalten, keinen offiziellen Apple-Vertrag: [actuallymentor/battery](https://github.com/actuallymentor/battery), [charlie0129/batt](https://github.com/charlie0129/batt), [mhaeuser/Battery-Toolkit](https://github.com/mhaeuser/Battery-Toolkit), [robzr Gist](https://gist.github.com/robzr/2abf9c7e7f576d8af00d90b671489b48) und [isliliming/power-flow-lite](https://github.com/isliliming/power-flow-lite). Der Anwendungscode ist eine eigenständige Swift-Implementierung.
 
 Designreferenz: [Apple Human Interface Guidelines für macOS](https://developer.apple.com/design/human-interface-guidelines/designing-for-macos/). Native macOS-Funktionen: [Apple Support zum Ladelimit](https://support.apple.com/en-au/102338).
 

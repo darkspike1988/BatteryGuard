@@ -27,6 +27,7 @@ __pycache__/
 
 # Logs & Temporary Files
 *.log
+*.json.lock
 /var/log/batteryguard.log
 
 # Local browser review artifacts

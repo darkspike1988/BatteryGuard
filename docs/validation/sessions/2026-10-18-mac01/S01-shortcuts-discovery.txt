@@ -1,0 +1,18 @@
+S01 Kurzbefehle entdecken — 18. Oktober 2026
+
+App 0.4.1, Commit 8e194edd97ef05769f377b7e4295fc59c2c8075d, macOS 27.0/26A428.
+
+Geprüft im Aktionskatalog der Kurzbefehle-App (Editorfenster, Suchfeld „Aktionen suchen“):
+
+- Suche „Akkustatus“ → Treffer „Akkustatus lesen“.
+- Suche „Ladeaktion“ → Treffer „Ladeaktion ausführen“.
+
+Im Release-Bundle enthaltene App-Intents-Metadaten:
+
+- ApplySavedProfileIntent — Gespeichertes Ladeprofil anwenden
+- PerformChargingActionIntent — Ladeaktion ausführen
+- ReadBatteryStatusIntent — Akkustatus lesen
+- ReadChargingConfigurationIntent — Ladeprofil und Aufträge lesen
+- ReadPowerFlowIntent — Energiefluss lesen
+
+Die Sichtprüfung erfolgte lokal am 18.10.2026. Der Screenshot wird nicht ins Repository übernommen, weil er lokale Kurzbefehlsnamen enthalten kann.

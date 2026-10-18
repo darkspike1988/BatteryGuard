@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "sessionID": "mac01-0.4.1-20261018",
+    "deviceID": "mac01",
+    "model": "MacBookPro18,3",
+    "chip": "Apple M1 Pro",
+    "macOSVersion": "27.0",
+    "macOSBuild": "26A428",
+    "firmware": "20457.1.29",
+    "appVersion": "0.4.1",
+    "daemonVersion": "0.4.0",
+    "commit": "8e194edd97ef05769f377b7e4295fc59c2c8075d",
+    "adapter": "67W USB-C Power Adapter (65 W)",
+    "connection": "USB-C",
+    "externalDisplay": "yes",
+    "lid": "open"
+  },
+  "records": [
+    {
+      "caseID": "H01",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Auto-Profil mit oberem Limit am Netzteil beobachten; Ladezeitreihe und Status prüfen.",
+      "observed": "Nicht ausgeführt: autonome Sitzung ohne physische Hardwarebeobachtung.",
+      "evidence": []
+    },
+    {
+      "caseID": "H02",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Ohne separate Ladesperre Pendelbetrieb über den Adapter-Fallback beobachten.",
+      "observed": "Nicht ausgeführt: physische Beobachtung und Absteckvorgang erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H03",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Externen Monitor verbinden und Status sowie nativen Fallback vor/nach dem Wechsel vergleichen.",
+      "observed": "Monitor ist verbunden, aber der dokumentierte Vorher-/Nachher-Ablauf wurde nicht durchgeführt.",
+      "evidence": []
+    },
+    {
+      "caseID": "H04",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Deckel schließen und öffnen; Monitor- und Stromversorgung beobachten.",
+      "observed": "Nicht ausgeführt: physische Deckelaktion erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H05",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Mac schlafen lassen und aufwecken; Freigabe vor Schlaf und frische Prüfung danach belegen.",
+      "observed": "Nicht ausgeführt: Schlaf-/Wachablauf mit Beobachtung erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H06",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Top Up starten; abstecken; USB-C und Dock getrennt prüfen; Basisprofil prüfen.",
+      "observed": "Nicht ausgeführt: physische Anschlusswechsel erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H07",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "App beenden, Dienst weiter beobachten, App neu starten.",
+      "observed": "Nicht ausgeführt: Dienst-/App-Neustart mit Verlaufsbeobachtung erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H08",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Mit zwei Testkonten den Konsolenbenutzer wechseln und eine Speicheraktion prüfen.",
+      "observed": "Nicht ausgeführt: zweites Testkonto und Benutzerwechsel erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H09",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Energiefluss beim Laden und Entladen beobachten; Vorzeichen, Zeitstempel und fehlende Werte prüfen.",
+      "observed": "Nicht ausgeführt: physische Lade-/Entladevorgänge und Zeitreihe erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H10",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Natives macOS-Limit und B-Guard-Ziel vergleichen; Apples Einstellung unverändert lassen.",
+      "observed": "Nicht ausgeführt: kontrollierte Limitänderung und Beobachtung erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "H11",
+      "basis": "physical",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Befristete Wachhaltung starten; Ziel, Abstecken, Frist und Abbruch getrennt beobachten.",
+      "observed": "Nicht ausgeführt: physische Aktion und geeignetes Backend erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "S01",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "In Apples Kurzbefehle-App nach B-Guard-Aktionen suchen.",
+      "observed": "Nicht ausgeführt: Bedienung in der Kurzbefehle-App erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "S02",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:05+00:00",
+      "steps": "Kurzbefehl bei geschlossener Oberfläche ausführen und JSON prüfen.",
+      "observed": "Nicht ausgeführt: Kurzbefehle-App erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "S03",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Profil über einen Kurzbefehl schreiben und Ausgangsprofil wiederherstellen.",
+      "observed": "Nicht ausgeführt: Kurzbefehle-App und getrennte Hardwarewirkungsprüfung erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "S04",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Pause und Fortsetzen per Kurzbefehl prüfen und Ausgangszustand herstellen.",
+      "observed": "Nicht ausgeführt: Kurzbefehle-App erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "S05",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Halten, Einmalentladung und Kalibrierung ohne bestätigtes Backend auslösen.",
+      "observed": "Nicht ausgeführt: Kurzbefehle-App erforderlich; Ablehnungspfade sind nur durch Swift-Tests abgedeckt.",
+      "evidence": []
+    },
+    {
+      "caseID": "S06",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Schreibaktion bei fehlendem oder veraltetem Dienst prüfen.",
+      "observed": "Nicht ausgeführt: absichtliches Dienst-Downgrade auf dem Alltagsgerät ist ausgeschlossen.",
+      "evidence": []
+    },
+    {
+      "caseID": "S07",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "UI, API und Kurzbefehl konkurrierend auslösen und die Reihenfolge dokumentieren.",
+      "observed": "Nicht ausgeführt: parallele Bedienung mehrerer Schnittstellen erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "S08",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Gespeichertes Profil löschen und Anwendung prüfen.",
+      "observed": "Nicht ausgeführt: Kurzbefehle-App und Profilverwaltung erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "R01",
+      "basis": "release",
+      "result": "not_run",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Community-Tests, Release-Bundle, Intent-Metadaten, codesign und DMG prüfen.",
+      "observed": "In dieser Sitzung nicht erneut durchgeführt; swift test und swift build -c release waren grün, Bundle-/DMG-Prüfungen wurden nicht verifiziert.",
+      "evidence": []
+    },
+    {
+      "caseID": "R02",
+      "basis": "release",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Developer-ID- und Notarisierungsablauf vollständig ausführen.",
+      "observed": "Blockiert: kein Developer-ID-Zertifikat und kein notarytool-Profil in dieser Sitzung.",
+      "evidence": []
+    },
+    {
+      "caseID": "R03",
+      "basis": "release",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Finale DMG mit Quarantäne auf einem sauberen Testkonto installieren.",
+      "observed": "Blockiert: frisches Testkonto und Browser-Download fehlen.",
+      "evidence": []
+    },
+    {
+      "caseID": "R04",
+      "basis": "release",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Vorversion aktualisieren und anschließend die Entfernung prüfen.",
+      "observed": "Blockiert: erfordert kontrollierte Vorversion und Entfernung der Installation.",
+      "evidence": []
+    },
+    {
+      "caseID": "T01",
+      "basis": "system",
+      "result": "blocked",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Temporären Profilzeitplan anlegen, Oberfläche beenden, gespeichertes Dienstresultat prüfen.",
+      "observed": "Nicht ausgeführt: Zeitplan-, Schlaf-/Wach- und Bedienablauf erforderlich.",
+      "evidence": []
+    },
+    {
+      "caseID": "U01",
+      "basis": "system",
+      "result": "not_run",
+      "testedAt": "2026-10-18T09:25:06+00:00",
+      "steps": "Alle Menükarten und geringe Fensterhöhe mit Tastatur und VoiceOver prüfen.",
+      "observed": "Nicht ausgeführt: interaktive Tastatur-/VoiceOver-Prüfung; statische Vorschauen wurden separat gesichtet.",
+      "evidence": []
+    },
+    {
+      "caseID": "R01",
+      "basis": "release",
+      "result": "passed",
+      "testedAt": "2026-10-18T09:48:40+00:00",
+      "steps": "Community-Tests, Release-Bundle, App-Intents-Metadaten, codesign und DMG prüfen.",
+      "observed": "swift test 216 Tests in 31 Suiten bestanden; Release-Build ohne Warnungen; codesign --verify --deep --strict erfolgreich (adhoc); alle fünf App-Intents-Metadaten vorhanden; DMG erstellt, hdiutil verify VALID, SHA-256 stimmt mit Prüfsummendatei überein.",
+      "evidence": [
+        "docs/validation/sessions/2026-10-18-mac01/R01-community-build.txt"
+      ]
+    },
+    {
+      "caseID": "S01",
+      "basis": "system",
+      "result": "passed",
+      "testedAt": "2026-10-18T09:48:40+00:00",
+      "steps": "In Apples Kurzbefehle-App nach B-Guard-Aktionen suchen.",
+      "observed": "Aktionskatalog findet 'Akkustatus lesen' bei Suche 'Akkustatus' und 'Ladeaktion ausführen' bei Suche 'Ladeaktion'.",
+      "evidence": [
+        "docs/validation/sessions/2026-10-18-mac01/S01-shortcuts-discovery.txt"
+      ]
+    }
+  ]
+}

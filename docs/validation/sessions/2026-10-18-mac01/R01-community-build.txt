@@ -1,0 +1,33 @@
+R01 Community-Build — 18. Oktober 2026
+Commit: 8e194edd97ef05769f377b7e4295fc59c2c8075d
+
+== swift test ==
+216 Tests in 31 Suiten bestanden (Swift Testing, Lauf 18.10.2026).
+
+== swift build -c release ==
+Build complete, keine Warnungen oder Fehler.
+
+== codesign --verify --deep --strict dist/B-Guard.app ==
+Signatur gültig (Exit 0).
+
+== codesign -dv --verbose=4 dist/B-Guard.app ==
+Identifier=com.batteryguard.app
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20400 size=11533 flags=0x2(adhoc) hashes=354+3 location=embedded
+Signature=adhoc
+TeamIdentifier=not set
+Sealed Resources version=2 rules=13 files=6
+
+== App-Intents-Metadaten ==
+-rw-r--r--@ 1 user  staff  13904 18 Okt. 11:43 dist/B-Guard.app/Contents/Resources/Metadata.appintents/extract.actionsdata
+actions: ApplySavedProfileIntent, PerformChargingActionIntent, ReadBatteryStatusIntent, ReadChargingConfigurationIntent, ReadPowerFlowIntent
+autoShortcuts: ReadBatteryStatusIntent, ReadPowerFlowIntent
+
+== DMG ==
+-rw-r--r--@ 1 user  staff  2576503 18 Okt. 11:43 dist/B-Guard-0.4.1-arm64.dmg
+ecfc6709e6fae8cebf78a7ec82251341390acee2bba4938065b4952af2de2320  dist/B-Guard-0.4.1-arm64.dmg
+Hashes identisch: ja
+hdiutil verify: VALID (siehe Build-Protokoll).
+
+== Dienstversion im Release-Bundle ==
+Der Hintergrunddienst benötigt Root-Rechte. Für lesende Diagnose --once verwenden.
