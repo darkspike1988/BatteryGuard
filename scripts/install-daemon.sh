@@ -74,10 +74,26 @@ launchctl bootout "system/${SERVICE_LABEL}" 2>/dev/null || launchctl bootout sys
 
 # 3. Zielverzeichnis anlegen und Binary kopieren
 echo "--> Kopiere Binary nach $TARGET_BINARY..."
-mkdir -p "$(dirname "$TARGET_BINARY")"
-cp -f "$DAEMON_SRC" "$TARGET_BINARY"
-chown root:wheel "$TARGET_BINARY"
-chmod 0755 "$TARGET_BINARY"
+BINARY_DIR="$(dirname "$TARGET_BINARY")"
+mkdir -p "$BINARY_DIR"
+# Root-Binary darf nur in einem root-eigenen, nicht schreibbaren Verzeichnis liegen.
+if [[ -L "$BINARY_DIR" ]] || [[ "$(stat -f '%u' "$BINARY_DIR")" != "0" ]] \
+   || [[ "$(( 8#$(stat -f '%Lp' "$BINARY_DIR") & 8#022 ))" != "0" ]]; then
+    echo "Fehler: $BINARY_DIR ist kein sicheres, root-eigenes Verzeichnis." >&2
+    exit 1
+fi
+if [[ -L "$TARGET_BINARY" ]] || [[ -e "$TARGET_BINARY" && ! -f "$TARGET_BINARY" ]]; then
+    echo "Fehler: $TARGET_BINARY ist keine reguläre Datei." >&2
+    exit 1
+fi
+# Atomar ersetzen, damit kein Symlink/Zwischenzustand ausgenutzt werden kann.
+BINARY_STAGE=$(mktemp "$BINARY_DIR/.batteryguardd.XXXXXX")
+trap 'rm -f "$BINARY_STAGE"' EXIT
+cat "$DAEMON_SRC" > "$BINARY_STAGE"
+chown root:wheel "$BINARY_STAGE"
+chmod 0755 "$BINARY_STAGE"
+mv -f "$BINARY_STAGE" "$TARGET_BINARY"
+trap - EXIT
 
 # Quarantäne-Attribut entfernen (z. B. bei Download oder unbestätigter Signatur)
 xattr -d com.apple.quarantine "$TARGET_BINARY" 2>/dev/null || true
