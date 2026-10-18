@@ -1,0 +1,41 @@
+R01 Community-Build 0.4.2 — 18. Oktober 2026
+Commit: 72b437a
+
+== swift test ==
+219 Tests in 32 Suiten bestanden (Swift Testing, Lauf 18.10.2026).
+
+== swift build -c release ==
+Build complete, keine Warnungen oder Fehler.
+
+== codesign --verify --deep --strict dist/B-Guard.app ==
+Signatur gültig (Exit 0).
+
+== codesign -dv --verbose=4 dist/B-Guard.app ==
+Identifier=com.batteryguard.app
+Format=app bundle with Mach-O thin (arm64)
+Signature=adhoc
+TeamIdentifier=not set
+Sealed Resources version=2 rules=13 files=9
+
+== Bundle-Sprachen ==
+CFBundleLocalizations: de, en, ru
+Ressourcen: de.lproj, en.lproj, ru.lproj
+
+== App-Intents-Metadaten ==
+-rw-r--r--@ 1 user  staff  13904 18 Okt. 15:42 dist/B-Guard.app/Contents/Resources/Metadata.appintents/extract.actionsdata
+actions: ApplySavedProfileIntent, PerformChargingActionIntent, ReadBatteryStatusIntent, ReadChargingConfigurationIntent, ReadPowerFlowIntent
+autoShortcuts: ReadBatteryStatusIntent, ReadPowerFlowIntent
+
+== DMG ==
+-rw-r--r--@ 1 user  staff  2674904 18 Okt. 15:42 dist/B-Guard-0.4.2-arm64.dmg
+64ffe0517f05d689b3b29c93a06f3b459344a799a42e9c9dbdd80155496e9869  dist/B-Guard-0.4.2-arm64.dmg
+Hashes identisch: ja
+hdiutil verify: VALID (siehe Build-Protokoll).
+
+== DMG-Inhalt ==
+Eingehängt schreibgeschützt: B-Guard.app, Programme-Link, Installation.txt.
+App-Version 0.4.2, CFBundleVersion 0.4.2, LSMinimumSystemVersion 14.0, arm64, ad-hoc signiert.
+App aus der DMG gestartet und Vorschauen mit -AppleLanguages '(ru)' gerendert; Übersicht und Navigation erscheinen russisch.
+
+== Dienstversion im Release-Bundle ==
+Der Hintergrunddienst benötigt Root-Rechte. Für lesende Diagnose --once verwenden.

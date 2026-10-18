@@ -108,7 +108,7 @@ Offen bleiben H01–H11 (physische Hardware), S02–S08 (Bedienung der Kurzbefeh
 ## 18. Oktober 2026 · Version 0.4.2 veröffentlicht
 
 - App 0.4.2 enthält die Lokalisierung; Hintergrunddienst bleibt 0.4.0. Ein älterer Dienst muss über den macOS-Administratordialog aktualisiert werden.
-- Community-Build ohne Warnungen, gültige ad-hoc-Signatur (`com.batteryguard.app`, `arm64`, macOS 14.0+), fünf App-Intents und `Metadata.appintents` vorhanden.
+- Community-Build ohne Warnungen, gültige ad-hoc-Signatur (`com.batteryguard.app`, `arm64`, macOS 14.0+), fünf App-Intents und `Metadata.appintents` vorhanden. [Beleg](validation/sessions/2026-10-18-mac01/R01-community-build-0.4.2.txt).
 - DMG `B-Guard-0.4.2-arm64.dmg` erstellt, `hdiutil verify` VALID. Veröffentlichte SHA-256 `64ffe0517f05d689b3b29c93a06f3b459344a799a42e9c9dbdd80155496e9869`.
 - App aus der eingehängten DMG gestartet und Vorschauen mit `-AppleLanguages '(ru)'` gerendert; Übersicht und Seitennavigation erscheinen vollständig russisch.
 - Die offenen N7-Punkte (physische Hardware, Kurzbefehle-Bedienung, Developer-ID/Notarisierung) bleiben unverändert blockiert und werden nicht als bestanden gezählt.
