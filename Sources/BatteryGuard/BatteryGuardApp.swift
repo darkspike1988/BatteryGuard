@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Self.updateStore?.startAutomaticChecks()
         Self.apiStore?.startIfEnabled()
         guard AppPresence.isRunningFromBundle,
-              !FileManager.default.fileExists(atPath: BGPaths.daemonBinary) else { return }
+              !ServiceManager.isDaemonInstalled else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = L("B-Guard einrichten")
