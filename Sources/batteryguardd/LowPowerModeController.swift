@@ -1,62 +1,118 @@
 import Foundation
 import BatteryGuardShared
 
-/// Applies the public `pmset lowpowermode` setting when the user opted in.
-/// It deliberately never touches any private SMC key.
+/// Applies the public `pmset -b lowpowermode` setting when the user opted in.
+/// macOS then switches Low Power Mode with the power source by itself, exactly like
+/// System Settings → Battery → Low Power Mode → "Only on Battery". The setting for
+/// power adapter (`-c`) is never touched, and the previous battery value is restored
+/// when the option is turned off. It deliberately never touches any private SMC key.
 final class LowPowerModeController {
     struct Driver {
-        var apply: (Bool) -> Bool
+        /// Current battery-power value from `pmset -g custom`, nil if unknown.
+        var readBattery: () -> Bool?
+        /// Sets `pmset -b lowpowermode`.
+        var applyBattery: (Bool) -> Bool
+        /// Battery value from before B-Guard changed it; survives daemon restarts.
+        var loadSaved: () -> Bool?
+        var save: (Bool?) -> Void
+
         static var system: Driver {
-            Driver { enabled in
-                let value = enabled ? "1" : "0"
-                for source in ["-b", "-c"] {
-                    let process = Process()
-                    process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
-                    process.arguments = [source, "lowpowermode", value]
-                    process.standardOutput = FileHandle.nullDevice
-                    process.standardError = FileHandle.nullDevice
-                    do {
-                        try process.run()
-                        process.waitUntilExit()
-                        guard process.terminationStatus == 0 else { return false }
-                    } catch { return false }
-                }
-                return true
-            }
+            let stateURL = URL(fileURLWithPath: BGPaths.directory)
+                .appendingPathComponent("lowpowermode-before.txt")
+            return Driver(
+                readBattery: {
+                    guard let output = run(["-g", "custom"]) else { return nil }
+                    return LowPowerModeController.batteryValue(inCustomSettings: output)
+                },
+                applyBattery: { run(["-b", "lowpowermode", $0 ? "1" : "0"]) != nil },
+                loadSaved: {
+                    guard let text = try? String(contentsOf: stateURL, encoding: .utf8) else { return nil }
+                    switch text.trimmingCharacters(in: .whitespacesAndNewlines) {
+                    case "1": return true
+                    case "0": return false
+                    default: return nil
+                    }
+                },
+                save: { value in
+                    if let value {
+                        try? Data((value ? "1" : "0").utf8).write(to: stateURL, options: .atomic)
+                    } else {
+                        try? FileManager.default.removeItem(at: stateURL)
+                    }
+                })
+        }
+
+        private static func run(_ arguments: [String]) -> String? {
+            let process = Process()
+            let output = Pipe()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+            process.arguments = arguments
+            process.standardOutput = output
+            process.standardError = FileHandle.nullDevice
+            do {
+                try process.run()
+                let data = output.fileHandleForReading.readDataToEndOfFile()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else { return nil }
+                return String(decoding: data, as: UTF8.self)
+            } catch { return nil }
         }
     }
 
     private let driver: Driver
-    private var lastApplied: Bool?
+    private var active = false
 
     init(driver: Driver = .system) { self.driver = driver }
 
-    func reconcile(config: BGConfig, pluggedIn: Bool, dryRun: Bool, logger: (String) -> Void) {
-        guard config.lowPowerModeOnBattery else {
-            if lastApplied != nil {
-                if dryRun {
-                    logger("[DRY-RUN] pmset lowpowermode 0 (Automatik aus)")
-                } else if driver.apply(false) {
-                    logger("Low Power Mode deaktiviert (Automatik aus).")
-                } else {
-                    logger("Low Power Mode konnte nicht zurückgesetzt werden.")
-                }
-                lastApplied = nil
+    /// Parses the "Battery Power:" section of `pmset -g custom`.
+    static func batteryValue(inCustomSettings output: String) -> Bool? {
+        var inBatterySection = false
+        for line in output.split(whereSeparator: \.isNewline) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasSuffix(":") {
+                inBatterySection = trimmed == "Battery Power:"
+                continue
+            }
+            guard inBatterySection else { continue }
+            let fields = trimmed.split(whereSeparator: \.isWhitespace)
+            if fields.count >= 2, fields[0] == "lowpowermode" { return fields[1] == "1" }
+        }
+        return nil
+    }
+
+    func reconcile(config: BGConfig, dryRun: Bool, logger: (String) -> Void) {
+        if config.lowPowerModeOnBattery {
+            guard !active else { return }
+            if dryRun {
+                logger("[DRY-RUN] pmset -b lowpowermode 1")
+                active = true
+                return
+            }
+            let current = driver.readBattery()
+            if driver.loadSaved() == nil { driver.save(current ?? false) }
+            if current == true {
+                active = true
+            } else if driver.applyBattery(true) {
+                active = true
+                logger("Low Power Mode auf Akkubetrieb aktiviert.")
+            } else {
+                logger("Low Power Mode konnte nicht aktiviert werden.")
             }
             return
         }
-        let desired = !pluggedIn
-        guard desired != lastApplied else { return }
         if dryRun {
-            logger("[DRY-RUN] pmset lowpowermode \(desired ? "1" : "0") (\(desired ? "Akku" : "Netzteil"))")
-            lastApplied = desired
+            if active { logger("[DRY-RUN] pmset -b lowpowermode zurücksetzen") }
+            active = false
             return
         }
-        if driver.apply(desired) {
-            lastApplied = desired
-            logger("Low Power Mode \(desired ? "aktiviert" : "deaktiviert") (\(desired ? "Akku" : "Netzteil")).")
+        active = false
+        // Only restore what B-Guard changed; without a saved value nothing is touched.
+        guard let previous = driver.loadSaved() else { return }
+        if previous || driver.applyBattery(false) {
+            driver.save(nil)
+            logger("Low Power Mode auf Akkubetrieb zurückgesetzt.")
         } else {
-            logger("Low Power Mode konnte nicht umgestellt werden.")
+            logger("Low Power Mode konnte nicht zurückgesetzt werden.")
         }
     }
 }

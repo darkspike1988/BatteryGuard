@@ -156,8 +156,8 @@ final class DaemonRunner: @unchecked Sendable {
         }
         dischargeSleep.reconcile(config: config, state: decision.state, now: now, dryRun: dryRun)
         if !isOnce {
-            lowPowerMode.reconcile(config: config, pluggedIn: battery.pluggedIn,
-                                   dryRun: dryRun, logger: { [weak self] msg in self?.log(msg) })
+            lowPowerMode.reconcile(config: config, dryRun: dryRun,
+                                   logger: { [weak self] msg in self?.log(msg) })
         }
 
         if !dryRun, let snapshot = storedConfig.calibrationPlan,
