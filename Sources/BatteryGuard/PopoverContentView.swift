@@ -152,7 +152,8 @@ struct PopoverContentView: View {
         }.frame(width: 370).frame(maxHeight: 700)
         .fixedSize(horizontal: false, vertical: true)
         .background(Color(nsColor: .windowBackgroundColor))
-        .onDisappear { configStore.flushPendingSave() }
+        .onAppear { statusStore.beginForeground() }
+        .onDisappear { statusStore.endForeground(); configStore.flushPendingSave() }
     }
 
     @ViewBuilder

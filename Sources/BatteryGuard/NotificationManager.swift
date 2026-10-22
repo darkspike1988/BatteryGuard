@@ -91,7 +91,8 @@ final class NotificationManager: Sendable {
             return
         }
         if status.percent >= 99, status.pluggedIn {
-            preferences.set(now, forKey: Key.lastFullCharge)
+            // Minutengenau reicht: nicht bei jeder Statusabfrage in UserDefaults schreiben.
+            if now.timeIntervalSince(lastFull) >= 60 { preferences.set(now, forKey: Key.lastFullCharge) }
             return
         }
         guard enabled, now.timeIntervalSince(lastFull) >= Self.calibrationInterval else { return }
@@ -106,7 +107,9 @@ final class NotificationManager: Sendable {
         guard let health = status.healthPercent else { return }
         let threshold = BatteryHealthAlertPolicy.threshold(from: preferences)
         if health >= threshold {
-            preferences.removeObject(forKey: Key.lastHealthAlert)
+            if preferences.object(forKey: Key.lastHealthAlert) != nil {
+                preferences.removeObject(forKey: Key.lastHealthAlert)
+            }
             return
         }
         guard enabled else { return }

@@ -2,48 +2,108 @@ import Foundation
 import Observation
 import BatteryGuardShared
 
+/// Verlauf als JSON Lines: Jede Messung hängt eine Zeile an. Die Datei wird nur bei
+/// Bedarf verdichtet (etwa einmal täglich), statt jede Minute komplett neu zu entstehen.
 actor HistoryRepository {
     let url: URL
+    /// Frühere Versionen speicherten ein JSON-Array; es wird einmalig übernommen.
+    let legacyURL: URL?
     private var samples: [BGHistorySample]?
+    private var linesInFile = 0
     private(set) var recoveryNotice: String?
+    /// Höchstens einen Tag veralteter Zeilen in der Datei behalten, dann verdichten.
+    static let compactionSlack = 1440
 
-    init(url: URL) { self.url = url }
+    init(url: URL, legacyURL: URL? = nil) {
+        self.url = url
+        self.legacyURL = legacyURL
+    }
 
     func load(now: Date = Date()) throws -> [BGHistorySample] {
         if let samples { return samples }
-        guard FileManager.default.fileExists(atPath: url.path) else {
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: url.path), let legacyURL, fileManager.fileExists(atPath: legacyURL.path) {
+            return try migrate(from: legacyURL, now: now)
+        }
+        guard fileManager.fileExists(atPath: url.path) else {
             samples = []
             return []
         }
         // Lesefehler (z. B. fehlende Rechte) dürfen keine vermeintliche Reparatur auslösen.
         let data = try Data(contentsOf: url)
+        let decoded = BGHistory.decodeLines(data)
+        if decoded.samples.isEmpty && decoded.invalidLines > 0 {
+            try quarantine(url)
+            samples = []
+            return []
+        }
+        let recent = BGHistory.recentSamples(decoded.samples, now: now)
+        samples = recent
+        linesInFile = decoded.lineCount
+        // Beschädigte oder abgeschnittene Zeilen nicht weiter mitschleppen.
+        if decoded.invalidLines > 0 || !decoded.endsCleanly { try rewrite(recent) }
+        return recent
+    }
+
+    private func migrate(from legacy: URL, now: Date) throws -> [BGHistorySample] {
+        let data = try Data(contentsOf: legacy)
         let loaded: [BGHistorySample]
         do {
             loaded = try BGJSON.decoder().decode([BGHistorySample].self, from: data)
         } catch is DecodingError {
-            let backup = url.deletingLastPathComponent()
-                .appendingPathComponent("history-recovery-\(UUID().uuidString).json")
-            // Erst sichern. Scheitert das Verschieben, bleibt die Originaldatei unangetastet.
-            try FileManager.default.moveItem(at: url, to: backup)
-            recoveryNotice = L("Beschädigter Verlauf wurde in %@ gesichert. Neue Messungen werden wieder aufgezeichnet.", backup.lastPathComponent)
+            try quarantine(legacy)
             samples = []
             return []
         }
         let recent = BGHistory.recentSamples(loaded, now: now)
+        try rewrite(recent)
+        try? FileManager.default.removeItem(at: legacy)
         samples = recent
         return recent
+    }
+
+    private func quarantine(_ file: URL) throws {
+        let backup = file.deletingLastPathComponent()
+            .appendingPathComponent("history-recovery-\(UUID().uuidString).json")
+        // Erst sichern. Scheitert das Verschieben, bleibt die Originaldatei unangetastet.
+        try FileManager.default.moveItem(at: file, to: backup)
+        recoveryNotice = L("Beschädigter Verlauf wurde in %@ gesichert. Neue Messungen werden wieder aufgezeichnet.", backup.lastPathComponent)
+    }
+
+    private func prepareDirectory() throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                               attributes: [.posixPermissions: 0o700])
+    }
+
+    private func rewrite(_ samples: [BGHistorySample]) throws {
+        try prepareDirectory()
+        try BGHistory.encodeLines(samples).write(to: url, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        linesInFile = samples.count
+    }
+
+    private func append(_ sample: BGHistorySample) throws {
+        try prepareDirectory()
+        let line = try BGHistory.encodeLine(sample)
+        let descriptor = open(url.path, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        defer { try? handle.close() }
+        try handle.write(contentsOf: line)
+        linesInFile += 1
     }
 
     func record(_ status: BGStatus, now: Date = Date()) throws -> [BGHistorySample] {
         let previous = try load(now: now)
         let next = BGHistory.recording(status, in: previous, now: now)
         guard next != previous else { return previous }
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
-                                               attributes: [.posixPermissions: 0o700])
-        let encoder = BGJSON.encoder()
-        encoder.outputFormatting = [.sortedKeys]
-        try encoder.encode(next).write(to: url, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        if let sample = next.last, BGHistory.isAppend(next, to: previous),
+           linesInFile < next.count + Self.compactionSlack,
+           FileManager.default.fileExists(atPath: url.path) {
+            try append(sample)
+        } else {
+            try rewrite(next)
+        }
         samples = next
         return next
     }
@@ -71,7 +131,8 @@ final class HistoryStore {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         capacityRepository = CapacityTrendRepository(url: base.appendingPathComponent("BatteryGuard/capacity-days.json"))
         longTermCapacityEnabled = preview ? !emptyPreview : UserDefaults.standard.bool(forKey: "BGuard.longTermCapacityEnabled")
-        repository = HistoryRepository(url: base.appendingPathComponent("BatteryGuard/history.json"))
+        repository = HistoryRepository(url: base.appendingPathComponent("BatteryGuard/history.jsonl"),
+                                       legacyURL: base.appendingPathComponent("BatteryGuard/history.json"))
         if preview {
             samples = emptyPreview ? [] : Self.previewSamples()
             capacityDays = emptyPreview ? [] : Self.previewCapacityDays()

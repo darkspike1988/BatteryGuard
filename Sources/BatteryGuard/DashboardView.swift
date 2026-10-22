@@ -57,7 +57,8 @@ struct DashboardView: View {
             .navigationTitle(L(page?.rawValue ?? "B-Guard"))
         }
         .frame(minWidth: 780, minHeight: 600)
-        .onDisappear { configStore.flushPendingSave() }
+        .onAppear { statusStore.beginForeground() }
+        .onDisappear { statusStore.endForeground(); configStore.flushPendingSave() }
     }
 }
 

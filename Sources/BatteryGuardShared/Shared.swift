@@ -11,6 +11,8 @@ public enum BGPaths {
     public static let daemonLabel = "com.batteryguard.daemon"
     public static let daemonPlist = "/Library/LaunchDaemons/com.batteryguard.daemon.plist"
     public static let daemonBinary = "/usr/local/libexec/batteryguardd"
+    /// Darwin-Benachrichtigung (notify(3)), die der Dienst nach jeder neuen status.json sendet.
+    public static let statusNotification = "com.batteryguard.status-changed"
 }
 
 /// Wie das Limit durchgesetzt wird.

@@ -121,6 +121,23 @@ struct PlanAndHistoryTests {
         #expect(decoded.nativeChargeLimit == nil)
     }
 
+    @Test func historyLinesRoundTripAndSkipDamagedLines() throws {
+        var s = BGStatus(); s.percent = 70
+        let samples = [0.0, 60, 120].map { offset -> BGHistorySample in
+            s.updatedAt = now.addingTimeInterval(offset); return BGHistorySample(status: s)
+        }
+        var data = try BGHistory.encodeLines(samples)
+        let clean = BGHistory.decodeLines(data)
+        #expect(clean.samples == samples && clean.lineCount == 3 && clean.invalidLines == 0 && clean.endsCleanly)
+        data.append(Data("{\"timestamp\":".utf8))
+        let damaged = BGHistory.decodeLines(data)
+        #expect(damaged.samples == samples && damaged.invalidLines == 1 && !damaged.endsCleanly)
+        #expect(BGHistory.isAppend(samples, to: Array(samples.dropLast())))
+        #expect(BGHistory.isAppend(Array(samples.dropFirst()), to: Array(samples.dropLast())))
+        #expect(!BGHistory.isAppend(samples, to: samples))
+        #expect(!BGHistory.isAppend(Array(samples.prefix(2)), to: [samples[0], samples[2]]))
+    }
+
     @Test func statusFromNewerDaemonStaysReadable() throws {
         var status = BGStatus(); status.percent = 64; status.state = .holding
         var json = try JSONSerialization.jsonObject(with: BGJSON.encoder().encode(status)) as! [String: Any]
