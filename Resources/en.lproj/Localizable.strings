@@ -468,6 +468,7 @@
 "Kompakte Darstellung wählen; letzte Verlaufsmessung mit eindeutigem Zeitpunkt." = "Choose a compact layout; latest history measurement with a clear timestamp.";
 "Kompakte Kartendarstellung" = "Compact card layout";
 "Konfiguration konnte nicht gelesen werden: %@" = "Configuration could not be read: %@";
+"Änderung konnte nicht gespeichert werden und wurde verworfen: %@" = "Change could not be saved and was discarded: %@";
 "Kritisch laut macOS" = "Critical according to macOS";
 "LADEZIEL" = "CHARGE TARGET";
 "Lade bewusst. Bleib flexibel. Behalte den Überblick." = "Charge intentionally. Stay flexible. Keep the overview.";
