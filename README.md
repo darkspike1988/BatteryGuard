@@ -35,7 +35,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
 - **Mitteilungen:** Niedriger Akkustand mit eigener Warnschwelle (5–50 %, Standard 20 %), erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 - **Drei Sprachen:** Oberfläche auf Deutsch, Englisch oder Russisch. Die App folgt automatisch der macOS-Systemsprache.
-- **Automatik (ab 0.5.0, optional):** Monitorprofil bei externem Bildschirm, Low Power Mode auf Akkubetrieb über die öffentliche macOS-Einstellung und ein Schlafassistent, der nur während einer vom Dienst ausgelösten Entladung höchstens 30 Minuten wachhält.
+- **Automatik (ab 0.5.0, optional):** Monitorprofil bei externem Bildschirm, Low Power Mode auf Akkubetrieb über die öffentliche macOS-Einstellung (`pmset -b lowpowermode`, wie „Nur bei Batteriebetrieb“ in den Systemeinstellungen; beim Abschalten wird der vorherige Wert wiederhergestellt) und ein Schlafassistent, der nur während einer vom Dienst ausgelösten Entladung höchstens 30 Minuten wachhält.
 
 Eigene benannte Profile mit Import/Export und wiederkehrende Zeitpläne sind ab 0.3.7 umgesetzt. Die Regeln laufen im Hintergrunddienst; manuelle Ladeaktionen haben Vorrang. Top Up benötigt separate Ladesteuerung. Einmalentladung, Halten und Kalibrierung bleiben bis zur physischen Hardware-Abnahme gesperrt.
 
