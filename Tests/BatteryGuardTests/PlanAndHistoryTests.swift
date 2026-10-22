@@ -121,6 +121,38 @@ struct PlanAndHistoryTests {
         #expect(decoded.nativeChargeLimit == nil)
     }
 
+    @Test func agingExposureWeightsTimeByTemperatureAndChargeBand() {
+        #expect(abs(BGAgingExposure.temperatureFactor(celsius: 25) - 1) < 1e-9)
+        #expect(abs(BGAgingExposure.temperatureFactor(celsius: 35) - 2.14) < 0.02)
+        #expect(abs(BGAgingExposure.temperatureFactor(celsius: 45) - 4.35) < 0.05)
+        #expect(BGAgingExposure.Band.of(percent: 50) == .low)
+        #expect(BGAgingExposure.Band.of(percent: 60) == .middle)
+        #expect(BGAgingExposure.Band.of(percent: 80) == .high)
+        #expect(BGAgingExposure.Band.of(percent: 100) == .full)
+
+        var s = BGStatus()
+        func sample(_ offset: Double, percent: Int, temperature: Double?) -> BGHistorySample {
+            s.updatedAt = now.addingTimeInterval(offset); s.percent = percent; s.temperatureCelsius = temperature
+            return BGHistorySample(status: s)
+        }
+        let samples = [
+            sample(0, percent: 50, temperature: 25),
+            sample(60, percent: 85, temperature: 35),
+            sample(120, percent: 85, temperature: nil),
+            sample(180, percent: 85, temperature: 35),
+            sample(3600, percent: 85, temperature: 35), // gap: not bridged
+            sample(3660, percent: 85, temperature: 35),
+        ]
+        let exposure = BGAgingExposure.evaluate(samples)
+        #expect(exposure.observedSeconds == 240)
+        #expect(exposure.seconds[.low] == 60 && exposure.seconds[.high] == 180)
+        #expect(exposure.secondsWithoutTemperature == 60)
+        let hot = BGAgingExposure.temperatureFactor(celsius: 35)
+        #expect(abs((exposure.weightedSeconds[.high] ?? 0) - (120 * hot + 60)) < 1e-6)
+        #expect(abs((exposure.highChargeShare ?? 0) - 0.75) < 1e-9)
+        #expect(BGAgingExposure.evaluate([]).averageTemperatureFactor == nil)
+    }
+
     @Test func historyLinesRoundTripAndSkipDamagedLines() throws {
         var s = BGStatus(); s.percent = 70
         let samples = [0.0, 60, 120].map { offset -> BGHistorySample in

@@ -914,3 +914,9 @@
 "Dein Ziel von %lld %% liegt unter dem macOS-Minimum von 80 %%. Ohne separate Ladesperre hält dieser Mac höchstens bei 80 %%; stelle das macOS-Ladelimit auf 80 %%." = "Your target of %lld %% is below the macOS minimum of 80 %%. Without a separate charge inhibit this Mac holds at 80 %% at best; set the macOS charge limit to 80 %%.";
 "Ohne separate Ladesperre hält macOS das Ladelimit. Stelle es in den Batterieeinstellungen auf %lld %%, passend zu deinem Ziel." = "Without a separate charge inhibit, macOS holds the charge limit. Set it to %lld %% in Battery settings to match your target.";
 "Das macOS-Ladelimit passt zu deinem Ziel. B-Guard beobachtet und greift nicht ein." = "The macOS charge limit matches your target. B-Guard observes and does not intervene.";
+"Alterungsbelastung" = "Aging load";
+"Modell" = "Model";
+"Zeit ab 80 % Ladung" = "Time at 80 % charge or more";
+"Temperaturfaktor im Mittel" = "Average temperature factor";
+"Temperaturgewichtet" = "Temperature-weighted";
+"Zeit je Ladebereich, gewichtet mit einem Temperaturfaktor (25 °C = 1×, 35 °C ≈ 2×, 45 °C ≈ 4×). Studien zeigen eine Alterungsstufe bei etwa 55–60 % Ladung und deutlich stärkere Alterung über 80 %. Das ist eine Modellrechnung, keine Lebensdauerprognose." = "Time per charge range, weighted by a temperature factor (25 °C = 1×, 35 °C ≈ 2×, 45 °C ≈ 4×). Studies show an aging step at about 55–60 % charge and much stronger aging above 80 %. This is a model estimate, not a lifetime forecast.";
