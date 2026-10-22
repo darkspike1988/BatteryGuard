@@ -184,4 +184,42 @@ struct ControllerTests {
         #expect(clean.upperLimit == 20)
         #expect(clean.heatProtectionCelsius == 50)
     }
+
+    func sleepCharging(_ config: BGConfig = BGConfig(), percent: Int, chargeControl: Bool = true) -> Bool {
+        var battery = BatteryInfo()
+        battery.percent = percent
+        battery.pluggedIn = true
+        return ControllerLogic.chargingEnabledDuringSleep(config: config.sanitized(), battery: battery,
+            hasChargeControl: chargeControl, now: Date(timeIntervalSince1970: 1_800_000_000))
+    }
+
+    @Test func sleepKeepsReachedLimitInhibited() {
+        // Default 20...80: inside the band the limit stays locked while asleep.
+        #expect(!sleepCharging(percent: 80))
+        #expect(!sleepCharging(percent: 50))
+        // Below the lower limit the Mac may keep charging instead of waking up empty.
+        #expect(sleepCharging(percent: 19))
+    }
+
+    @Test func sleepFallsBackToNormalChargingForExceptions() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(sleepCharging(percent: 80, chargeControl: false))
+        var config = BGConfig(); config.mode = .pendulum
+        #expect(sleepCharging(config, percent: 80))
+        config = BGConfig(); config.mode = .native
+        #expect(sleepCharging(config, percent: 80))
+        config = BGConfig(); config.enabled = false
+        #expect(sleepCharging(config, percent: 80))
+        config = BGConfig(); config.pauseUntil = now.addingTimeInterval(600)
+        #expect(sleepCharging(config, percent: 80))
+        config = BGConfig(); config.chargeToFullOnce = true
+        #expect(sleepCharging(config, percent: 80))
+        config = BGConfig(); config.travelReadyAt = now.addingTimeInterval(3600)
+        #expect(sleepCharging(config, percent: 80))
+        config = BGConfig(); config.lowerLimit = 95; config.upperLimit = 100
+        #expect(sleepCharging(config, percent: 98))
+        var unknown = BatteryInfo(); unknown.percentAvailable = false
+        #expect(ControllerLogic.chargingEnabledDuringSleep(config: BGConfig(), battery: unknown,
+            hasChargeControl: true, now: now))
+    }
 }

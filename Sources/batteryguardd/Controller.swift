@@ -353,6 +353,20 @@ public enum ControllerLogic {
         }
     }
 
+    /// Ladezustand für den Systemschlaf. Aktives Entladen endet vor dem Schlaf immer.
+    /// Eine erreichte Ladegrenze bleibt über die SMC-Ladesperre gesperrt, sonst lädt der
+    /// Mac im Schlaf bis 100 %. Unter der unteren Grenze darf er weiter laden: lieber über
+    /// das Ziel als mit leerem Akku aufwachen. Alle Sonderfälle bleiben beim Normalbetrieb.
+    public static func chargingEnabledDuringSleep(config: BGConfig, battery: BatteryInfo,
+                                                  hasChargeControl: Bool, now: Date = Date()) -> Bool {
+        guard hasChargeControl, config.mode == .auto, config.calibrationPlan == nil,
+              battery.percentAvailable, (0...100).contains(battery.percent) else { return true }
+        let effective = config.effective(at: now)
+        guard effective.enabled, !effective.chargeToFullOnce, effective.specialChargePlan == nil,
+              effective.upperLimit < 100 else { return true }
+        return battery.percent < effective.lowerLimit
+    }
+
     /// Hysterese (in Prozentpunkten) des Pendel-Modus: Netzteil geht bei >= upperLimit aus
     /// und erst bei <= upperLimit - pendulumHysteresis wieder an.
     public static let pendulumHysteresis = 5
@@ -553,6 +567,44 @@ public final class BatteryController: @unchecked Sendable {
     public func invalidateHardwareCache() {
         lock.lock()
         defer { lock.unlock() }
+        previousDecision = nil
+        lastAppliedCharging = nil
+        lastAppliedAdapter = nil
+        lastAppliedMagSafeLED = nil
+        lastHardwareCheckUptime = nil
+    }
+
+    /// Vor dem Schlaf: Netzteil immer verbinden und die Ladesperre nur halten, wenn
+    /// `chargingEnabled` false ist. Scheitert das Verbinden, wird alles normalisiert.
+    public func prepareForSleep(chargingEnabled: Bool, logger: ((String) -> Void)? = nil) {
+        guard !chargingEnabled, smc.hasChargeControl else {
+            restoreNormal(logger: logger)
+            return
+        }
+        lock.lock()
+        defer { lock.unlock() }
+
+        let adapter = !smc.hasDischargeControl || smc.setAdapterConnected(true)
+        guard adapter else {
+            // Nie mit getrenntem Netzteil schlafen: lieber vollständig normalisieren.
+            let restored = smc.restoreNormal()
+            logger?(restored ? "SMC: Netzteil vor dem Schlaf über Normalbetrieb verbunden."
+                             : "SMC: Netzteil konnte vor dem Schlaf nicht verbunden werden.")
+            invalidateLocked()
+            return
+        }
+        let inhibited = smc.setChargingEnabled(false)
+        let led = !smc.keyExists("ACLC") || smc.setMagSafeLED(.auto)
+        previousDecision = nil
+        lastAppliedAdapter = true
+        lastAppliedCharging = inhibited ? false : nil
+        lastAppliedMagSafeLED = led ? .auto : nil
+        lastHardwareCheckUptime = nil
+        logger?(inhibited ? "SMC: Netzteil verbunden, Ladegrenze bleibt im Schlaf gesperrt."
+                          : "SMC: Ladesperre vor dem Schlaf fehlgeschlagen – macOS steuert das Laden.")
+    }
+
+    private func invalidateLocked() {
         previousDecision = nil
         lastAppliedCharging = nil
         lastAppliedAdapter = nil
