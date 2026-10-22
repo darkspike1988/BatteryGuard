@@ -338,7 +338,7 @@ final class DaemonRunner: @unchecked Sendable {
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
         if !controller.smc.hasChargeControl {
             log(controller.smc.hasDischargeControl
-                ? "SMC-Ladesperre nicht vorhanden – Pendelsteuerung verfügbar."
+                ? "SMC-Ladesperre nicht vorhanden – macOS hält das Ladelimit; Netzteil-Schalter nur für Sonderaktionen."
                 : "WARNUNG: Keine unterstützte Ladesteuerung vorhanden.")
         }
 

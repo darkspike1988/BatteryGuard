@@ -23,22 +23,31 @@ struct ControllerTests {
         #expect(decision(percent: 19, previous: hold).chargingEnabled)
     }
 
-    @Test func pendulumHysteresisAndDisabledAdapter() {
-        var config = BGConfig(); config.mode = .pendulum
-        let off = decision(config, percent: 80)
-        #expect(!off.adapterConnected)
-        #expect(!decision(config, percent: 77, plugged: false, previous: off).adapterConnected)
-        #expect(decision(config, percent: 75, plugged: false, previous: off).adapterConnected)
+    @Test func withoutChargeLockMacOSHoldsTheLimitAndPowerStaysConnected() {
+        // No separate charge inhibit: never disconnect the adapter to hold a limit.
+        let config = BGConfig()
+        for percent in [50, 80, 95] {
+            let result = decision(config, percent: percent, chargeControl: false)
+            #expect(result.adapterConnected && result.chargingEnabled)
+            #expect(result.state == .disabled)
+            #expect(result.message == ControllerLogic.nativeLimitMessage)
+        }
+        // An adapter left disconnected by an older pendulum daemon is reconnected.
+        let legacy = ControllerDecision(state: .discharging, chargingEnabled: false, adapterConnected: false)
+        #expect(decision(config, percent: 80, plugged: false, previous: legacy, chargeControl: false).adapterConnected)
+    }
+
+    @Test func legacyPendulumConfigurationMigratesToAuto() throws {
+        let data = Data(#"{"enabled":true,"mode":"pendulum","lowerLimit":75,"upperLimit":80}"#.utf8)
+        let config = try BGJSON.decoder().decode(BGConfig.self, from: data)
+        #expect(config.mode == .auto && config.upperLimit == 80)
     }
 
     @Test func heatProtectionOverridesFullCharge() {
         var config = BGConfig()
         config.chargeToFullOnce = true; config.heatProtectionCelsius = 40
         #expect(!decision(config, percent: 60, temperature: 45).chargingEnabled)
-        config.mode = .pendulum
-        #expect(!decision(config, percent: 60, temperature: 45).adapterConnected)
-        // Pendulum must reconnect at the safety floor instead of draining indefinitely.
-        #expect(decision(config, percent: 20, temperature: 45).adapterConnected)
+        #expect(decision(config, percent: 60, temperature: 45).adapterConnected)
     }
 
     @Test func chargingResumesAfterCooling() {
@@ -49,8 +58,8 @@ struct ControllerTests {
         #expect(cooled.chargingEnabled)
     }
 
-    @Test func heatProtectionHasCoolingHysteresisInBothModes() {
-        for mode in [BGMode.auto, .pendulum] {
+    @Test func heatProtectionHasCoolingHysteresis() {
+        for mode in [BGMode.auto] {
             var config = BGConfig(); config.mode = mode; config.heatProtectionCelsius = 40
             let hot = decision(config, percent: 60, temperature: 40.1)
             #expect(hot.heatProtectionActive)
@@ -64,21 +73,6 @@ struct ControllerTests {
             // Once released, warming below the activation threshold must not reactivate it.
             #expect(!decision(config, percent: 60, temperature: 39.9, previous: cool).heatProtectionActive)
         }
-    }
-
-    @Test func pendulumHeatReserveStaysConnectedUntilCooling() {
-        var config = BGConfig(); config.mode = .pendulum; config.heatProtectionCelsius = 40
-        let hot = decision(config, percent: 21, temperature: 45)
-        #expect(!hot.adapterConnected)
-        let reserve = decision(config, percent: 20, temperature: 45, plugged: false, previous: hot)
-        #expect(reserve.adapterConnected && reserve.heatProtectionActive)
-        let recovering = decision(config, percent: 21, temperature: 45, previous: reserve)
-        #expect(recovering.adapterConnected && recovering.heatProtectionActive)
-        #expect(decision(config, percent: 60, temperature: 39, previous: recovering).adapterConnected)
-        let cool = decision(config, percent: 60, temperature: 38, previous: recovering)
-        #expect(cool.adapterConnected && !cool.heatProtectionActive)
-        // A new heat episode above the reserve can disconnect again.
-        #expect(!decision(config, percent: 60, temperature: 45, previous: cool).adapterConnected)
     }
 
     @Test func sensorLossDoesNotCancelActiveHeatProtection() {
@@ -137,23 +131,6 @@ struct ControllerTests {
         #expect(decision(config, percent: 100).resetChargeToFullOnce)
     }
 
-    @Test func externalMonitorKeepsPowerInPendulumAndReconnectsPreviouslyDisabledAdapter() {
-        var config = BGConfig(); config.upperLimit = 60; config.lowerLimit = 55
-        let off = decision(config, percent: 80, chargeControl: false)
-        #expect(!off.adapterConnected)
-        let desktop = decision(config, percent: 80, plugged: false, previous: off,
-                               chargeControl: false, adapterDisconnectAllowed: false)
-        #expect(desktop.adapterConnected && desktop.chargingEnabled)
-        #expect(desktop.state == .disabled)
-        config.mode = .pendulum
-        config.heatProtectionCelsius = 40
-        #expect(decision(config, percent: 80, temperature: 45,
-                         adapterDisconnectAllowed: false).adapterConnected)
-        // Unplugging the external display allows ordinary pendulum control again.
-        #expect(!decision(config, percent: 80, previous: desktop,
-                          chargeControl: false).adapterConnected)
-    }
-
     @Test func externalMonitorPreservesSeparateChargeInhibitionWithoutActiveDischarge() {
         var config = BGConfig(); config.activeDischargeAboveUpper = true
         let result = decision(config, percent: 90, adapterDisconnectAllowed: false)
@@ -204,9 +181,7 @@ struct ControllerTests {
     @Test func sleepFallsBackToNormalChargingForExceptions() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         #expect(sleepCharging(percent: 80, chargeControl: false))
-        var config = BGConfig(); config.mode = .pendulum
-        #expect(sleepCharging(config, percent: 80))
-        config = BGConfig(); config.mode = .native
+        var config = BGConfig(); config.mode = .native
         #expect(sleepCharging(config, percent: 80))
         config = BGConfig(); config.enabled = false
         #expect(sleepCharging(config, percent: 80))

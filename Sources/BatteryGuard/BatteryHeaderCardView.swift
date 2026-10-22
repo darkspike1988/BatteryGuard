@@ -68,7 +68,7 @@ struct BatteryHeaderCardView: View {
         if keys.contains("CHTE") || keys.contains("CH0B") {
             return L("Native SMC-Sperre")
         } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
-            return L("Pendel-Modus")
+            return L("macOS-Ladelimit")
         }
 
         if let msg = status.message, !msg.isEmpty {
@@ -83,7 +83,7 @@ struct BatteryHeaderCardView: View {
         if keys.contains("CHTE") || keys.contains("CH0B") {
             return L("Hardware-Ladesperre aktiv (%@). Die Batterie wird präzise auf dem Zielwert gehalten.", keys.joined(separator: ", "))
         } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
-            return L("Neueres MacBook erkannt! Nutzt den Pendel-Modus (%@): Das Netzteil wird virtuell vom Akku getrennt, bis der Akku unter das Limit fällt.", keys.joined(separator: ", "))
+            return L("Keine separate Ladesperre erkannt (%@). macOS hält das Ladelimit; B-Guard beobachtet und warnt.", keys.joined(separator: ", "))
         }
         return L("Steuert die Ladeelektronik.")
     }

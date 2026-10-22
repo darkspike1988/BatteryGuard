@@ -92,7 +92,6 @@
 "Aktives Entladen" = "Active discharge";
 "Aktives Entladen auf %lld %% (aktuell %lld %%)" = "Active discharge to %lld %% (currently %lld %%)";
 "Aktives Entladen einschalten?" = "Enable active discharge?";
-"Aktives Entladen trennt das Netzteil softwareseitig. Im Pendelmodus geschieht dies bereits automatisch. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt." = "Active discharge disconnects the power adapter in software. In pendulum mode this already happens automatically. Heat protection stays active during full charging but is suspended during a protection pause.";
 "Aktives Entladen über oberem Limit" = "Active discharge above upper limit";
 "Aktiviere die Aufzeichnung, damit B-Guard höchstens ein Jahr lang einen Tageswert für Kapazitätsquote, Zyklen und Temperatur speichert. Die Datei bleibt auf diesem Mac." = "Enable recording so B-Guard stores one daily value for capacity ratio, cycles and temperature for at most one year. The file stays on this Mac.";
 "Aktiviert" = "Enabled";
@@ -129,7 +128,6 @@
 "Auto" = "Auto";
 "Automatik" = "Automation";
 "Automatisch" = "Automatic";
-"Automatisch (Empfohlen): Wählt eigenständig die beste Methode für dein MacBook-Modell aus." = "Automatic (recommended): independently selects the best method for your MacBook model.";
 "Automatisch nach Updates suchen" = "Check for updates automatically";
 "Automatisch wieder aktiv: %@. Während der Pause greift B-Guard nicht ein." = "Automatically active again: %@. B-Guard does not intervene during the pause.";
 "Automatische Updateprüfung höchstens täglich über GitHub, abschaltbar und ohne Konto." = "Automatic update check at most daily via GitHub, can be disabled and requires no account.";
@@ -263,14 +261,11 @@
 "Dienstversion" = "Service version";
 "Diese Aktion braucht B-Guard-Steuerung. Bitte zuerst ein Ladeprofil aktivieren oder den Schutz starten." = "This action requires B-Guard control. First activate a charging profile or start protection.";
 "Diese Einstellungen werden direkt aus deiner aktuellen Konfiguration übernommen." = "These settings are taken directly from your current configuration.";
-"Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Dabei läuft er zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku." = "This Mac uses the power adapter switch for regulation. It then runs on battery between the charge limit and five percentage points below it.";
 "Dieses Profil kann das Netzteil softwareseitig trennen und den Akku entladen. Monitor- und Deckelschutz bleiben aktiv." = "This profile can disconnect the power adapter in software and discharge the battery. Monitor and lid protection remain active.";
 "Dieses Profil schaltet aktives Entladen ein; das Netzteil kann softwareseitig getrennt werden." = "This profile enables active discharge; the power adapter may be disconnected in software.";
 "Dieses Profil wurde gelöscht. Bitte ein vorhandenes Profil wählen." = "This profile was deleted. Please choose an existing profile.";
 "Direkt (Root)" = "Direct (root)";
 "Direkt · nicht verfügbar" = "Direct · unavailable";
-"Direktmodus nicht implementiert – bitte Auto, Nativ oder Pendel wählen" = "Direct mode not implemented – choose Auto, Native or Pendulum";
-"Direktmodus nicht implementiert. Bitte Auto, Nativ oder Pendel wählen." = "Direct mode is not implemented. Please choose Auto, Native or Pendulum.";
 "Download abbrechen" = "Cancel download";
 "Download abgebrochen." = "Download cancelled.";
 "Download geprüft und geöffnet. B-Guard beenden und die neue App auf Programme ziehen." = "Download verified and opened. Quit B-Guard and move the new app to Applications.";
@@ -411,7 +406,6 @@
 "Höchstens täglich über GitHub. Neue Versionen werden in der App angezeigt; bei erlaubten Mitteilungen auch als Hinweis. Downloads starten erst nach deinem Klick." = "At most daily via GitHub. New versions are shown in the app; also as a notification if allowed. Downloads start only after you click.";
 "Höchster Zyklusstand: %@" = "Highest cycle count: %@";
 "Im Dock anzeigen" = "Show in Dock";
-"Im Pendelmodus verbindet sich das Netzteil bei Maximum minus 5 % wieder. Die untere Grenze bleibt die Sicherheitsgrenze des Hitzeschutzes." = "In pendulum mode the power adapter reconnects at maximum minus 5 %. The lower limit remains the safety limit for heat protection.";
 "Im macOS-Modus bleibt B-Guard ein Beobachter. Die Steuerung kannst du in den Einstellungen aktivieren." = "In macOS mode B-Guard remains an observer. You can enable control in Settings.";
 "Import fehlgeschlagen" = "Import failed";
 "Import sichert den vorherigen Stand unter derselben Dateisperre. Export nach einem Lesefehler meldet einen Fehler." = "Import backs up the previous state under the same file lock. Export after a read error reports an error.";
@@ -608,7 +602,6 @@
 "Neuer Name für App und DMG; Einstellungen und Verlauf bleiben erhalten." = "New name for the app and DMG; settings and history are kept.";
 "Neuer Zeitplan" = "New schedule";
 "Neueren Zeitplan bevorzugt" = "Newer schedule preferred";
-"Neueres MacBook erkannt! Nutzt den Pendel-Modus (%@): Das Netzteil wird virtuell vom Akku getrennt, bis der Akku unter das Limit fällt." = "Newer MacBook detected. Using pendulum mode (%@): the power adapter is virtually disconnected from the battery until it falls below the limit.";
 "Neues Panel zeigt Ziel, tatsächlich angewendeten Wert, macOS-Limit und erkannten Steuerungsweg." = "New panel shows the target, the value actually applied, the macOS limit and the detected control path.";
 "Neues Profil anlegen" = "Create new profile";
 "Neues Profil erstellen" = "Create new profile";
@@ -638,12 +631,6 @@
 "Ohne separate Ladesperre übernimmt macOS im Monitorbetrieb das Limit." = "Without a separate charge lock, macOS takes over the limit in monitor mode.";
 "Optional bis zum Limit wachhalten, höchstens zwei Stunden; Diagnoseexport ohne persönliche Daten." = "Optional keep-awake until the limit, at most two hours; diagnostics export without personal data.";
 "Optionale REST API: Status, gespeicherte Einstellungen und Verlauf als JSON oder CSV auslesen." = "Optional REST API: read status, saved settings and history as JSON or CSV.";
-"Pendel" = "Pendulum";
-"Pendel · Netzteil umschalten" = "Pendulum · switch power adapter";
-"Pendel-Modus" = "Pendulum mode";
-"Pendel-Modus: Akku läuft ab %lld %% bis %lld %% vom Akku" = "Pendulum mode: running on battery from %lld %% down to %lld %%";
-"Pendel-Modus: lädt bis %lld %%" = "Pendulum mode: charging up to %lld %%";
-"Pendel: Trennt das Netzteil am Maximum und verbindet es wieder fünf Prozentpunkte darunter." = "Pendulum: disconnects the power adapter at the maximum and reconnects it five percentage points below.";
 "Physischer RAM" = "Physical RAM";
 "Plan entfernen" = "Remove plan";
 "Plane eine volle Ladung vor deiner nächsten Reise." = "Schedule a full charge before your next trip.";
@@ -914,3 +901,16 @@
 "Die geschätzte Akkukapazität liegt bei %lld %% (Grenze %lld %%). Ein Akkutausch oder eine Wartung kann sinnvoll sein. Das ist keine Hardwarediagnose." = "Estimated battery capacity is %lld %% (threshold %lld %%). A battery replacement or service may be advisable. This is not a hardware diagnosis.";
 "Die geschätzte Kapazität stammt aus Design- und Maximalkapazität. Ein Wert unter der Grenze kann auf einen notwendigen Akkutausch oder eine Wartung hindeuten, ist aber keine Diagnose. Unternehmen können den Wert zusätzlich über die lokale API auslesen." = "The estimated capacity comes from design and maximum capacity. A value below the threshold may indicate that a battery replacement or service is needed, but it is not a diagnosis. Organizations can also read the value through the local API.";
 "Wartungshinweis bei niedriger Akkukapazität" = "Service notice for low battery capacity";
+"Automatisch (Empfohlen): Nutzt die SMC-Ladesperre, wenn vorhanden. Sonst hält macOS das Ladelimit." = "Automatic (recommended): uses the SMC charge inhibit when available. Otherwise macOS holds the charge limit.";
+"Direktmodus nicht implementiert. Bitte Auto oder Nativ wählen." = "Direct mode is not implemented. Please choose Auto or Native.";
+"Direktmodus nicht implementiert – bitte Auto oder Nativ wählen" = "Direct mode not implemented – choose Auto or Native";
+"Die untere Grenze bestimmt, ab wann wieder geladen wird. Ohne separate Ladesperre hält macOS das Ladelimit." = "The lower limit sets when charging resumes. Without a separate charge inhibit, macOS holds the charge limit.";
+"Aktives Entladen trennt das Netzteil softwareseitig, bis das Limit erreicht ist. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt." = "Active discharge disconnects the power adapter in software until the limit is reached. Heat protection stays active during a full charge but is suspended during a protection pause.";
+"Keine separate Ladesperre erkannt (%@). macOS hält das Ladelimit; B-Guard beobachtet und warnt." = "No separate charge inhibit detected (%@). macOS holds the charge limit; B-Guard observes and warns.";
+"Dieser Mac hat keine separate Ladesperre. macOS hält das Ladelimit – stelle es in den Batterieeinstellungen passend zu deinem Profil ein." = "This Mac has no separate charge inhibit. macOS holds the charge limit – set it in Battery settings to match your profile.";
+"Keine separate Ladesperre – macOS-Ladelimit übernimmt (Systemeinstellungen → Batterie)" = "No separate charge inhibit – the macOS charge limit applies (System Settings → Battery)";
+"Ohne separate Ladesperre hält macOS das Ladelimit. B-Guard beobachtet und greift nicht ein." = "Without a separate charge inhibit, macOS holds the charge limit. B-Guard observes and does not intervene.";
+"Kein macOS-Ladelimit erkannt. Ab macOS 26.4 lässt es sich unter Systemeinstellungen → Batterie einstellen; auf älteren Versionen hilft „Optimiertes Laden“." = "No macOS charge limit detected. From macOS 26.4 you can set it in System Settings → Battery; on older versions, Optimized Battery Charging helps.";
+"Dein Ziel von %lld %% liegt unter dem macOS-Minimum von 80 %%. Ohne separate Ladesperre hält dieser Mac höchstens bei 80 %%; stelle das macOS-Ladelimit auf 80 %%." = "Your target of %lld %% is below the macOS minimum of 80 %%. Without a separate charge inhibit this Mac holds at 80 %% at best; set the macOS charge limit to 80 %%.";
+"Ohne separate Ladesperre hält macOS das Ladelimit. Stelle es in den Batterieeinstellungen auf %lld %%, passend zu deinem Ziel." = "Without a separate charge inhibit, macOS holds the charge limit. Set it to %lld %% in Battery settings to match your target.";
+"Das macOS-Ladelimit passt zu deinem Ziel. B-Guard beobachtet und greift nicht ein." = "The macOS charge limit matches your target. B-Guard observes and does not intervene.";

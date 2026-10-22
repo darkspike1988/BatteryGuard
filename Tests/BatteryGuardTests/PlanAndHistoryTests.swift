@@ -54,12 +54,12 @@ struct PlanAndHistoryTests {
 
     @Test func profilePreservesOtherChoices() {
         var c = BGConfig()
-        c.mode = .pendulum
+        c.mode = .auto
         c.heatProtectionCelsius = 38
         c.travelReadyAt = now.addingTimeInterval(3600)
         let next = BGProfile.mobile.applying(to: c)
         #expect(next.lowerLimit == 85 && next.upperLimit == 90)
-        #expect(next.mode == .pendulum)
+        #expect(next.mode == .auto)
         #expect(next.heatProtectionCelsius == 38)
         #expect(next.travelReadyAt == c.travelReadyAt)
     }

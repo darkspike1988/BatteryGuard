@@ -63,7 +63,6 @@ struct PreferencesView: View {
                 Picker("Ladesteuerung", selection: $configStore.config.mode) {
                     Text("Automatisch").tag(BGMode.auto)
                     Text("macOS · nur beobachten").tag(BGMode.native)
-                    Text("Pendel · Netzteil umschalten").tag(BGMode.pendulum)
                     if configStore.config.mode == .direct { Text("Direkt · nicht verfügbar").tag(BGMode.direct) }
                 }
                 if let limit = statusStore.status.nativeChargeLimit, statusStore.isDaemonActive {
@@ -80,7 +79,7 @@ struct PreferencesView: View {
                             in: 5...min(95, configStore.config.upperLimit - 1))
                     Stepper(L("Stoppen bei %lld %%", configStore.config.upperLimit), value: $configStore.config.upperLimit,
                             in: max(20, configStore.config.lowerLimit + 1)...100)
-                    Text("Im Pendelmodus verbindet sich das Netzteil bei Maximum minus 5 % wieder. Die untere Grenze bleibt die Sicherheitsgrenze des Hitzeschutzes.")
+                    Text("Die untere Grenze bestimmt, ab wann wieder geladen wird. Ohne separate Ladesperre hält macOS das Ladelimit.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             } header: { Text("Ladebereich") }
@@ -95,7 +94,7 @@ struct PreferencesView: View {
                             value: $configStore.config.heatProtectionCelsius, in: 30...50)
                 }
                 Toggle("Oberhalb des Limits aktiv entladen", isOn: $configStore.config.activeDischargeAboveUpper)
-                Text("Aktives Entladen trennt das Netzteil softwareseitig. Im Pendelmodus geschieht dies bereits automatisch. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt.")
+                Text("Aktives Entladen trennt das Netzteil softwareseitig, bis das Limit erreicht ist. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("MagSafe-Farbe dem Ladezustand anpassen", isOn: $configStore.config.magsafeLed)
                     .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")

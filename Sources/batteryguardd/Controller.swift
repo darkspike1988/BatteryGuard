@@ -213,31 +213,19 @@ public enum ControllerLogic {
         if config.mode == .direct {
             return ControllerDecision(state: .unsupported, chargingEnabled: true,
                                       adapterConnected: true,
-                                      message: "Direktmodus nicht implementiert – bitte Auto, Nativ oder Pendel wählen")
+                                      message: "Direktmodus nicht implementiert – bitte Auto oder Nativ wählen")
         }
 
-        // 1. Hardware/SMC-Unterstützung prüfen
-        guard hasChargeControl && config.mode != .pendulum else {
-            // macOS 26.4+/27: CHTE/CH0B (Ladesperre) existieren nicht mehr.
-            // Fallback "Pendel-Modus": nur über den Netzteil-Schalter (CHIE/CH0J/CH0I) arbeiten.
-            guard hasDischargeControl else {
-                return ControllerDecision(
-                    state: .unsupported,
-                    chargingEnabled: true,
-                    adapterConnected: true,
-                    resetChargeToFullOnce: false,
-                    message: "Keine unterstützten SMC-Schlüssel für Ladesteuerung gefunden (weder CHTE/CH0B noch CHIE/CH0J/CH0I)."
-                )
-            }
-            if config.enabled && effectivelyPlugged && !allowsAdapterDisconnect {
-                return ControllerDecision(state: .disabled, chargingEnabled: true, adapterConnected: true,
-                    message: "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit.")
-            }
-            return evaluatePendulum(
-                config: config,
-                battery: battery,
-                previousDecision: previousDecision,
-                effectivelyPlugged: effectivelyPlugged
+        // 1. Ohne separate SMC-Ladesperre setzt macOS das Limit durch (Systemeinstellungen →
+        //    Batterie → Ladelimit, ab macOS 26.4). B-Guard trennt das Netzteil nie, um ein
+        //    Limit zu halten: Das erzeugt nur zusätzliche Teilzyklen ohne belegten Nutzen.
+        guard hasChargeControl else {
+            return ControllerDecision(
+                state: .disabled,
+                chargingEnabled: true,
+                adapterConnected: true,
+                resetChargeToFullOnce: config.chargeToFullOnce && battery.percent >= 100,
+                message: config.enabled ? Self.nativeLimitMessage : "Batterieschutz deaktiviert"
             )
         }
 
@@ -367,78 +355,8 @@ public enum ControllerLogic {
         return battery.percent < effective.lowerLimit
     }
 
-    /// Hysterese (in Prozentpunkten) des Pendel-Modus: Netzteil geht bei >= upperLimit aus
-    /// und erst bei <= upperLimit - pendulumHysteresis wieder an.
-    public static let pendulumHysteresis = 5
-
-    /// Fallback ohne Ladesperre-Key: Das Limit wird nur über das Ein-/Ausschalten des Netzteils
-    /// (CHIE/CH0J/CH0I) erzwungen. Der Akku pendelt dadurch zwischen (upper - 5) und upper.
-    static func evaluatePendulum(
-        config: BGConfig,
-        battery: BatteryInfo,
-        previousDecision: ControllerDecision?,
-        effectivelyPlugged: Bool
-    ) -> ControllerDecision {
-        let normal = { (state: BGChargeState, msg: String?, reset: Bool) in
-            ControllerDecision(state: state, chargingEnabled: true, adapterConnected: true,
-                               resetChargeToFullOnce: reset, message: msg)
-        }
-
-        guard effectivelyPlugged else {
-            return normal(.onBattery, nil, config.chargeToFullOnce && battery.percent >= 100)
-        }
-        guard config.enabled else {
-            return normal(.disabled, "Batterieschutz deaktiviert", config.chargeToFullOnce && battery.percent >= 100)
-        }
-        // Hitzeschutz: lieber vom Akku laufen als heiß weiter laden
-        if needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision) {
-            // Once the reserve is reached, keep AC connected until cooling. Otherwise
-            // charging one percent would immediately disconnect it again while still hot.
-            let reserveReached = battery.percent <= config.lowerLimit
-                || (previousDecision?.heatProtectionActive == true && previousDecision?.adapterConnected == true)
-            if reserveReached {
-                return ControllerDecision(
-                    state: .charging, chargingEnabled: true, adapterConnected: true,
-                    message: "Akkureserve erreicht: Netzteil bleibt bis zur Abkühlung verbunden. Ohne separate Ladesperre kann Hitzeschutz das Laden nicht stoppen.",
-                    heatProtectionActive: true,
-                    heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
-                )
-            }
-            return ControllerDecision(
-                state: .discharging, chargingEnabled: false, adapterConnected: false,
-                message: heatMessage(battery: battery),
-                heatProtectionActive: true,
-                    heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
-            )
-        }
-
-        if config.chargeToFullOnce {
-            if battery.percent >= 100 {
-                return normal(.holding, "Einmaliges Vollladen abgeschlossen (100 %)", true)
-            }
-            return normal(.charging, "Einmaliges Vollladen aktiv (\(battery.percent) %)", false)
-        }
-
-        let resumeLevel = max(config.upperLimit - pendulumHysteresis, config.lowerLimit)
-        var adapterOff = previousDecision?.adapterConnected == false
-
-        if battery.percent >= config.upperLimit {
-            adapterOff = true
-        } else if battery.percent <= resumeLevel {
-            adapterOff = false
-        }
-
-        if adapterOff {
-            return ControllerDecision(
-                state: .discharging, chargingEnabled: false, adapterConnected: false,
-                message: "Pendel-Modus: Akku läuft ab \(config.upperLimit) % bis \(resumeLevel) % vom Akku"
-            )
-        }
-        return ControllerDecision(
-            state: .charging, chargingEnabled: true, adapterConnected: true,
-            message: "Pendel-Modus: lädt bis \(config.upperLimit) %"
-        )
-    }
+    /// Stabile Meldung; die App erkennt daran, dass macOS das Ladelimit hält.
+    public static let nativeLimitMessage = "Keine separate Ladesperre – macOS-Ladelimit übernimmt (Systemeinstellungen → Batterie)"
 }
 
 

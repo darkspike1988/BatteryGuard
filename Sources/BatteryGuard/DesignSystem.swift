@@ -25,9 +25,11 @@ struct BGSectionHeading: View {
 }
 
 extension BGStatus {
-    /// Older daemons expose their desktop fallback through this stable decision message.
-    var usesNativeDesktopFallback: Bool {
-        state == .disabled && message?.hasPrefix("Monitor-/Deckelschutz:") == true
+    /// macOS hält das Ladelimit: ohne separate Ladesperre oder, bei älteren Diensten,
+    /// beim Monitor-/Deckelschutz. Beides erkennt die App an stabilen Dienstmeldungen.
+    var usesNativeChargeLimit: Bool {
+        guard state == .disabled, let message else { return false }
+        return message.hasPrefix("Keine separate Ladesperre") || message.hasPrefix("Monitor-/Deckelschutz:")
     }
 
     func displayTitle(active: Bool, config: BGConfig) -> String {
