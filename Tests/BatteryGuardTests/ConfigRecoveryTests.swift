@@ -25,6 +25,18 @@ struct ConfigRecoveryTests {
         #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o644)
     }
 
+    @Test func invalidScheduleEntryNoLongerBlocksStartup() throws {
+        let (directory, configURL, backupURL) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let data = Data("{\"enabled\":true,\"scheduledTasks\":[{\"secret\":1}]}".utf8)
+        try data.write(to: configURL)
+        let result = try BGConfigRecovery.prepare(configURL: configURL, backupURL: backupURL, requireRoot: false)
+        #expect(!result.recovered)
+        #expect(try BGConfigFile.read(at: configURL).enabled)
+        #expect(BGConfigRecovery.isContentError(BGChargingActionError.invalidRequest("x")))
+        #expect(!BGConfigRecovery.isContentError(POSIXError(.EBUSY)))
+    }
+
     @Test func corruptConfigUsesDisabledBackupAndQuarantinesExactBytes() throws {
         let (directory, configURL, backupURL) = try fixture()
         defer { try? FileManager.default.removeItem(at: directory) }

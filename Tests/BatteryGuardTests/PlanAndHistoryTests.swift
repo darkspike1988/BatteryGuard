@@ -121,6 +121,23 @@ struct PlanAndHistoryTests {
         #expect(decoded.nativeChargeLimit == nil)
     }
 
+    @Test func statusFromNewerDaemonStaysReadable() throws {
+        var status = BGStatus(); status.percent = 64; status.state = .holding
+        var json = try JSONSerialization.jsonObject(with: BGJSON.encoder().encode(status)) as! [String: Any]
+        json["state"] = "futureState"
+        json["measurements"] = ["schemaVersion": 2, "values": []]
+        json["newField"] = 1
+        json.removeValue(forKey: "smcKeysDetected")
+        let decoded = try BGJSON.decoder().decode(BGStatus.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded.percent == 64)
+        #expect(decoded.state == .unsupported)
+        #expect(decoded.measurements == nil)
+        #expect(decoded.smcKeysDetected.isEmpty)
+        #expect(abs(decoded.updatedAt.timeIntervalSince(status.updatedAt)) < 1)
+        let empty = try BGJSON.decoder().decode(BGStatus.self, from: Data("{}".utf8))
+        #expect(empty.updatedAt == .distantPast)
+    }
+
     @Test func summaryDoesNotBridgeSleepGaps() {
         var s = BGStatus(); s.percent = 95; s.temperatureCelsius = 42; s.state = .holding
         let samples = [0.0, 60, 7200, 7260].map { offset in

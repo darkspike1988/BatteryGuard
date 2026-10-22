@@ -106,4 +106,31 @@ struct ScheduleRunnerTests {
         let data = Data("{\"kind\":\"topUp\",\"secret\":\"value\"}".utf8)
         #expect(throws: (any Error).self) { try BGJSON.decoder().decode(BGScheduledAction.self, from: data) }
     }
+    @Test func invalidOrNewerScheduleEntriesAreDroppedNotFatal() throws {
+        var config = BGConfig()
+        config.scheduledTasks = [try task()]
+        let valid = try JSONSerialization.jsonObject(with: BGJSON.encoder().encode(config)) as! [String: Any]
+        var json = valid
+        var tasks = valid["scheduledTasks"] as! [[String: Any]]
+        var newer = tasks[0]; newer["futureField"] = true
+        tasks.append(newer)
+        tasks.append(["kind": "unknown"])
+        json["scheduledTasks"] = tasks
+        json["scheduleHistory"] = [["taskID": "not-a-uuid"]]
+        let decoded = try BGJSON.decoder().decode(BGConfig.self,
+            from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded.scheduledTasks == config.scheduledTasks)
+        #expect(decoded.scheduleHistory.isEmpty)
+        #expect(decoded.enabled)
+    }
+
+    @Test func sanitizeTrimsDuplicatesAndOverflowInsteadOfWiping() throws {
+        let first = try task()
+        var config = BGConfig()
+        config.scheduledTasks = [first, first] + (0..<60).map { _ in try! task() }
+        let clean = config.sanitized()
+        #expect(clean.scheduledTasks.count == 50)
+        #expect(clean.scheduledTasks.first == first)
+        #expect(Set(clean.scheduledTasks.map(\.id)).count == 50)
+    }
 }

@@ -95,8 +95,10 @@ public struct BGConfig: Codable, Equatable, Sendable {
         travelRequestID = try c.decodeIfPresent(UUID.self, forKey: .travelRequestID)
         awakeUntilLimitUntil = try c.decodeIfPresent(Date.self, forKey: .awakeUntilLimitUntil)
         calibrationPlan = try? c.decodeIfPresent(BGCalibrationPlan.self, forKey: .calibrationPlan)
-        scheduledTasks = try c.decodeIfPresent([BGScheduledTask].self, forKey: .scheduledTasks) ?? []
-        scheduleHistory = try c.decodeIfPresent([BGScheduleRun].self, forKey: .scheduleHistory) ?? []
+        // Ein einzelner ungültiger oder neuerer Eintrag darf nie die ganze Konfiguration
+        // unlesbar machen: sonst bleibt der Schutz aus und der Einstellungsdienst startet nicht.
+        scheduledTasks = (try? c.decodeIfPresent(BGLossyArray<BGScheduledTask>.self, forKey: .scheduledTasks))?.elements ?? []
+        scheduleHistory = (try? c.decodeIfPresent(BGLossyArray<BGScheduleRun>.self, forKey: .scheduleHistory))?.elements ?? []
         manualOverrideUntil = try c.decodeIfPresent(Date.self, forKey: .manualOverrideUntil)
         desktopProfileEnabled = try c.decodeIfPresent(Bool.self, forKey: .desktopProfileEnabled) ?? d.desktopProfileEnabled
         if let rawProfile = try c.decodeIfPresent(String.self, forKey: .desktopProfile) {
@@ -129,12 +131,37 @@ public struct BGConfig: Codable, Equatable, Sendable {
                 c.specialChargePlan = nil
             }
         }
-        if c.scheduledTasks.count > 50 || Set(c.scheduledTasks.map(\.id)).count != c.scheduledTasks.count { c.scheduledTasks = [] }
+        // Doppelte IDs und Überlänge kürzen, statt alle Zeitpläne zu verwerfen.
+        var seenTaskIDs = Set<UUID>()
+        c.scheduledTasks = Array(c.scheduledTasks.filter { seenTaskIDs.insert($0.id).inserted }.prefix(50))
         c.scheduleHistory = Array(c.scheduleHistory.suffix(100))
         return c
     }
 }
 
+
+/// Dekodiert ein Array elementweise und überspringt ungültige Einträge.
+struct BGLossyArray<Element: Decodable>: Decodable {
+    var elements: [Element]
+
+    private struct Skip: Decodable {
+        init(from decoder: any Decoder) throws {}
+    }
+
+    init(from decoder: any Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        var result: [Element] = []
+        if let count = container.count { result.reserveCapacity(count) }
+        while !container.isAtEnd {
+            if let element = try? container.decode(Element.self) {
+                result.append(element)
+            } else if (try? container.decode(Skip.self)) == nil {
+                break
+            }
+        }
+        elements = result
+    }
+}
 
 public enum BGChargeState: String, Codable, Sendable {
     case charging          // lädt normal
@@ -183,6 +210,43 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var message: String? = nil
 
     public init() {}
+
+    /// Tolerant gegenüber neueren Diensten: unbekannte Zustände und Messwerte
+    /// dürfen eine ältere App nicht als „Dienst inaktiv“ erscheinen lassen.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = BGStatus()
+        measurements = try? c.decodeIfPresent(BGBatteryMeasurements.self, forKey: .measurements)
+        configurationNotice = try c.decodeIfPresent(String.self, forKey: .configurationNotice)
+        nativeChargeLimit = try c.decodeIfPresent(Int.self, forKey: .nativeChargeLimit)
+        effectiveLowerLimit = try c.decodeIfPresent(Int.self, forKey: .effectiveLowerLimit)
+        effectiveUpperLimit = try c.decodeIfPresent(Int.self, forKey: .effectiveUpperLimit)
+        externalDisplayConnected = try c.decodeIfPresent(Bool.self, forKey: .externalDisplayConnected)
+        lidClosed = try c.decodeIfPresent(Bool.self, forKey: .lidClosed)
+        adapterDisconnectAllowed = try c.decodeIfPresent(Bool.self, forKey: .adapterDisconnectAllowed)
+        desktopProfileActive = try c.decodeIfPresent(Bool.self, forKey: .desktopProfileActive)
+        percent = try c.decodeIfPresent(Int.self, forKey: .percent) ?? d.percent
+        percentAvailable = try c.decodeIfPresent(Bool.self, forKey: .percentAvailable)
+        externalPowerAvailable = try c.decodeIfPresent(Bool.self, forKey: .externalPowerAvailable)
+        awakeUntilLimitActive = try c.decodeIfPresent(Bool.self, forKey: .awakeUntilLimitActive)
+        pluggedIn = try c.decodeIfPresent(Bool.self, forKey: .pluggedIn) ?? d.pluggedIn
+        isChargingHardware = try c.decodeIfPresent(Bool.self, forKey: .isChargingHardware) ?? d.isChargingHardware
+        state = try c.decodeIfPresent(String.self, forKey: .state).flatMap(BGChargeState.init(rawValue:)) ?? d.state
+        temperatureCelsius = try c.decodeIfPresent(Double.self, forKey: .temperatureCelsius)
+        cycleCount = try c.decodeIfPresent(Int.self, forKey: .cycleCount)
+        healthPercent = try c.decodeIfPresent(Int.self, forKey: .healthPercent)
+        watts = try c.decodeIfPresent(Double.self, forKey: .watts)
+        voltage = try c.decodeIfPresent(Double.self, forKey: .voltage)
+        amperage = try c.decodeIfPresent(Double.self, forKey: .amperage)
+        timeRemainingMinutes = try c.decodeIfPresent(Int.self, forKey: .timeRemainingMinutes)
+        maxCapacityMah = try c.decodeIfPresent(Int.self, forKey: .maxCapacityMah)
+        designCapacityMah = try c.decodeIfPresent(Int.self, forKey: .designCapacityMah)
+        smcKeysDetected = try c.decodeIfPresent([String].self, forKey: .smcKeysDetected) ?? d.smcKeysDetected
+        daemonVersion = try c.decodeIfPresent(String.self, forKey: .daemonVersion) ?? d.daemonVersion
+        // Ohne Zeitstempel ist der Status nie frisch.
+        updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .distantPast
+        message = try c.decodeIfPresent(String.self, forKey: .message)
+    }
 }
 
 public enum BGJSON {
