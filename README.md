@@ -18,7 +18,7 @@ Version 0.5.0 beantwortet in der Übersicht, was gerade wirklich gilt: gespeiche
 
 macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Alltag:
 
-- **Ladeprofile:** Schreibtisch (55–60 %), Alltag (75–80 %) und Unterwegs (85–90 %). Eigene Grenzen bleiben in den Einstellungen verfügbar.
+- **Ladeprofile:** Schreibtisch (45–50 %), Alltag (75–80 %) und Unterwegs (85–90 %). Das Schreibtischprofil liegt unter der Ladestufe von etwa 55–60 %, ab der die Lagerungsalterung sprunghaft zunimmt, und entspricht Apples Empfehlung von etwa 50 % für längere Lagerung. Eigene Grenzen bleiben in den Einstellungen verfügbar. Ohne separate Ladesperre hält macOS mindestens 80 %.
 - **Reiseplanung:** Vollladen startet drei Stunden vor einem gewählten Termin. Ist der Akku vor dem Termin voll, bleibt er bis zum Termin voll. Danach gilt nach 100 %, spätestens eine Stunde nach dem Termin, wieder der vorherige Ladebereich. Der Mac muss wach und am Netzteil sein; eine vollständige Ladung zum Termin ist keine Garantie.
 - **Zeitliche Schutzpause:** Eine, zwei oder zwölf Stunden mit automatischer Rückkehr zu den gespeicherten Einstellungen. Während der Pause greift B-Guard einschließlich Hitzeschutz nicht ein.
 - **Einmaliges Vollladen:** Mit weiterhin aktivem konfiguriertem Hitzeschutz und einer maximalen Dauer von acht Stunden.

@@ -24,7 +24,7 @@ struct AtomicActionTests {
         try BGJSON.encoder().encode(intervening).write(to: url)
         let profile = try ConfigServer.apply(.init(action: .init(action: .profile, profile: "desk")),
             peerUID: 501, consoleUID: 501, configURL: url)
-        #expect(profile.enabled && profile.lowerLimit == 55 && profile.upperLimit == 60)
+        #expect(profile.enabled && profile.lowerLimit == 45 && profile.upperLimit == 50)
         #expect(profile.heatProtectionCelsius == 43)
     }
 
