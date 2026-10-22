@@ -3,6 +3,7 @@ import Observation
 import CryptoKit
 import AppKit
 import UserNotifications
+import BatteryGuardShared
 
 /// App-only releases do not require reinstalling an unchanged root service.
 enum AppVersion {
