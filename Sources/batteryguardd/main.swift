@@ -3,6 +3,9 @@ import BatteryGuardShared
 import IOKit.ps
 import IOKit.pwr_mgt
 import CoreGraphics
+#if canImport(notify)
+import notify
+#endif
 
 final class DaemonRunner: @unchecked Sendable {
     private let controller: BatteryController
@@ -25,10 +28,14 @@ final class DaemonRunner: @unchecked Sendable {
         self.isOnce = isOnce
     }
 
-    private func timestamp() -> String {
+    private let timestampFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        return formatter.string(from: Date())
+        return formatter
+    }()
+
+    private func timestamp() -> String {
+        timestampFormatter.string(from: Date())
     }
 
     private func log(_ message: String) {
@@ -97,6 +104,10 @@ final class DaemonRunner: @unchecked Sendable {
         do {
             try data.write(to: URL(fileURLWithPath: BGPaths.status), options: .atomic)
             chmod(BGPaths.status, 0o644)
+            #if canImport(notify)
+            // Die App liest den Status sofort statt in kurzen Abständen nachzufragen.
+            _ = notify_post(BGPaths.statusNotification)
+            #endif
         } catch {
             if !isOnce {
                 logStderr("Hinweis: Konnte status.json nicht schreiben: \(error.localizedDescription)")
@@ -366,6 +377,9 @@ final class DaemonRunner: @unchecked Sendable {
         let timer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        // Toleranz lässt macOS Aufwachvorgänge bündeln; Netzteil- und Schlafereignisse
+        // lösen ohnehin sofort einen Durchlauf aus.
+        timer.tolerance = 5
         RunLoop.current.add(timer, forMode: .default)
 
         // Sofortige Reaktion auf Netzteil-/Akku-Änderung via IOPSNotificationCreateRunLoopSource

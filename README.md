@@ -111,7 +111,7 @@ Weitere Renderingzustände: `--desktop`, `--native`, `--offline`, `--travel`, `-
 ## Daten und Betrieb
 
 - Konfiguration und Dienststatus: `/Library/Application Support/BatteryGuard/` (root-eigen, 0644). Änderungen übernimmt der lokale Einstellungsdienst nach Benutzerprüfung.
-- Benutzerverlauf: `~/Library/Application Support/BatteryGuard/history.json` (0600, Verzeichnis 0700)
+- Benutzerverlauf: `~/Library/Application Support/BatteryGuard/history.jsonl` (JSON Lines, ein Messpunkt pro Zeile; 0600, Verzeichnis 0700). Ein vorhandenes `history.json` früherer Versionen wird einmalig übernommen.
 - Keine Cloud für Akkuwerte, kein Konto, keine Telemetrie. Automatische Updateprüfungen kontaktieren GitHub höchstens täglich; abschaltbar. Manuelle Prüfungen und Downloads kontaktieren ebenfalls GitHub.
 - Der Root-Dienst bleibt beim Beenden der App aktiv, einschließlich Zeitplänen. Die Verlaufsaufzeichnung endet.
 - Autostart und Dock-Sichtbarkeit lassen sich in den Einstellungen ändern.

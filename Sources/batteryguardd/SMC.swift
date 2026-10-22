@@ -73,6 +73,9 @@ public final class SMCClient: @unchecked Sendable {
 
     private var connection: io_connect_t = 0
     private let lock = NSRecursiveLock()
+    /// Die Schlüsselmenge ändert sich zur Laufzeit nicht. Nur eindeutige Antworten des SMC
+    /// (vorhanden oder „nicht gefunden“) werden zwischengespeichert, nie IOKit-Fehler.
+    private var keyExistence: [String: Bool] = [:]
 
     public init() {}
 
@@ -113,10 +116,25 @@ public final class SMCClient: @unchecked Sendable {
             IOServiceClose(connection)
             connection = 0
         }
+        keyExistence.removeAll()
     }
 
     public func keyExists(_ key: String) -> Bool {
-        return readKeyInfo(key) != nil
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = keyExistence[key] { return cached }
+        guard ensureConnected() else { return false }
+
+        var input = SMCKeyData()
+        input.key = fourCharCode(key)
+        input.data8 = cmdReadKeyInfo
+        var output = SMCKeyData()
+        var outSize = MemoryLayout<SMCKeyData>.size
+        let kr = IOConnectCallStructMethod(connection, selector, &input, MemoryLayout<SMCKeyData>.size, &output, &outSize)
+        guard kr == KERN_SUCCESS else { return false }
+        let exists = output.result == 0
+        keyExistence[key] = exists
+        return exists
     }
 
     public func readKeyInfo(_ key: String) -> (type: String, size: UInt32)? {

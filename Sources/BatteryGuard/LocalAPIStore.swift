@@ -216,6 +216,8 @@ final class LocalAPIStore {
             case "/api/v1/power-flow":
                 // Freshness represents collection freshness (when the sample was gathered by B-Guard),
                 // not sensor freshness (the underlying hardware sensor update interval).
+                // Ohne sichtbares Fenster wird der Energiefluss nicht laufend gelesen.
+                if !(status.powerFlow?.isFresh(at: now) ?? false) { status.refreshPowerFlow() }
                 let sample = status.powerFlow
                 let isFresh = sample?.isFresh(at: now) ?? false
                 let hasBatteryOrInput = (sample?.batteryWatts != nil) || (sample?.inputWatts != nil)

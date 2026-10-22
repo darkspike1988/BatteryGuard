@@ -47,6 +47,54 @@ public enum BGHistory {
             .sorted { $0.timestamp < $1.timestamp }.suffix(10_081))
     }
 
+    /// JSON Lines: ein Messpunkt pro Zeile. Neue Messungen werden nur angehängt,
+    /// statt jede Minute den ganzen Siebentageverlauf neu zu schreiben.
+    public struct DecodedLines: Equatable, Sendable {
+        public var samples: [BGHistorySample]
+        public var lineCount: Int
+        public var invalidLines: Int
+        /// Ein abgebrochener letzter Schreibvorgang hinterlässt eine Zeile ohne Zeilenende.
+        public var endsCleanly: Bool
+    }
+
+    public static func encodeLine(_ sample: BGHistorySample) throws -> Data {
+        let encoder = BGJSON.encoder()
+        encoder.outputFormatting = [.sortedKeys]
+        var data = try encoder.encode(sample)
+        data.append(0x0A)
+        return data
+    }
+
+    public static func encodeLines(_ samples: [BGHistorySample]) throws -> Data {
+        var data = Data()
+        for sample in samples { data.append(try encodeLine(sample)) }
+        return data
+    }
+
+    public static func decodeLines(_ data: Data) -> DecodedLines {
+        let decoder = BGJSON.decoder()
+        var samples: [BGHistorySample] = []
+        var lines = 0
+        var invalid = 0
+        for line in data.split(separator: 0x0A, omittingEmptySubsequences: true) {
+            lines += 1
+            if let sample = try? decoder.decode(BGHistorySample.self, from: Data(line)) {
+                samples.append(sample)
+            } else {
+                invalid += 1
+            }
+        }
+        return DecodedLines(samples: samples, lineCount: lines, invalidLines: invalid,
+                            endsCleanly: data.isEmpty || data.last == 0x0A)
+    }
+
+    /// True, wenn `next` nur vorne gekürzt und hinten um genau einen Messpunkt verlängert wurde.
+    public static func isAppend(_ next: [BGHistorySample], to previous: [BGHistorySample]) -> Bool {
+        guard let last = next.last, previous.last.map({ $0.timestamp < last.timestamp }) ?? true else { return false }
+        let kept = next.dropLast()
+        return kept.count <= previous.count && kept.elementsEqual(previous.suffix(kept.count))
+    }
+
     public static func csv(_ samples: [BGHistorySample]) -> String {
         let formatter = ISO8601DateFormatter()
         var rows = ["timestamp,percent,temperature_celsius,watts,health_percent,cycles,state,plugged_in"]
