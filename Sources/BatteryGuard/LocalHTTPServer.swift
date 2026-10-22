@@ -148,6 +148,9 @@ final class LocalHTTPServer: @unchecked Sendable {
             }
             let parameters = NWParameters.tcp
             parameters.requiredLocalEndpoint = .hostPort(host: NWEndpoint.Host("127.0.0.1"), port: endpointPort)
+            // Der Server schließt jede Verbindung selbst (TIME_WAIT); ohne Wiederverwendung
+            // scheitert ein Neustart der API kurz danach mit „Adresse belegt“.
+            parameters.allowLocalEndpointReuse = true
             // Explicit host binding prevents wildcard/IPv6 external listeners.
             let created = try NWListener(using: parameters)
             let run = UUID()

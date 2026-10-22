@@ -73,8 +73,12 @@ final class LocalAPIStore {
 
     func copyToken() {
         guard enabled, let token else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(token, forType: .string)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        // Konvention von nspasteboard.org: Zwischenablage-Manager speichern den Token nicht.
+        pasteboard.declareTypes([.string, NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")], owner: nil)
+        pasteboard.setString(token, forType: .string)
+        pasteboard.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
         message = L("API-Token kopiert. Behandle ihn wie ein Passwort.")
     }
 

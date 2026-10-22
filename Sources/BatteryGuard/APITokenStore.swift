@@ -19,42 +19,69 @@ struct APITokenStore: Sendable {
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
     }
 
-    func loadOrCreate() throws -> String {
-        try prepareDirectory()
+    private enum Existing {
+        case missing
+        case valid(String)
+        /// Eigene, reguläre Datei mit falschem Inhalt oder zu offenen Rechten (z. B. nach
+        /// einem Absturz beim Schreiben oder einer Wiederherstellung). Sie wird ersetzt.
+        case damaged
+    }
+
+    /// Fremde, verlinkte oder nicht reguläre Pfade werden nie angefasst.
+    private func inspect() throws -> Existing {
         let fd = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
         if fd < 0 {
             guard errno == ENOENT else { throw POSIXError(.EPERM) }
-            let token = try Self.generate()
-            let output = open(url.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
-            guard output >= 0 else {
-                if errno == EEXIST { return try loadOrCreate() }
-                throw POSIXError(.EIO)
-            }
-            let handle = FileHandle(fileDescriptor: output, closeOnDealloc: true)
-            defer { try? handle.close() }
-            try handle.write(contentsOf: Data(token.utf8))
-            try handle.synchronize()
-            return token
+            return .missing
         }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         defer { try? handle.close() }
         var info = stat()
-        guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG,
-              info.st_uid == geteuid(), info.st_mode & 0o077 == 0, info.st_size == 64 else {
+        guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG, info.st_uid == geteuid() else {
             throw POSIXError(.EPERM)
         }
-        let data = try handle.read(upToCount: 65) ?? Data()
-        guard let token = String(data: data, encoding: .utf8), Self.isValid(token) else {
-            throw POSIXError(.EINVAL)
+        guard info.st_mode & 0o077 == 0, info.st_size == 64,
+              let data = try handle.read(upToCount: 65),
+              let token = String(data: data, encoding: .utf8), Self.isValid(token) else { return .damaged }
+        return .valid(token)
+    }
+
+    func loadOrCreate() throws -> String {
+        try prepareDirectory()
+        switch try inspect() {
+        case .valid(let token): return token
+        case .missing: return try store(Self.generate(), replacing: false)
+        case .damaged: return try store(Self.generate(), replacing: true)
         }
-        return token
     }
 
     func rotate() throws -> String {
-        _ = try loadOrCreate() // Refuse unsafe existing paths before replacing them.
-        let token = try Self.generate()
-        try Data(token.utf8).write(to: url, options: .atomic)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        try prepareDirectory()
+        _ = try inspect() // Refuse unsafe existing paths before replacing them.
+        return try store(Self.generate(), replacing: true)
+    }
+
+    /// Vollständig geschriebene 0600-Datei, dann atomar an ihren Platz: `link` für eine
+    /// neue Datei (scheitert, wenn parallel eine entstand), `rename` zum Ersetzen.
+    private func store(_ token: String, replacing: Bool) throws -> String {
+        let temporary = url.deletingLastPathComponent()
+            .appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString).tmp")
+        let fd = open(temporary.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        guard fd >= 0 else { throw POSIXError(.EIO) }
+        defer { _ = unlink(temporary.path) }
+        do {
+            let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+            defer { try? handle.close() }
+            try handle.write(contentsOf: Data(token.utf8))
+            guard fchmod(fd, 0o600) == 0 else { throw POSIXError(.EIO) }
+            try handle.synchronize()
+        }
+        if replacing {
+            guard rename(temporary.path, url.path) == 0 else { throw POSIXError(.EIO) }
+        } else if link(temporary.path, url.path) != 0 {
+            if errno == EEXIST { return try loadOrCreate() }
+            throw POSIXError(.EIO)
+        }
         return token
     }
 

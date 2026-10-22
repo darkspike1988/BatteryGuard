@@ -145,6 +145,20 @@ struct LocalAPITests {
         #expect(try String(contentsOf: target, encoding: .utf8) == f.token)
     }
 
+    @Test func damagedOrExposedTokenIsRegenerated() throws {
+        let f = try fixture(); defer { f.cleanUp() }
+        try Data("half".utf8).write(to: f.credentials.url)
+        let repaired = try f.credentials.loadOrCreate()
+        #expect(APITokenStore.isValid(repaired) && repaired != f.token)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: f.credentials.url.path)
+        let replaced = try f.credentials.loadOrCreate()
+        #expect(replaced != repaired)
+        let mode = try FileManager.default.attributesOfItem(atPath: f.credentials.url.path)[.posixPermissions] as? NSNumber
+        #expect(mode?.intValue == 0o600)
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: f.directory.path).filter { $0.hasSuffix(".tmp") }
+        #expect(leftovers.isEmpty)
+    }
+
     @Test func realLoopbackHTTPReadAndActionStayInsideTemporaryConfiguration() async throws {
         let f = try fixture(); defer { f.cleanUp() }
         let deadline = Date().addingTimeInterval(3)
