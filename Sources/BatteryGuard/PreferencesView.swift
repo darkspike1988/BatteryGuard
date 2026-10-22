@@ -139,13 +139,6 @@ struct PreferencesView: View {
                         .disabled(!statusStore.supportsChargingPlans || !statusStore.status.smcKeysDetected.contains(where: { $0 == "CHTE" || $0 == "CH0B" }))
                 }
                 Text("Verhindert nur automatischen Ruhezustand am Netzteil. Display und bewusst ausgelöster Schlaf bleiben möglich. Bei Abstecken, fehlenden Sensoren, erreichtem Ziel, Frist oder Fehler wird Wachhalten gelöst.").font(.caption).foregroundStyle(.secondary)
-                Text("Kalibrierung: 100 % laden → bis 10 % entladen → erneut 100 % laden → eine Stunde halten. Der Assistent bleibt bis zur physischen Hardware-Abnahme gesperrt. Er kann die Ladestandsschätzung verbessern; eine längere Akkulebensdauer wird nicht zugesagt.").font(.caption).foregroundStyle(.secondary)
-                if configStore.config.calibrationPlan != nil {
-                    Button("Kalibrierung abbrechen") {
-                        do { _ = try configStore.performAPIAction(.init(action: .cancelCalibration)) }
-                        catch { diagnosticsError = error.localizedDescription }
-                    }
-                }
             } header: { Text("Sonderaktionen") }
 
             Section {

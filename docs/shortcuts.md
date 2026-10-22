@@ -30,7 +30,7 @@ Vorbereitung: B-Guard aus Programme starten, Dienstversion prüfen, Ausgangsprof
 | S02 | Lesende Aktionen einzeln ausführen; anschließend B-Guard-Oberfläche schließen und erneut ausführen | JSON oder erklärbarer Fehler; keine Vordergrundöffnung erforderlich; fehlende Daten nicht als Nullwerte interpretieren |
 | S03 | Ladeaktion ausführen → Profil wählen → Schreibtisch; alle unpassenden optionalen Parameter leer lassen | Dienst bestätigt gespeichertes Profil; danach mit Leseaktion gegenprüfen; Hardwarewirkung separat als H01/H02 testen; Ausgangsprofil wiederherstellen |
 | S04 | Schutz pausieren, Dauer 1 Minute; anschließend Schutz fortsetzen, ohne zusätzliche Parameter | Speicherung und Rückkehr nachvollziehbar; Schutzpause setzt auch Hitzeschutz aus; Ausgangszustand wiederherstellen |
-| S05 | Halten, Einmalentladung oder Kalibrierung mit passenden Parametern anfragen | Noch nicht physisch freigegebene Aktion wird abgelehnt; keine erfolgreiche Hardwareausführung behaupten |
+| S05 | Halten oder Einmalentladung mit passenden Parametern anfragen | Noch nicht physisch freigegebene Aktion wird abgelehnt; keine erfolgreiche Hardwareausführung behaupten |
 | S06 | In isolierter Testumgebung ohne aktuellen Dienst Schreibaktion ausführen | Konkreter Fehler; keine fingierte Erfolgsantwort; ohne Testumgebung blocked |
 | S07 | UI-/API-/Kurzbefehle-Aufträge kontrolliert überlappen; Reihenfolge und finale Konfiguration notieren | Keine veralteten Abschlüsse löschen erneuerte Anforderungen; API nur für diesen Test ausdrücklich aktivieren und danach zurücksetzen |
 | S08 | Temporäres eigenes Profil in Kurzbefehl wählen, in B-Guard löschen, Kurzbefehl erneut ausführen | Fehlermeldung statt Anwendung gelöschter Profildaten |

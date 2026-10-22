@@ -171,15 +171,6 @@ final class DaemonRunner: @unchecked Sendable {
                                    logger: { [weak self] msg in self?.log(msg) })
         }
 
-        if !dryRun, let snapshot = storedConfig.calibrationPlan,
-           decision.completedCalibrationRequestID != nil || (decision.updatedCalibrationPlan != nil && decision.updatedCalibrationPlan != snapshot) {
-            do {
-                try BGConfigFile.update(at: URL(fileURLWithPath: BGPaths.config)) { latest in
-                    CalibrationControllerPersistence.apply(snapshot: snapshot, decision: decision, to: &latest)
-                }
-            } catch { logStderr("Kalibrierung konnte nicht aktualisiert werden: \(error.localizedDescription)") }
-        }
-
         if !dryRun, let snapshot = storedConfig.specialChargePlan,
            decision.completedSpecialRequestID != nil || decision.updatedSpecialPlan != nil {
             do {
