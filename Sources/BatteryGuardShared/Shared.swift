@@ -15,6 +15,11 @@ public enum BGPaths {
     public static let statusNotification = "com.batteryguard.status-changed"
 }
 
+/// Eine Versionsquelle für App, Dienst und Bundle (build-app.sh liest sie aus dieser Datei).
+public enum BGVersion {
+    public static let current = "0.5.0"
+}
+
 /// Wie das Limit durchgesetzt wird.
 public enum BGMode: String, Codable, CaseIterable, Sendable {
     /// Daemon wählt selbst: SMC-Ladesperre, falls vorhanden, sonst Pendel-Modus.

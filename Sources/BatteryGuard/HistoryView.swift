@@ -20,6 +20,38 @@ private struct HistoryPoint: Identifiable {
     let segment: Int
 }
 
+/// `body` liest die Messpunkte vielfach (Diagramm, Zusammenfassung, Auswahl, Tasten).
+/// Der Cache berechnet sie nur neu, wenn sich Verlauf, Messwert, Zeitraum oder Minute ändern.
+private final class HistoryPointCache {
+    struct Key: Equatable {
+        let count: Int
+        let first: Date?
+        let last: Date?
+        let metric: HistoryMetric
+        let hours: Int
+        let minute: Int
+    }
+    var key: Key?
+    var filtered: [BGHistorySample] = []
+    var points: [HistoryPoint] = []
+    var chartPoints: [HistoryPoint] = []
+
+    /// Swift Charts zeichnet jede Marke einzeln; 10.080 Punkte für sieben Tage sind unnötig.
+    /// Abschnittsgrenzen bleiben erhalten, damit Lücken sichtbar bleiben.
+    static func thinned(_ points: [HistoryPoint], limit: Int = 720) -> [HistoryPoint] {
+        guard points.count > limit else { return points }
+        let step = Int((Double(points.count) / Double(limit)).rounded(.up))
+        var result: [HistoryPoint] = []
+        result.reserveCapacity(limit + 32)
+        for (index, point) in points.enumerated() {
+            let edge = index == 0 || index == points.count - 1
+                || points[index - 1].segment != point.segment || points[index + 1].segment != point.segment
+            if edge || index % step == 0 { result.append(point) }
+        }
+        return result
+    }
+}
+
 private enum LongTermMetric: String, CaseIterable, Identifiable {
     case capacity = "Kapazitätsquote", cycles = "Zyklen", temperature = "Temperatur"
     var id: String { rawValue }
@@ -51,23 +83,49 @@ struct HistoryView: View {
     @State private var longTermMetric: LongTermMetric = .capacity
     @State private var longTermDays = 365
 
-    private var filtered: [BGHistorySample] {
-        let cutoff = Date().addingTimeInterval(-Double(hours) * 3600)
-        return history.samples.filter { $0.timestamp >= cutoff }
-    }
-    private var points: [HistoryPoint] {
+    @State private var cache = HistoryPointCache()
+
+    private func refreshCache() {
+        let now = Date()
+        let samples = history.samples
+        let key = HistoryPointCache.Key(count: samples.count, first: samples.first?.timestamp,
+                                        last: samples.last?.timestamp, metric: metric, hours: hours,
+                                        minute: Int(now.timeIntervalSince1970 / 60))
+        guard cache.key != key else { return }
+        cache.key = key
+        let cutoff = now.addingTimeInterval(-Double(hours) * 3600)
+        let filtered = samples.filter { $0.timestamp >= cutoff }
         var segment = 0
         var previous: Date?
-        return filtered.compactMap { sample in
+        let points = filtered.compactMap { sample -> HistoryPoint? in
             guard let value = metric.value(sample), value.isFinite else { previous = nil; segment += 1; return nil }
             if let previous, sample.timestamp.timeIntervalSince(previous) > 120 { segment += 1 }
             previous = sample.timestamp
             return HistoryPoint(time: sample.timestamp, value: value, segment: segment)
         }
+        cache.filtered = filtered
+        cache.points = points
+        cache.chartPoints = HistoryPointCache.thinned(points)
     }
+
+    private var filtered: [BGHistorySample] { refreshCache(); return cache.filtered }
+    private var points: [HistoryPoint] { refreshCache(); return cache.points }
+    private var chartPoints: [HistoryPoint] { refreshCache(); return cache.chartPoints }
+
+    /// Binäre Suche: Hover-Ereignisse kommen sehr häufig.
     private var selectedPoint: HistoryPoint? {
         guard let selectedTime else { return nil }
-        return points.min { abs($0.time.timeIntervalSince(selectedTime)) < abs($1.time.timeIntervalSince(selectedTime)) }
+        let points = self.points
+        guard !points.isEmpty else { return nil }
+        var low = 0, high = points.count - 1
+        while low < high {
+            let mid = (low + high) / 2
+            if points[mid].time < selectedTime { low = mid + 1 } else { high = mid }
+        }
+        if low > 0, abs(points[low - 1].time.timeIntervalSince(selectedTime)) <= abs(points[low].time.timeIntervalSince(selectedTime)) {
+            return points[low - 1]
+        }
+        return points[low]
     }
 
     var body: some View {
@@ -182,9 +240,10 @@ struct HistoryView: View {
     }
 
     private var chart: some View {
-        let segmentCounts = Dictionary(grouping: points, by: \.segment).mapValues { $0.count }
+        let chartPoints = self.chartPoints
+        let segmentCounts = Dictionary(grouping: chartPoints, by: \.segment).mapValues { $0.count }
         return Chart {
-            ForEach(points) { point in
+            ForEach(chartPoints) { point in
                 LineMark(x: .value("Zeit", point.time), y: .value(metric.unit, point.value), series: .value("Abschnitt", point.segment))
                     .foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth: 2))
                 // Isolated samples otherwise disappear when a gap splits the line series.
@@ -303,9 +362,10 @@ struct HistoryView: View {
     }
 
     private func longTermChart(_ points: [LongTermPoint]) -> some View {
-        let segmentCounts = Dictionary(grouping: points, by: \.segment).mapValues { $0.count }
+        let chartPoints = self.chartPoints
+        let segmentCounts = Dictionary(grouping: chartPoints, by: \.segment).mapValues { $0.count }
         return Chart {
-            ForEach(points) { point in
+            ForEach(chartPoints) { point in
                 LineMark(x: .value("Tag", point.day), y: .value(longTermMetric.unit, point.value),
                          series: .value("Abschnitt", point.segment))
                     .foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth: 2))
