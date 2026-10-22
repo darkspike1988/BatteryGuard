@@ -905,3 +905,8 @@
 "Temperaturfaktor im Mittel" = "Average temperature factor";
 "Temperaturgewichtet" = "Temperature-weighted";
 "Zeit je Ladebereich, gewichtet mit einem Temperaturfaktor (25 °C = 1×, 35 °C ≈ 2×, 45 °C ≈ 4×). Studien zeigen eine Alterungsstufe bei etwa 55–60 % Ladung und deutlich stärkere Alterung über 80 %. Das ist eine Modellrechnung, keine Lebensdauerprognose." = "Time per charge range, weighted by a temperature factor (25 °C = 1×, 35 °C ≈ 2×, 45 °C ≈ 4×). Studies show an aging step at about 55–60 % charge and much stronger aging above 80 %. This is a model estimate, not a lifetime forecast.";
+"Akku ist kalt" = "Battery is cold";
+"Aktuell %.1f °C. Laden unter 10 °C belastet den Akku stärker. Lass den Mac nach Möglichkeit erst warm werden." = "Currently %.1f °C. Charging below 10 °C stresses the battery more. If possible, let the Mac warm up first.";
+"Mac ist stark erwärmt" = "Mac is very warm";
+"macOS meldet hohe Systemwärme. Laden erzeugt zusätzliche Wärme im Akku; sorge für Belüftung oder aktiviere den Hitzeschutz." = "macOS reports high system heat. Charging adds heat to the battery; improve ventilation or turn on heat protection.";
+"Ladelimit am %@ deutlich geändert. Die gemessene Kapazität kann sich danach einige Wochen vorübergehend verschieben (Anodenüberhang); das ist weder Alterung noch Erholung." = "Charge limit changed significantly on %@. The measured capacity may shift temporarily for a few weeks afterwards (anode overhang); this is neither aging nor recovery.";

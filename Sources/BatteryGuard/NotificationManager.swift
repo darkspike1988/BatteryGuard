@@ -9,6 +9,8 @@ final class NotificationManager: Sendable {
     private var lowBatteryPolicy = LowBatteryWarningPolicy()
     private var didNotifyUpperLimit: Bool = false
     private var didNotifyHeat: Bool = false
+    private var didNotifyThermal: Bool = false
+    private var coldCharging = BGColdChargingPolicy()
 
     private enum Key {
         static let lastFullCharge = "bg.lastFullChargeAt"
@@ -38,6 +40,23 @@ final class NotificationManager: Sendable {
                 didNotifyHeat = true
                 send(title: L("Akku ist warm"), body: L("Aktuell %.1f °C. Prüfe Belüftung und Hitzeschutz.", temperature))
             } else if temperature < threshold - 2 { didNotifyHeat = false }
+        }
+        if heatEnabled, coldCharging.shouldWarn(temperatureCelsius: status.temperatureCelsius,
+                                                charging: status.pluggedIn && status.isChargingHardware),
+           let temperature = status.temperatureCelsius {
+            send(title: L("Akku ist kalt"),
+                 body: L("Aktuell %.1f °C. Laden unter 10 °C belastet den Akku stärker. Lass den Mac nach Möglichkeit erst warm werden.", temperature))
+        }
+        // Öffentliche Systemthermik (ProcessInfo.thermalState) ergänzt die Akkutemperatur.
+        switch ProcessInfo.processInfo.thermalState {
+        case .serious, .critical:
+            if heatEnabled, status.pluggedIn, !didNotifyThermal {
+                didNotifyThermal = true
+                send(title: L("Mac ist stark erwärmt"),
+                     body: L("macOS meldet hohe Systemwärme. Laden erzeugt zusätzliche Wärme im Akku; sorge für Belüftung oder aktiviere den Hitzeschutz."))
+            }
+        case .nominal: didNotifyThermal = false
+        default: break
         }
 
         let calibrationEnabled = preferences.object(forKey: "bg.notifyCalibration") as? Bool ?? true

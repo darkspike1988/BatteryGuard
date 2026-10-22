@@ -153,6 +153,31 @@ struct PlanAndHistoryTests {
         #expect(BGAgingExposure.evaluate([]).averageTemperatureFactor == nil)
     }
 
+    @Test func coldChargingWarnsOncePerEpisode() {
+        var policy = BGColdChargingPolicy()
+        let steps: [(Double?, Bool, Bool)] = [
+            (8, false, false), (8, true, true), (7, true, false), (11, true, false),
+            (9, true, false), (12, true, false), (9, true, true), (nil, true, false),
+        ]
+        for (temperature, charging, expected) in steps {
+            let warned = policy.shouldWarn(temperatureCelsius: temperature, charging: charging)
+            #expect(warned == expected)
+        }
+    }
+
+    @Test func significantLimitChangesStartASettlingPeriod() {
+        var change = BGLimitChange(upperLimit: 80)
+        #expect(!change.isSettling(at: now))
+        change = change.observing(upperLimit: 75, at: now)
+        #expect(change.changedAt == nil && change.upperLimit == 80)
+        change = change.observing(upperLimit: 70, at: now)
+        #expect(change.changedAt == now && change.upperLimit == 70)
+        #expect(change.isSettling(at: now.addingTimeInterval(27 * 86400)))
+        #expect(!change.isSettling(at: now.addingTimeInterval(29 * 86400)))
+        let decoded = try? BGJSON.decoder().decode(BGLimitChange.self, from: BGJSON.encoder().encode(change))
+        #expect(decoded == change)
+    }
+
     @Test func historyLinesRoundTripAndSkipDamagedLines() throws {
         var s = BGStatus(); s.percent = 70
         let samples = [0.0, 60, 120].map { offset -> BGHistorySample in
