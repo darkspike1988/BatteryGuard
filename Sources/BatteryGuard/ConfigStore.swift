@@ -66,6 +66,7 @@ final class ConfigStore: Sendable {
         do {
             let clean = try BGConfigFile.read(at: configURL)
             baseline = clean
+            observeLimit(clean.upperLimit)
             if self.config != clean { self.config = clean }
             if !keepsSaveError {
                 self.hasWriteError = false
@@ -113,6 +114,7 @@ final class ConfigStore: Sendable {
             isInitialLoad = true
             config = saved
             baseline = saved
+            observeLimit(saved.upperLimit)
             isInitialLoad = wasInitialLoad
             saveTask?.cancel()
             hasPendingSave = false
@@ -144,6 +146,12 @@ final class ConfigStore: Sendable {
     
     var hasUnsavedChanges: Bool { hasPendingSave }
 
+    /// Nur die echte Dienstkonfiguration zählt; Tests und Vorschauen bleiben unberührt.
+    private func observeLimit(_ upperLimit: Int) {
+        guard persistenceEnabled, configURL.path == BGPaths.config else { return }
+        LimitChangeStore.observe(upperLimit: upperLimit)
+    }
+
     func savedConfig() throws -> BGConfig { try BGConfigFile.read(at: configURL) }
 
     @discardableResult
@@ -174,6 +182,7 @@ final class ConfigStore: Sendable {
         isInitialLoad = true
         config = saved
         baseline = saved
+        observeLimit(saved.upperLimit)
         isInitialLoad = wasInitialLoad
         keepsSaveError = false
         hasWriteError = false

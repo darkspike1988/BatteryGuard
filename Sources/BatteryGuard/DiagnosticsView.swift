@@ -102,6 +102,11 @@ struct DiagnosticsView: View {
                         Text("Standardmäßig aus. Erfasst nur bei laufender App und gültigen Kapazitätsquellen. Deaktivieren pausiert die Aufzeichnung; vorhandene Werte bleiben erhalten.")
                             .font(.caption).foregroundStyle(.secondary)
                         if let error = history.capacityError { Text(error).font(.caption).foregroundStyle(.orange) }
+                        if let change = LimitChangeStore.current(), change.isSettling(at: Date()), let changedAt = change.changedAt {
+                            Label(L("Ladelimit am %@ deutlich geändert. Die gemessene Kapazität kann sich danach einige Wochen vorübergehend verschieben (Anodenüberhang); das ist weder Alterung noch Erholung.",
+                                    changedAt.formatted(date: .abbreviated, time: .omitted)), systemImage: "info.circle")
+                                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        }
                         if let delta = BGCapacityTrend.change(history.capacityDays) {
                             Text(L("Beobachtete Veränderung: %+.1f Prozentpunkte", delta))
                             Text("Vergleich erster und letzter Tagesmittelwerte gleicher Quelle, Designkapazität und OS-Version; keine Alterungsprognose.").font(.caption).foregroundStyle(.secondary)
