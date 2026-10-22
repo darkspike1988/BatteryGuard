@@ -362,10 +362,9 @@ struct HistoryView: View {
     }
 
     private func longTermChart(_ points: [LongTermPoint]) -> some View {
-        let chartPoints = self.chartPoints
-        let segmentCounts = Dictionary(grouping: chartPoints, by: \.segment).mapValues { $0.count }
+        let segmentCounts = Dictionary(grouping: points, by: \.segment).mapValues { $0.count }
         return Chart {
-            ForEach(chartPoints) { point in
+            ForEach(points) { point in
                 LineMark(x: .value("Tag", point.day), y: .value(longTermMetric.unit, point.value),
                          series: .value("Abschnitt", point.segment))
                     .foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth: 2))
