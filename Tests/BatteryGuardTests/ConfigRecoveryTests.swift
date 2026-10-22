@@ -10,6 +10,11 @@ struct ConfigRecoveryTests {
         return (directory, directory.appendingPathComponent("config.json"), directory.appendingPathComponent("config.backup.json"))
     }
 
+    /// The writer lock file is an expected companion; nothing else may appear.
+    private func entries(_ directory: URL) throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: directory.path).filter { !$0.hasSuffix(".lock") }
+    }
+
     @Test func validConfigCreatesSanitizedBackup() throws {
         let (directory, configURL, backupURL) = try fixture()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -91,7 +96,7 @@ struct ConfigRecoveryTests {
         }
         #expect(try Data(contentsOf: target) == original)
         #expect(!FileManager.default.fileExists(atPath: backupURL.path))
-        #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).count == 2)
+        #expect(try entries(directory).count == 2)
     }
 
     @Test func missingConfigAndSymlinkBackupDoNotAuthorizeRepair() throws {
@@ -109,6 +114,6 @@ struct ConfigRecoveryTests {
             try BGConfigRecovery.prepare(configURL: configURL, backupURL: backupURL, requireRoot: false)
         }
         #expect(try Data(contentsOf: configURL) == original)
-        #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).count == 3)
+        #expect(try entries(directory).count == 3)
     }
 }
