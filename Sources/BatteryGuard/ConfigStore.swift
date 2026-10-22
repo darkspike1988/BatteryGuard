@@ -33,6 +33,11 @@ final class ConfigStore: Sendable {
     private var saveTask: Task<Void, Never>?
     private var hasPendingSave = false
     private var baseline = BGConfig().sanitized()
+    /// Fehlgeschlagene Speicherungen werden mit wachsendem Abstand wiederholt und nach
+    /// `maximumSaveAttempts` verworfen, damit Dienständerungen wieder sichtbar werden.
+    private var failedSaveAttempts = 0
+    private var keepsSaveError = false
+    static let maximumSaveAttempts = 5
     
     init(loadImmediately: Bool = true, persistenceEnabled: Bool = true,
          configURL: URL = URL(fileURLWithPath: BGPaths.config)) {
@@ -62,8 +67,10 @@ final class ConfigStore: Sendable {
             let clean = try BGConfigFile.read(at: configURL)
             baseline = clean
             if self.config != clean { self.config = clean }
-            self.hasWriteError = false
-            self.writeErrorMessage = nil
+            if !keepsSaveError {
+                self.hasWriteError = false
+                self.writeErrorMessage = nil
+            }
         } catch {
             self.hasWriteError = true
             self.writeErrorMessage = L("Konfiguration konnte nicht gelesen werden: %@", error.localizedDescription)
@@ -72,16 +79,26 @@ final class ConfigStore: Sendable {
     
     func scheduleDebouncedSave() {
         hasPendingSave = true
+        failedSaveAttempts = 0
+        scheduleSave(after: .milliseconds(400))
+    }
+
+    private func scheduleSave(after delay: Duration) {
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             do {
-                try await Task.sleep(for: .milliseconds(400))
+                try await Task.sleep(for: delay)
             } catch {
                 return // Vorzeitig abgebrochen
             }
             guard !Task.isCancelled, let self else { return }
             self.saveConfig()
         }
+    }
+
+    /// 2, 4, 8, 16 s: genug für einen Dienstneustart, ohne die IPC zu überlasten.
+    static func retryDelay(afterFailedAttempts attempts: Int) -> Duration {
+        .seconds(1 << min(max(attempts, 1), 4))
     }
     
     func saveConfig() {
@@ -97,13 +114,31 @@ final class ConfigStore: Sendable {
             config = saved
             baseline = saved
             isInitialLoad = wasInitialLoad
+            saveTask?.cancel()
             hasPendingSave = false
+            failedSaveAttempts = 0
+            keepsSaveError = false
             self.hasWriteError = false
             self.writeErrorMessage = nil
         } catch {
-            hasPendingSave = true
+            failedSaveAttempts += 1
             self.hasWriteError = true
+            guard failedSaveAttempts < Self.maximumSaveAttempts else {
+                // Aufgeben statt dauerhaft hängen: den gespeicherten Stand wieder laden,
+                // damit Dienständerungen und API-Aktionen wieder funktionieren.
+                saveTask?.cancel()
+                hasPendingSave = false
+                failedSaveAttempts = 0
+                keepsSaveError = true
+                loadConfig()
+                self.hasWriteError = true
+                self.writeErrorMessage = L("Änderung konnte nicht gespeichert werden und wurde verworfen: %@",
+                                           error.localizedDescription)
+                return
+            }
+            hasPendingSave = true
             self.writeErrorMessage = error.localizedDescription
+            scheduleSave(after: Self.retryDelay(afterFailedAttempts: failedSaveAttempts))
         }
     }
     
@@ -140,6 +175,7 @@ final class ConfigStore: Sendable {
         config = saved
         baseline = saved
         isInitialLoad = wasInitialLoad
+        keepsSaveError = false
         hasWriteError = false
         writeErrorMessage = nil
         return saved

@@ -71,6 +71,27 @@ struct AppActionsTests {
         #expect(try BGJSON.decoder().decode(BGConfig.self, from: Data(contentsOf: url)).upperLimit == 90)
     }
 
+    @Test func repeatedSaveFailuresGiveUpInsteadOfBlockingForever() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("config.json")
+        store.config.upperLimit = 90
+        try FileManager.default.removeItem(at: url)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+        for _ in 0..<ConfigStore.maximumSaveAttempts { store.flushPendingSave() }
+        #expect(!store.hasUnsavedChanges)
+        #expect(store.hasWriteError)
+        try FileManager.default.removeItem(at: url)
+        var external = BGConfig(); external.upperLimit = 70
+        try BGJSON.encoder().encode(external).write(to: url)
+        store.loadConfig()
+        // Daemon changes are visible again and the failure stays reported.
+        #expect(store.config.upperLimit == 70)
+        #expect(store.hasWriteError)
+        #expect(ConfigStore.retryDelay(afterFailedAttempts: 1) == .seconds(2))
+        #expect(ConfigStore.retryDelay(afterFailedAttempts: 9) == .seconds(16))
+    }
+
     @Test func menuActionsActivateProfilesAndToggleProtection() throws {
         let (store, directory) = try fixture()
         defer { try? FileManager.default.removeItem(at: directory) }

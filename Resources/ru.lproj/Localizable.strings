@@ -468,6 +468,7 @@
 "Kompakte Darstellung wählen; letzte Verlaufsmessung mit eindeutigem Zeitpunkt." = "Выбрать компактный вид; последнее измерение истории с однозначным временем.";
 "Kompakte Kartendarstellung" = "Компактный вид карточек";
 "Konfiguration konnte nicht gelesen werden: %@" = "Не удалось прочитать конфигурацию: %@";
+"Änderung konnte nicht gespeichert werden und wurde verworfen: %@" = "Изменение не удалось сохранить, и оно было отменено: %@";
 "Kritisch laut macOS" = "Критично по данным macOS";
 "LADEZIEL" = "ЦЕЛЬ ЗАРЯДКИ";
 "Lade bewusst. Bleib flexibel. Behalte den Überblick." = "Заряжай осознанно. Оставайся гибким. Держи всё под контролем.";
