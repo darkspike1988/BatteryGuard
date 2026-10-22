@@ -13,7 +13,7 @@ struct ChargingActionTests {
             config.travelReadyAt = now.addingTimeInterval(12 * 3600)
             let applied = try BGChargingActionRequest(action: .profile, profile: "desk").applying(to: config, at: now)
             #expect(applied.mode == .auto)
-            #expect(applied.enabled && applied.lowerLimit == 55 && applied.upperLimit == 60)
+            #expect(applied.enabled && applied.lowerLimit == 45 && applied.upperLimit == 50)
             #expect(!applied.chargeToFullOnce && applied.fullChargeUntil == nil)
             #expect(applied.travelReadyAt == config.travelReadyAt)
             config.travelReadyAt = now.addingTimeInterval(3600)

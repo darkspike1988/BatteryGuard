@@ -11,7 +11,7 @@ struct PlanAndHistoryTests {
         c.pauseUntil = now.addingTimeInterval(3600)
         #expect(!c.effective(at: now).enabled)
         #expect(c.effective(at: now.addingTimeInterval(3600)).enabled)
-        #expect(c.effective(at: now.addingTimeInterval(3600)).upperLimit == 60)
+        #expect(c.effective(at: now.addingTimeInterval(3600)).upperLimit == 50)
         #expect(c.removingExpiredPlans(at: now.addingTimeInterval(3600)).pauseUntil == nil)
     }
 
