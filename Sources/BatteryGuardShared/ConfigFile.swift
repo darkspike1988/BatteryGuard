@@ -1,43 +1,111 @@
 import Foundation
 import Darwin
 
-/// Cooperative locking keeps app and daemon on the same inode in a root-owned directory.
-/// This prevents partial reads and conflicting read/modify/write transactions.
+/// Writers serialize on a separate, never-replaced lock file and replace the
+/// configuration atomically (temporary file, F_FULLFSYNC, rename). Readers therefore
+/// always see either the complete old or the complete new file, even after a crash,
+/// power loss or a full disk.
 public enum BGConfigFile {
-    private static func withFile<T>(at url: URL, writing: Bool,
-                                    operation: (FileHandle) throws -> T) throws -> T {
-        let descriptor = open(url.path, (writing ? O_RDWR : O_RDONLY) | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
-        guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+    static let maximumSize = 262_144
+
+    private static func posixError() -> POSIXError {
+        POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+    }
+
+    /// Bounded non-blocking wait: a stalled writer must not freeze the UI or sleep acknowledgement.
+    static func acquire(_ descriptor: Int32, _ operation: Int32) throws {
+        for _ in 0..<20 {
+            if flock(descriptor, operation | LOCK_NB) == 0 { return }
+            guard errno == EWOULDBLOCK || errno == EINTR else { throw posixError() }
+            usleep(10_000)
+        }
+        throw POSIXError(.EBUSY)
+    }
+
+    static func lockURL(for url: URL) -> URL {
+        url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".lock")
+    }
+
+    /// Exclusive writer transaction. The lock file lives next to the configuration
+    /// in the same root-owned directory and is never renamed, so every writer locks
+    /// the same inode even though the configuration itself is replaced.
+    static func withWriterLock<T>(for url: URL, operation: () throws -> T) throws -> T {
+        let descriptor = open(lockURL(for: url).path, O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0o644)
+        guard descriptor >= 0 else { throw posixError() }
+        defer { _ = close(descriptor) }
+        var attributes = stat()
+        guard fstat(descriptor, &attributes) == 0,
+              (attributes.st_mode & S_IFMT) == S_IFREG,
+              attributes.st_uid == geteuid() else { throw POSIXError(.EINVAL) }
+        try acquire(descriptor, LOCK_EX)
+        defer { _ = flock(descriptor, LOCK_UN) }
+        return try operation()
+    }
+
+    /// Writes `data` to a new temporary file in the same directory, flushes it to
+    /// permanent storage and renames it over `url`. `rename(2)` is atomic and replaces
+    /// a symlink instead of following it. On macOS `fsync(2)` does not flush the drive
+    /// cache; `F_FULLFSYNC` does (see fsync(2) and fcntl(2)).
+    static func replaceAtomically(_ data: Data, at url: URL, permissions: mode_t = 0o644) throws {
+        guard data.count <= maximumSize else { throw POSIXError(.EFBIG) }
+        let directory = url.deletingLastPathComponent()
+        let temporary = directory.appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString).tmp")
+        let descriptor = open(temporary.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, permissions)
+        guard descriptor >= 0 else { throw posixError() }
+        var renamed = false
+        defer {
+            _ = close(descriptor)
+            if !renamed { _ = unlink(temporary.path) }
+        }
+        try data.withUnsafeBytes { buffer in
+            var offset = 0
+            while offset < buffer.count {
+                let written = write(descriptor, buffer.baseAddress! + offset, buffer.count - offset)
+                if written < 0 {
+                    if errno == EINTR { continue }
+                    throw posixError()
+                }
+                offset += written
+            }
+        }
+        guard fchmod(descriptor, permissions) == 0 else { throw posixError() }
+        if fcntl(descriptor, F_FULLFSYNC) != 0 {
+            // Some file systems do not support F_FULLFSYNC; fall back to fsync.
+            guard fsync(descriptor) == 0 else { throw posixError() }
+        }
+        guard rename(temporary.path, url.path) == 0 else { throw posixError() }
+        renamed = true
+        let directoryDescriptor = open(directory.path, O_RDONLY | O_CLOEXEC)
+        if directoryDescriptor >= 0 {
+            _ = fsync(directoryDescriptor)
+            _ = close(directoryDescriptor)
+        }
+    }
+
+    /// Reads one complete snapshot. A shared lock keeps compatibility with older
+    /// daemons that still rewrote the file in place; it never contends with new writers.
+    private static func readData(at url: URL) throws -> Data {
+        let descriptor = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard descriptor >= 0 else { throw posixError() }
         let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
         defer { try? handle.close() }
         var attributes = stat()
         guard fstat(descriptor, &attributes) == 0,
               (attributes.st_mode & S_IFMT) == S_IFREG,
-              attributes.st_size <= 262_144 else { throw POSIXError(.EINVAL) }
-        let lockType = (writing ? LOCK_EX : LOCK_SH) | LOCK_NB
-        var acquired = false
-        // Bound the wait: a stalled writer must not freeze the UI or sleep acknowledgement.
-        for _ in 0..<20 {
-            if flock(descriptor, lockType) == 0 { acquired = true; break }
-            guard errno == EWOULDBLOCK || errno == EINTR else {
-                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
-            }
-            usleep(10_000)
-        }
-        guard acquired else { throw POSIXError(.EBUSY) }
+              attributes.st_size <= maximumSize else { throw POSIXError(.EINVAL) }
+        try acquire(descriptor, LOCK_SH)
         defer { _ = flock(descriptor, LOCK_UN) }
-        return try operation(handle)
+        let data = try handle.read(upToCount: maximumSize + 1) ?? Data()
+        guard data.count <= maximumSize else { throw POSIXError(.EFBIG) }
+        return data
     }
 
-    private static func decode(_ handle: FileHandle) throws -> BGConfig {
-        try handle.seek(toOffset: 0)
-        let data = try handle.read(upToCount: 262_145) ?? Data()
-        guard data.count <= 262_144 else { throw POSIXError(.EFBIG) }
-        return try BGJSON.decoder().decode(BGConfig.self, from: data).sanitized()
+    private static func decode(at url: URL) throws -> BGConfig {
+        try BGJSON.decoder().decode(BGConfig.self, from: readData(at: url)).sanitized()
     }
 
     public static func read(at url: URL) throws -> BGConfig {
-        try withFile(at: url, writing: false) { try decode($0) }
+        try decode(at: url)
     }
 
     /// Commands are applied under the service writer lock against current state.
@@ -58,19 +126,17 @@ public enum BGConfigFile {
             try mutation(&desired)
             return try BGConfigClient.update(baseline: baseline, desired: desired)
         }
-        return try withFile(at: url, writing: true) { handle in
-            var config = try decode(handle)
+        return try withWriterLock(for: url) {
+            var config = try decode(at: url)
             let previous = config
             try mutation(&config)
             config = config.sanitized()
             let data = try BGJSON.encoder().encode(config)
+            guard data.count <= maximumSize else { throw POSIXError(.EFBIG) }
             if geteuid() == 0 && url.path == BGPaths.config {
                 try BGConfigRecovery.backup(config: previous)
             }
-            try handle.seek(toOffset: 0)
-            try handle.write(contentsOf: data)
-            try handle.truncate(atOffset: UInt64(data.count))
-            try handle.synchronize()
+            try replaceAtomically(data, at: url)
             return config
         }
     }
