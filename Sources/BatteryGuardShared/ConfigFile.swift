@@ -131,6 +131,8 @@ public enum BGConfigFile {
             let previous = config
             try mutation(&config)
             config = config.sanitized()
+            // Unveränderte Stände nicht neu schreiben: spart Schreibzugriffe und Backups.
+            guard config != previous else { return config }
             let data = try BGJSON.encoder().encode(config)
             guard data.count <= maximumSize else { throw POSIXError(.EFBIG) }
             if geteuid() == 0 && url.path == BGPaths.config {
@@ -144,7 +146,7 @@ public enum BGConfigFile {
 
 public extension BGConfig {
     /// Apply only fields edited by this app; retain unrelated changes from the daemon.
-    func mergingEdits(since baseline: BGConfig, into latest: BGConfig) -> BGConfig {
+    func mergingEdits(since baseline: BGConfig, into latest: BGConfig, now: Date = Date()) -> BGConfig {
         var result = latest
         if enabled != baseline.enabled { result.enabled = enabled }
         if lowerLimit != baseline.lowerLimit { result.lowerLimit = lowerLimit }
@@ -157,14 +159,22 @@ public extension BGConfig {
         if lowPowerModeOnBattery != baseline.lowPowerModeOnBattery { result.lowPowerModeOnBattery = lowPowerModeOnBattery }
         if preventSleepWhileDischarging != baseline.preventSleepWhileDischarging { result.preventSleepWhileDischarging = preventSleepWhileDischarging }
         if mode != baseline.mode { result.mode = mode }
-        if pauseUntil != baseline.pauseUntil { result.pauseUntil = pauseUntil }
-        if travelReadyAt != baseline.travelReadyAt || travelRequestID != baseline.travelRequestID {
+        // Legacy edits get the same bounds as typed actions: pause ≤ 12 h,
+        // travel within 30 days, full charge ≤ 8 h with a deadline.
+        if pauseUntil != baseline.pauseUntil,
+           pauseUntil.map({ $0.timeIntervalSince(now) <= 720 * 60 }) ?? true {
+            result.pauseUntil = pauseUntil
+        }
+        if travelReadyAt != baseline.travelReadyAt || travelRequestID != baseline.travelRequestID,
+           travelReadyAt.map({ $0 > now && $0.timeIntervalSince(now) <= 30 * 24 * 3600 }) ?? true {
             result.travelReadyAt = travelReadyAt
             result.travelRequestID = travelRequestID
         }
         // These fields are one logical request, so never merge them independently.
+        let fullChargeBounded = !chargeToFullOnce
+            || (fullChargeUntil.map { $0 > now && $0.timeIntervalSince(now) <= 8 * 3600 } ?? false)
         if chargeToFullOnce != baseline.chargeToFullOnce || fullChargeUntil != baseline.fullChargeUntil
-            || fullChargeRequestID != baseline.fullChargeRequestID {
+            || fullChargeRequestID != baseline.fullChargeRequestID, fullChargeBounded {
             result.chargeToFullOnce = chargeToFullOnce
             result.fullChargeUntil = fullChargeUntil
             result.fullChargeRequestID = fullChargeRequestID
@@ -178,7 +188,7 @@ public extension BGConfig {
             || enabled != baseline.enabled || mode != baseline.mode
             || heatProtectionCelsius != baseline.heatProtectionCelsius
             || activeDischargeAboveUpper != baseline.activeDischargeAboveUpper {
-            result.manualOverrideUntil = Date().addingTimeInterval(2 * 3600)
+            result.manualOverrideUntil = now.addingTimeInterval(2 * 3600)
         }
         return result.sanitized()
     }

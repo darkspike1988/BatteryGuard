@@ -160,6 +160,15 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         }
     }
 
+    static let returnsToNormal: Set<BGChargingAction> = [.resume, .cancelTravel, .cancelFullCharge,
+                                                         .cancelSpecial, .cancelCalibration]
+
+    /// „Aktuellen Ladestand halten“ übernimmt den gemessenen Stand, begrenzt auf den
+    /// erlaubten Haltebereich (10–95 %), damit Halten bei 96–100 % nicht scheitert.
+    public static func holdTarget(forCurrentPercent percent: Int) -> Int {
+        min(max(percent, 10), 95)
+    }
+
     public func applying(to config: BGConfig, at now: Date = Date()) throws -> BGConfig {
         try validateParameters()
         guard now.timeIntervalSince1970.isFinite else {
@@ -175,7 +184,11 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         }
         var next = config
         if action != .upsertSchedule && action != .deleteSchedule && action != .stayAwakeUntilLimit && action != .cancelStayAwake {
-            next.manualOverrideUntil = now.addingTimeInterval(2 * 3600)
+            // Nur echte Eingriffe übersteuern Zeitpläne und Monitorprofil für zwei Stunden.
+            // Abbrechen und Fortsetzen kehren zum Normalbetrieb zurück.
+            if !Self.returnsToNormal.contains(action) {
+                next.manualOverrideUntil = now.addingTimeInterval(2 * 3600)
+            }
             next.calibrationPlan = nil
         }
         switch action {

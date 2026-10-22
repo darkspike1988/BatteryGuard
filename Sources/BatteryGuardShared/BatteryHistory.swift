@@ -59,11 +59,13 @@ public enum BGHistory {
         return rows.joined(separator: "\n") + "\n"
     }
 
-    public static func weeklyReport(_ samples: [BGHistorySample], now: Date) -> BGWeeklyReport {
+    public static func weeklyReport(_ samples: [BGHistorySample], now: Date,
+                                    calendar: Calendar = .current) -> BGWeeklyReport {
         let cutoff = now.addingTimeInterval(-7 * 86400)
         let recent = samples.filter { $0.timestamp >= cutoff && $0.timestamp <= now }
+        // Kalendertage in der Zeitzone des Benutzers, nicht UTC-Tage.
         let days = Set(recent.filter { $0.percent >= 99 }
-            .map { Int(floor($0.timestamp.timeIntervalSince1970 / 86400)) })
+            .map { calendar.startOfDay(for: $0.timestamp) })
         return BGWeeklyReport(from: cutoff, to: now, sampleCount: recent.count,
                               summary: summary(recent), fullChargeDays: days.count,
                               highestCycleCount: recent.compactMap(\.cycles).max())

@@ -192,7 +192,7 @@ final class ConfigServer: @unchecked Sendable {
                         guard specialContext != nil else {
                             throw BGChargingActionError.invalidRequest("Halten ist für diese Hardware noch nicht physisch bestätigt.")
                         }
-                        validated.targetPercent = context.percent
+                        validated.targetPercent = context.percent.map(BGChargingActionRequest.holdTarget(forCurrentPercent:))
                     }
                     if action.action == .dischargeTo {
                         guard context.canDisconnectAdapter && context.allowsAdapterDisconnect else {
