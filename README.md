@@ -121,7 +121,7 @@ App und Dienst lesen die Konfiguration unter einer gemeinsamen Dateisperre. Änd
 
 Der Dienst sichert gültige Einstellungen vor Änderungen. Bei beschädigtem JSON bleiben die Originalbytes in einer Sicherungsdatei erhalten; ein gültiger vorheriger Stand oder Standardwerte werden mit ausgeschaltetem Schutz wiederhergestellt. Prüfe die Einstellungen vor erneuter Aktivierung. Beschädigte Verlaufsdateien werden ebenfalls gesichert, anschließend beginnt die Aufzeichnung neu.
 
-Vor dem Systemschlaf wird die Steuerung freigegeben, nach dem Aufwachen neu geprüft. Monitoränderungen lösen eine sofortige erneute Prüfung aus. Bekannte Hardware-Schalter werden ungefähr jede Minute nachgelesen; nicht verifizierbare Zustände werden nicht als Erfolg gewertet. Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
+Vor dem Systemschlaf verbindet der Dienst immer das Netzteil; aktives Entladen endet. Liegt der Akku im Automatikmodus mit SMC-Ladesperre bereits im Zielbereich, bleibt die Ladesperre im Schlaf gesetzt, damit der Mac über Nacht nicht bis 100 % lädt. Unter der unteren Grenze, bei Pause, Vollladen, Reiseplan, Sonderaktionen und im Pendelmodus übernimmt macOS das Laden wie bisher. Nach dem Aufwachen wird neu geprüft. Monitoränderungen lösen eine sofortige erneute Prüfung aus. Bekannte Hardware-Schalter werden ungefähr jede Minute nachgelesen; nicht verifizierbare Zustände werden nicht als Erfolg gewertet. Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
 
 ## Lokale Automatisierung
 

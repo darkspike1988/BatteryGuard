@@ -224,6 +224,20 @@ final class DaemonRunner: @unchecked Sendable {
         return status
     }
 
+    /// Muss schnell bleiben: macOS wartet vor dem Schlaf auf IOAllowPowerChange.
+    func prepareForSleep() {
+        let now = Date()
+        let stored = loadConfig()
+        let desktop = DesktopEnvironment.snapshot()
+        let config = BGDesktopProfileRule.resolve(config: stored,
+                                                  externalDisplay: desktop.externalDisplayConnected,
+                                                  now: now).config
+        let battery = BatteryReader.read(smcClient: controller.smc)
+        let charging = ControllerLogic.chargingEnabledDuringSleep(config: config, battery: battery,
+            hasChargeControl: controller.smc.hasChargeControl, now: now)
+        controller.prepareForSleep(chargingEnabled: charging, logger: { [weak self] in self?.log($0) })
+    }
+
     func runOnce() {
         defer { wakeUntilLimit.release() }
         ensureEnvironment()
@@ -249,8 +263,8 @@ final class DaemonRunner: @unchecked Sendable {
                 runner.sleeping = true
                 runner.wakeUntilLimit.release()
                 runner.dischargeSleep.release()
-                if !runner.dryRun { runner.controller.restoreNormal(logger: { runner.log($0) }) }
-                runner.log("Schlafmodus: Normalbetrieb wiederhergestellt, Steuerung pausiert.")
+                if !runner.dryRun { runner.prepareForSleep() }
+                runner.log("Schlafmodus: Netzteil verbunden, Steuerung pausiert.")
                 IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
             case 0xe0000300 /* kIOMessageSystemHasPoweredOn */:
                 // Firmware may have changed SMC registers while asleep. Forget all cached writes.
