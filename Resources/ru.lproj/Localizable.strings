@@ -914,3 +914,9 @@
 "Dein Ziel von %lld %% liegt unter dem macOS-Minimum von 80 %%. Ohne separate Ladesperre hält dieser Mac höchstens bei 80 %%; stelle das macOS-Ladelimit auf 80 %%." = "Ваша цель %lld %% ниже минимума macOS в 80 %%. Без отдельной блокировки зарядки этот Mac удерживает не ниже 80 %%; установите предел зарядки macOS на 80 %%.";
 "Ohne separate Ladesperre hält macOS das Ladelimit. Stelle es in den Batterieeinstellungen auf %lld %%, passend zu deinem Ziel." = "Без отдельной блокировки зарядки предел удерживает macOS. Установите его в параметрах аккумулятора на %lld %% в соответствии с вашей целью.";
 "Das macOS-Ladelimit passt zu deinem Ziel. B-Guard beobachtet und greift nicht ein." = "Предел зарядки macOS соответствует вашей цели. B-Guard наблюдает и не вмешивается.";
+"Alterungsbelastung" = "Нагрузка старения";
+"Modell" = "Модель";
+"Zeit ab 80 % Ladung" = "Время при заряде от 80 %";
+"Temperaturfaktor im Mittel" = "Средний температурный коэффициент";
+"Temperaturgewichtet" = "С учётом температуры";
+"Zeit je Ladebereich, gewichtet mit einem Temperaturfaktor (25 °C = 1×, 35 °C ≈ 2×, 45 °C ≈ 4×). Studien zeigen eine Alterungsstufe bei etwa 55–60 % Ladung und deutlich stärkere Alterung über 80 %. Das ist eine Modellrechnung, keine Lebensdauerprognose." = "Время в каждом диапазоне заряда с учётом температурного коэффициента (25 °C = 1×, 35 °C ≈ 2×, 45 °C ≈ 4×). Исследования показывают ступень старения около 55–60 % заряда и заметно более сильное старение выше 80 %. Это модельная оценка, а не прогноз срока службы.";

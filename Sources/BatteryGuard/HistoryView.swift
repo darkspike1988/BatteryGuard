@@ -203,6 +203,7 @@ struct HistoryView: View {
                 }
                 longTermPanel
                 summaryPanel
+                exposurePanel
                 weeklyPanel
                 Text("Lücken bedeuten, dass keine Messwerte aufgezeichnet wurden, etwa im Ruhezustand. Sie werden nicht als durchgehende Nutzung gerechnet. Eine Ladelimit-Linie zeigt den aktuell eingestellten B-Guard-Zielwert.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -447,6 +448,42 @@ struct HistoryView: View {
                     Spacer()
                     Text(summary.peakTemperature.map { String(format: "%.1f °C", $0) } ?? "—").monospacedDigit()
                 }.font(.callout)
+            }
+        }
+    }
+
+    /// Modell, keine Prognose: Zeit je Ladebereich, gewichtet mit einem Arrhenius-Temperaturfaktor.
+    private var exposurePanel: some View {
+        let exposure = BGAgingExposure.evaluate(filtered)
+        return BGPanel {
+            VStack(alignment: .leading, spacing: 15) {
+                HStack {
+                    Text("Alterungsbelastung").font(.headline)
+                    Spacer()
+                    Text("Modell").font(.caption).foregroundStyle(.secondary)
+                }
+                HStack(alignment: .top, spacing: 24) {
+                    statistic("Zeit ab 80 % Ladung",
+                              value: exposure.highChargeShare.map { String(format: "%.0f %%", $0 * 100) } ?? "—")
+                    statistic("Temperaturfaktor im Mittel",
+                              value: exposure.averageTemperatureFactor.map { String(format: "%.1f×", $0) } ?? "—")
+                }
+                Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 7) {
+                    GridRow {
+                        Text("Ladebereich").foregroundStyle(.secondary)
+                        Text("Zeit").foregroundStyle(.secondary)
+                        Text("Temperaturgewichtet").foregroundStyle(.secondary)
+                    }.font(.caption)
+                    ForEach(BGAgingExposure.Band.allCases, id: \.self) { band in
+                        GridRow {
+                            Text(L("%lld–%lld %%", band.range.lowerBound, band.range.upperBound))
+                            Text(duration(exposure.seconds[band] ?? 0))
+                            Text(duration(exposure.weightedSeconds[band] ?? 0))
+                        }.font(.callout).monospacedDigit()
+                    }
+                }
+                Text("Zeit je Ladebereich, gewichtet mit einem Temperaturfaktor (25 °C = 1×, 35 °C ≈ 2×, 45 °C ≈ 4×). Studien zeigen eine Alterungsstufe bei etwa 55–60 % Ladung und deutlich stärkere Alterung über 80 %. Das ist eine Modellrechnung, keine Lebensdauerprognose.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
