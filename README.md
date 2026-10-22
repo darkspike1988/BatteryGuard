@@ -49,13 +49,13 @@ Die Menüleistenanzeige lässt sich auf Symbol, Prozent, Temperatur oder Akku-Le
 
 Weitere Vorschauen: [Verlauf](docs/previews/light/history.png), [Menüleiste](docs/previews/light/menu.png), [Dunkelmodus](docs/previews/dark/overview.png).
 
-## Drei Steuerungsmodi
+## Zwei Steuerungsmodi
 
 **macOS – nur beobachten:** macOS steuert das Laden. Profile, Reiseplan und Schutzpausen werden in diesem Modus nicht ausgeführt. Verlauf, Auswertung und Temperaturhinweise bleiben nutzbar.
 
-**Automatisch:** Nutzt eine SMC-Ladesperre, falls vorhanden, sonst den Netzteil-Schalter. Bei letzterem läuft der Mac vom Akku zwischen Maximum und Maximum minus fünf Prozentpunkten. Die untere Grenze begrenzt die Entladung durch den Hitzeschutz.
+**Automatisch:** Nutzt die SMC-Ladesperre, falls vorhanden. Fehlt sie (so auf dem Referenz-Mac unter macOS 27), hält das macOS-eigene Ladelimit (80–100 %, Systemeinstellungen → Batterie) den Akku; B-Guard zeigt dann an, auf welchen Wert du es stellen solltest, und warnt, wenn dein Ziel unter 80 % liegt.
 
-**Pendel:** Verwendet ausdrücklich den Netzteil-Schalter. Das erzeugt zusätzliche Lade-/Entladebewegungen. Es ist keine Garantie für eine längere Akkulebensdauer.
+Der frühere Pendelmodus wurde entfernt. Er trennte am Limit das Netzteil und ließ den Akku um fünf Prozentpunkte entladen. Das senkt die mittlere Ladung kaum, verursacht aber zusätzliche Teilzyklen; einen Nutzen für die Lebensdauer belegen Studien nicht (siehe [Belege](docs/EVIDENCE.md)). Gespeicherte Einstellungen mit Pendelmodus werden automatisch auf „Automatisch“ umgestellt; ein noch getrenntes Netzteil verbindet der Dienst wieder.
 
 **Externer Monitor / geschlossener Deckel:** B-Guard hält das Netzteil verbunden, sobald ein externer Bildschirm erkannt wird oder der Deckel geschlossen ist. Aktives Entladen entfällt dann. Auf Macs ohne separate SMC-Ladesperre übernimmt macOS das Ladelimit, auch wenn ein B-Guard-Profil gewählt ist; der Status zeigt diese Einschränkung. Stelle das native Limit in den macOS-Batterieeinstellungen ein. Standardmäßig erzeugt B-Guard keine Schlafsperre; optional hält der Schlafassistent den Mac während einer aktiven Entladung bis zu 30 Minuten wach. Bei fehlgeschlagener Monitor-/Deckelerkennung bleibt das Netzteil vorsorglich verbunden.
 
@@ -121,7 +121,7 @@ Der Dienst ersetzt die Konfiguration atomar (temporäre Datei, `F_FULLFSYNC`, `r
 
 Der Dienst sichert gültige Einstellungen vor Änderungen. Bei beschädigtem JSON bleiben die Originalbytes in einer Sicherungsdatei erhalten; ein gültiger vorheriger Stand oder Standardwerte werden mit ausgeschaltetem Schutz wiederhergestellt. Prüfe die Einstellungen vor erneuter Aktivierung. Beschädigte Verlaufsdateien werden ebenfalls gesichert, anschließend beginnt die Aufzeichnung neu.
 
-Vor dem Systemschlaf verbindet der Dienst immer das Netzteil; aktives Entladen endet. Liegt der Akku im Automatikmodus mit SMC-Ladesperre bereits im Zielbereich, bleibt die Ladesperre im Schlaf gesetzt, damit der Mac über Nacht nicht bis 100 % lädt. Unter der unteren Grenze, bei Pause, Vollladen, Reiseplan, Sonderaktionen und im Pendelmodus übernimmt macOS das Laden wie bisher. Nach dem Aufwachen wird neu geprüft. Monitoränderungen lösen eine sofortige erneute Prüfung aus. Bekannte Hardware-Schalter werden ungefähr jede Minute nachgelesen; nicht verifizierbare Zustände werden nicht als Erfolg gewertet. Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
+Vor dem Systemschlaf verbindet der Dienst immer das Netzteil; aktives Entladen endet. Liegt der Akku im Automatikmodus mit SMC-Ladesperre bereits im Zielbereich, bleibt die Ladesperre im Schlaf gesetzt, damit der Mac über Nacht nicht bis 100 % lädt. Unter der unteren Grenze, bei Pause, Vollladen, Reiseplan, Sonderaktionen und ohne Ladesperre übernimmt macOS das Laden wie bisher. Nach dem Aufwachen wird neu geprüft. Monitoränderungen lösen eine sofortige erneute Prüfung aus. Bekannte Hardware-Schalter werden ungefähr jede Minute nachgelesen; nicht verifizierbare Zustände werden nicht als Erfolg gewertet. Hardware-Schreibtests sind nicht durch reine Logiktests ersetzt.
 
 ## Lokale Automatisierung
 

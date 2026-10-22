@@ -22,12 +22,10 @@ public enum BGVersion {
 
 /// Wie das Limit durchgesetzt wird.
 public enum BGMode: String, Codable, CaseIterable, Sendable {
-    /// Daemon wählt selbst: SMC-Ladesperre, falls vorhanden, sonst Pendel-Modus.
+    /// SMC-Ladesperre, falls vorhanden; sonst hält macOS das Ladelimit.
     case auto
     /// Nur beobachten: das native macOS-Ladelimit (Systemeinstellungen → Batterie) macht die Arbeit.
     case native
-    /// Limit nur über den Netzteil-Schalter (CHIE) erzwingen (Sägezahn zwischen max-5 und max).
-    case pendulum
     /// EXPERIMENTELL: natives Limit direkt im SMC (CHLT) auf den eigenen Wert setzen (nur root).
     case direct
 }
@@ -93,7 +91,8 @@ public struct BGConfig: Codable, Equatable, Sendable {
         // Missing legacy values retain their default. Explicit unknown modes must
         // never silently enable active adapter switching.
         if let rawMode = try c.decodeIfPresent(String.self, forKey: .mode) {
-            mode = BGMode(rawValue: rawMode) ?? .native
+            // Der frühere Pendelmodus (Netzteil umschalten) wurde entfernt; Auto ist sein Nachfolger.
+            mode = rawMode == "pendulum" ? .auto : (BGMode(rawValue: rawMode) ?? .native)
         } else { mode = d.mode }
         pauseUntil = try c.decodeIfPresent(Date.self, forKey: .pauseUntil)
         travelReadyAt = try c.decodeIfPresent(Date.self, forKey: .travelReadyAt)

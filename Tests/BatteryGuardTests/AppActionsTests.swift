@@ -169,12 +169,14 @@ struct AppActionsTests {
         var status = BGStatus()
         status.state = .disabled
         status.message = "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit."
-        #expect(status.usesNativeDesktopFallback)
+        #expect(status.usesNativeChargeLimit)
         status.state = .unsupported
-        #expect(!status.usesNativeDesktopFallback)
+        #expect(!status.usesNativeChargeLimit)
         status.state = .disabled
         status.message = "Batterieschutz deaktiviert"
-        #expect(!status.usesNativeDesktopFallback)
+        #expect(!status.usesNativeChargeLimit)
+        status.message = "Keine separate Ladesperre – macOS-Ladelimit übernimmt (Systemeinstellungen → Batterie)"
+        #expect(status.usesNativeChargeLimit)
     }
 
     @Test func previewActionsNeverWrite() throws {

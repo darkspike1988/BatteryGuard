@@ -52,14 +52,6 @@ enum StatusMessageLocalizer {
            let limit = Int(values[0]) {
             return L("Laden aktiv bis %lld %%", limit)
         }
-        if let values = captures(message, #"^Pendel-Modus: Akku läuft ab (\d+) % bis (\d+) % vom Akku$"#),
-           let upper = Int(values[0]), let lower = Int(values[1]) {
-            return L("Pendel-Modus: Akku läuft ab %lld %% bis %lld %% vom Akku", upper, lower)
-        }
-        if let values = captures(message, #"^Pendel-Modus: lädt bis (\d+) %$"#),
-           let limit = Int(values[0]) {
-            return L("Pendel-Modus: lädt bis %lld %%", limit)
-        }
         return nil
     }
 

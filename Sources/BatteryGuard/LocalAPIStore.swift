@@ -211,7 +211,9 @@ final class LocalAPIStore {
                     "controlAllowed": allowsControl, "controlReady": daemonActive && !status.daemonNeedsUpdate,
                     "availableProfiles": BGProfile.allCases.map(\.rawValue), "historyRetentionHours": 168,
                     "smcKeysDetected": status.status.smcKeysDetected,
-                    "usesNativeDesktopFallback": status.status.usesNativeDesktopFallback,
+                    // Alter Schlüssel bleibt für bestehende Skripte erhalten.
+                    "usesNativeDesktopFallback": status.status.usesNativeChargeLimit,
+                    "usesNativeChargeLimit": status.status.usesNativeChargeLimit,
                     "availableActions": BGChargingAction.allCases.map(\.rawValue),
                     "topUpRequiresSeparateChargeControl": true,
                     "holdChargeHardwareVerified": false, "dischargeToHardwareVerified": false,

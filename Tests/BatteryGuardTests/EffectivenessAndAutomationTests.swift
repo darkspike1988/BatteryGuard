@@ -90,6 +90,18 @@ struct EffectivenessAndAutomationTests {
         #expect(BGEffectiveness.evaluate(config: config, status: status(),
                                          daemonActive: true, daemonCurrent: false, now: now).state == .daemonOutdated)
 
+        // Without a separate charge inhibit macOS holds the limit; advise the matching setting.
+        let macOS = BGEffectiveness.evaluate(config: config, status: status(keys: ["CHIE"], state: .disabled, native: 90),
+                                             daemonActive: true, daemonCurrent: true, now: now)
+        #expect(macOS.state == .handledByMacOS && macOS.controlPath == .macOS)
+        #expect(macOS.appliedUpperLimit == 90)
+        #expect(macOS.nativeAdvice == BGNativeLimitAdvice(target: 80, nativeLimit: 90))
+        #expect(macOS.nativeAdvice?.needsAdjustment == true && macOS.nativeAdvice?.recommendedLimit == 80)
+        var desk = config; desk.lowerLimit = 45; desk.upperLimit = 50
+        let low = BGEffectiveness.evaluate(config: desk, status: status(keys: ["CHIE"], state: .disabled, native: 80),
+                                           daemonActive: true, daemonCurrent: true, now: now)
+        #expect(low.nativeAdvice?.targetBelowNativeMinimum == true && low.nativeAdvice?.needsAdjustment == false)
+
         var nativeMode = config
         nativeMode.mode = .native
         let observing = BGEffectiveness.evaluate(config: nativeMode, status: status(native: 70),
