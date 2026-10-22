@@ -76,7 +76,7 @@ final class DaemonRunner: @unchecked Sendable {
 
     func loadConfig() -> BGConfig {
         do { return try BGConfigFile.read(at: URL(fileURLWithPath: BGPaths.config)) }
-        catch is DecodingError {
+        catch where BGConfigRecovery.isContentError(error) {
             if !dryRun {
                 do {
                     let recovery = try BGConfigRecovery.prepare()

@@ -19,6 +19,12 @@ public enum BGConfigRecovery {
         }
     }
 
+    /// Inhaltliche Fehler (JSON, Validierung) erlauben eine Wiederherstellung;
+    /// Datei-, Rechte- und Sperrfehler nie.
+    public static func isContentError(_ error: any Error) -> Bool {
+        !(error is POSIXError) && !(error is CocoaError)
+    }
+
     /// Call with the valid *previous* configuration while holding the configuration lock.
     public static func backup(config: BGConfig) throws {
         guard geteuid() == 0 else { throw POSIXError(.EPERM) }
@@ -54,12 +60,16 @@ public enum BGConfigRecovery {
         try validateFile(fd, requireRoot: requireRoot)
         let original = try file.read(upToCount: 262_145) ?? Data()
         guard original.count <= 262_144 else { throw POSIXError(.EFBIG) }
+        let current: BGConfig?
         do {
-            let config = try BGJSON.decoder().decode(BGConfig.self, from: original).sanitized()
-            try writeBackup(config: config, at: backupURL, requireRoot: requireRoot)
+            current = try BGJSON.decoder().decode(BGConfig.self, from: original).sanitized()
+        } catch where isContentError(error) {
+            // Only content failures (JSON or validation) authorize recovery.
+            current = nil
+        }
+        if let current {
+            try writeBackup(config: current, at: backupURL, requireRoot: requireRoot)
             return Result(recovered: false, usedBackup: false, quarantinePath: nil)
-        } catch is DecodingError {
-            // Only typed JSON decoding failure authorizes recovery.
         }
 
         var restored = BGConfig()
@@ -69,7 +79,7 @@ public enum BGConfigRecovery {
             usedBackup = true
         } catch let error as POSIXError where error.code == .ENOENT {
             // No backup yet: explicitly disabled defaults are the safe starting point.
-        } catch is DecodingError {
+        } catch where isContentError(error) {
             // A corrupt regular backup also cannot authorize active charging control.
         }
         restored.enabled = false
