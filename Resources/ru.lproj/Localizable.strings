@@ -910,3 +910,5 @@
 "Mac ist stark erwärmt" = "Mac сильно нагрет";
 "macOS meldet hohe Systemwärme. Laden erzeugt zusätzliche Wärme im Akku; sorge für Belüftung oder aktiviere den Hitzeschutz." = "macOS сообщает о сильном нагреве системы. Зарядка дополнительно нагревает аккумулятор; обеспечьте вентиляцию или включите защиту от перегрева.";
 "Ladelimit am %@ deutlich geändert. Die gemessene Kapazität kann sich danach einige Wochen vorübergehend verschieben (Anodenüberhang); das ist weder Alterung noch Erholung." = "Предел зарядки заметно изменён %@. После этого измеренная ёмкость может несколько недель временно смещаться (эффект свеса анода); это не старение и не восстановление.";
+"Bitte den B-Guard-Dienst unter Systemeinstellungen → Allgemein → Anmeldeobjekte erlauben." = "Разрешите службу B-Guard в «Системные настройки → Основные → Объекты входа».";
+"Der Dienst konnte nicht registriert werden. Bitte die App aus dem Programme-Ordner öffnen." = "Не удалось зарегистрировать службу. Откройте приложение из папки «Программы».";
