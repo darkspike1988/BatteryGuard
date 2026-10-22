@@ -33,6 +33,15 @@ chmod 755 "$RESOURCES_DIR/batteryguardd"
 echo "==> Kopiere Hilfsskripte in App-Ressourcen..."
 cp "$SCRIPT_DIR/install-daemon.sh" "$RESOURCES_DIR/install-daemon.sh"
 chmod 755 "$RESOURCES_DIR/install-daemon.sh"
+# Developer-ID-Builds binden die Team-ID ein; der Installer akzeptiert dann nur so signierte Dienste.
+if [[ -n "${BGUARD_TEAM_ID:-}" ]]; then
+    if [[ ! "$BGUARD_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+        echo "Fehler: BGUARD_TEAM_ID muss eine zehnstellige Apple-Team-ID sein." >&2
+        exit 1
+    fi
+    sed -i '' "s/^EXPECTED_TEAM_ID=\"\"$/EXPECTED_TEAM_ID=\"$BGUARD_TEAM_ID\"/" "$RESOURCES_DIR/install-daemon.sh"
+    grep -q "^EXPECTED_TEAM_ID=\"$BGUARD_TEAM_ID\"$" "$RESOURCES_DIR/install-daemon.sh"
+fi
 
 cp "$SCRIPT_DIR/uninstall-daemon.sh" "$RESOURCES_DIR/uninstall-daemon.sh"
 chmod 755 "$RESOURCES_DIR/uninstall-daemon.sh"

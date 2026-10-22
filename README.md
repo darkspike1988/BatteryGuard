@@ -146,6 +146,8 @@ Designreferenz: [Apple Human Interface Guidelines für macOS](https://developer.
 
 `scripts/build-notarized.sh` unterstützt Developer-ID-Signierung mit Hardened Runtime, Notarisierung und angehefteten Tickets für App und DMG. Dafür müssen `BGUARD_SIGN_IDENTITY` und `BGUARD_NOTARY_PROFILE` auf eine vorhandene Developer-ID-Application-Identität und ein zuvor eingerichtetes notarytool-Keychain-Profil verweisen. Zugangsdaten bleiben im Schlüsselbund. Ohne diese Voraussetzungen bleibt `build-dmg.sh` bei der ad-hoc signierten Community-Version.
 
+Der Dienst-Installer kopiert die Binary zuerst in ein root-eigenes Verzeichnis, prüft dort die Code-Signatur und ersetzt die installierte Datei atomar. Er bricht ab, wenn `/usr/local` oder `/usr/local/libexec` nicht ausschließlich root gehören. Mit `BGUARD_TEAM_ID` gebaute Developer-ID-Versionen akzeptieren nur Dienste mit dieser Team-ID. Im ad-hoc signierten Community-Build bleibt eine Grenze: Ein Prozess des angemeldeten Benutzers kann das App-Bundle in Programme austauschen. Die vollständige Lösung ist Developer-ID-Signierung mit Notarisierung und `SMAppService.daemon`, bei der launchd die Signatur selbst prüft. Heruntergeladene Updates erhalten wie Browser-Downloads das Quarantäne-Attribut, damit Gatekeeper die neue App beim ersten Start prüft.
+
 Der notarisierten Pfad ist vorbereitet, aber mangels Developer-ID-Zertifikat auf diesem Mac noch nicht durchgehend geprüft. [Apple zur Notarisierung](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
 
 [Plan zur Arbeit mit den verbleibenden Modellkontingenten](docs/CONTINGENT_PLAN.md): Aufgabenverteilung, geprüfter Umfang und gemeldete CLI-Nutzungswerte.
