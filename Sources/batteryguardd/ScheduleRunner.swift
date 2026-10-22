@@ -61,7 +61,7 @@ public enum ScheduleRunner {
                         }
                         if task.action.kind == .hold {
                             guard specialHardwareVerified else { throw BGChargingActionError.invalidRequest("Unverified hold backend") }
-                            request.targetPercent = percent
+                            request.targetPercent = BGChargingActionRequest.holdTarget(forCurrentPercent: percent)
                         }
                         if task.action.kind == .discharge {
                             guard specialHardwareVerified && context.canDisconnectAdapter && context.allowsAdapterDisconnect else {

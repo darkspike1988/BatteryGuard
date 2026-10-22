@@ -12,7 +12,10 @@ public enum BGChargeCompletion {
             result.fullChargeUntil = nil
             result.fullChargeRequestID = nil
         }
+        // Vor dem Termin bleibt der Reiseplan aktiv und hält den Akku voll; sonst würde
+        // aktives Entladen ihn bis zur Abfahrt wieder auf das normale Limit senken.
         if snapshot.isTravelCharging(at: now),
+           let readyAt = snapshot.travelReadyAt, now >= readyAt,
            latest.travelReadyAt == snapshot.travelReadyAt,
            latest.travelRequestID == snapshot.travelRequestID {
             result.travelReadyAt = nil
