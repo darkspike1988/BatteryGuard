@@ -93,11 +93,11 @@ struct LocalAPITests {
         #expect(response.status == 200)
         let body = try JSONSerialization.jsonObject(with: response.jsonData) as! [String: Any]
         #expect(body["hardwareApplied"] as? Bool == false)
-        #expect((body["savedConfig"] as? [String: Any])?["upperLimit"] as? Int == 60)
-        #expect(f.config.config.upperLimit == 60)
+        #expect((body["savedConfig"] as? [String: Any])?["upperLimit"] as? Int == 50)
+        #expect(f.config.config.upperLimit == 50)
         try FileManager.default.removeItem(at: f.directory.appendingPathComponent("config.json"))
         #expect(f.api.respond(to: action).status == 503)
-        #expect(f.config.config.upperLimit == 60 && !f.config.hasUnsavedChanges)
+        #expect(f.config.config.upperLimit == 50 && !f.config.hasUnsavedChanges)
     }
 
     @Test func invalidActionsStaleDaemonAndNativeModeDoNotMutate() throws {
@@ -185,7 +185,7 @@ struct LocalAPITests {
         request.httpBody = Data(#"{"action":"profile","profile":"desk"}"#.utf8)
         let (_, saved) = try await session.data(for: request)
         #expect((saved as? HTTPURLResponse)?.statusCode == 200)
-        #expect(try BGConfigFile.read(at: f.directory.appendingPathComponent("config.json")).upperLimit == 60)
+        #expect(try BGConfigFile.read(at: f.directory.appendingPathComponent("config.json")).upperLimit == 50)
     }
 
     @Test func occupiedLoopbackPortReportsFailureAndCanBeRetried() async throws {
