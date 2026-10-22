@@ -7,8 +7,6 @@ public struct ControllerDecision: Sendable, Equatable {
     public var adapterConnected: Bool
     public var resetChargeToFullOnce: Bool
     public var message: String?
-    public var completedCalibrationRequestID: UUID? = nil
-    public var updatedCalibrationPlan: BGCalibrationPlan? = nil
     public var completedSpecialRequestID: UUID? = nil
     public var updatedSpecialPlan: BGSpecialChargePlan? = nil
     public var heatProtectionThresholdCelsius: Int?
@@ -89,56 +87,6 @@ public enum ControllerLogic {
         specialHardwareVerified: Bool = false,
         now: Date = Date()
     ) -> ControllerDecision {
-        if let plan = config.calibrationPlan {
-            let adapterDisabled = previousDecision?.adapterConnected == false
-            let power: BGExternalPowerState = !battery.externalPowerAvailable || adapterDisabled
-                ? .unknown : (battery.pluggedIn ? .connected : .disconnected)
-            var heatConfig = config
-            heatConfig.heatProtectionCelsius = config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : 40
-            let heatActive = needsHeatProtection(config: heatConfig, battery: battery, previousDecision: previousDecision)
-                || (battery.temperatureCelsius.map { $0.isFinite && $0 >= Double(heatConfig.heatProtectionCelsius) } ?? false)
-            let verified = specialHardwareVerified && hasChargeControl && hasDischargeControl
-                && allowsAdapterDisconnect && config.enabled && !config.isPaused(at: now)
-                && config.mode != .native && config.mode != .direct
-            let context = BGCalibrationContext(
-                percent: battery.percentAvailable && (0...100).contains(battery.percent) ? battery.percent : nil,
-                externalPower: power,
-                temperatureCelsius: battery.temperatureCelsius.flatMap { $0.isFinite ? $0 : nil },
-                heatThreshold: heatConfig.heatProtectionCelsius, heatActive: heatActive,
-                hardwareVerified: verified, adapterDisabledByUs: adapterDisabled)
-            var decision: ControllerDecision
-            switch plan.evaluate(context: context, at: now) {
-            case .unavailable(let reason):
-                decision = ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
-                    message: "Kalibrierung nicht verfügbar: " + reason)
-                decision.completedCalibrationRequestID = plan.requestID
-            case .complete(let reason):
-                decision = ControllerDecision(state: .disabled, chargingEnabled: true, adapterConnected: true,
-                    message: "Kalibrierung beendet: " + reason)
-                decision.completedCalibrationRequestID = plan.requestID
-            case .paused(let updated, let reason):
-                decision = ControllerDecision(state: heatActive ? .holding : .disabled,
-                    chargingEnabled: !heatActive, adapterConnected: true,
-                    message: heatActive ? heatMessage(battery: battery) : "Kalibrierung pausiert: " + reason,
-                    heatProtectionActive: heatActive)
-                decision.updatedCalibrationPlan = updated
-            case .active(let updated, let command):
-                switch command {
-                case .charge:
-                    decision = ControllerDecision(state: .charging, chargingEnabled: true, adapterConnected: true,
-                        message: "Kalibrierung: " + updated.phase.rawValue)
-                case .hold:
-                    decision = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: true,
-                        message: "Kalibrierung: 100 % eine Stunde halten")
-                case .discharge:
-                    decision = ControllerDecision(state: .discharging, chargingEnabled: false, adapterConnected: false,
-                        message: "Kalibrierung: auf 10 % entladen")
-                }
-                decision.updatedCalibrationPlan = updated
-            }
-            return preservingHeat(decision, config: heatConfig, battery: battery,
-                previousDecision: previousDecision, hasChargeControl: hasChargeControl, now: now)
-        }
         if let plan = config.specialChargePlan {
             var decision: ControllerDecision
             let adapterDisabled = previousDecision?.adapterConnected == false
@@ -347,7 +295,7 @@ public enum ControllerLogic {
     /// das Ziel als mit leerem Akku aufwachen. Alle Sonderfälle bleiben beim Normalbetrieb.
     public static func chargingEnabledDuringSleep(config: BGConfig, battery: BatteryInfo,
                                                   hasChargeControl: Bool, now: Date = Date()) -> Bool {
-        guard hasChargeControl, config.mode == .auto, config.calibrationPlan == nil,
+        guard hasChargeControl, config.mode == .auto,
               battery.percentAvailable, (0...100).contains(battery.percent) else { return true }
         let effective = config.effective(at: now)
         guard effective.enabled, !effective.chargeToFullOnce, effective.specialChargePlan == nil,
@@ -561,17 +509,6 @@ public enum SpecialControllerPersistence {
             latest.specialChargePlan = nil
         } else if let updated = decision.updatedSpecialPlan, updated.requestID == snapshot.requestID {
             latest.specialChargePlan = updated
-        }
-    }
-}
-
-public enum CalibrationControllerPersistence {
-    public static func apply(snapshot: BGCalibrationPlan, decision: ControllerDecision, to latest: inout BGConfig) {
-        guard latest.calibrationPlan?.requestID == snapshot.requestID else { return }
-        if decision.completedCalibrationRequestID == snapshot.requestID {
-            latest.calibrationPlan = nil
-        } else if let updated = decision.updatedCalibrationPlan, updated.requestID == snapshot.requestID {
-            latest.calibrationPlan = updated
         }
     }
 }

@@ -24,8 +24,7 @@ public enum ScheduleRunner {
         guard needsEvaluation(config: config, now: now) else { return config }
         var next = config
         let overrideClockCorrection = config.manualOverrideUntil.map { $0.timeIntervalSince(now) > 24 * 3600 } ?? false
-        let overridden = (config.calibrationPlan.map { $0.expiresAt > now } ?? false)
-            || config.isPaused(at: now)
+        let overridden = config.isPaused(at: now)
             || (config.chargeToFullOnce && (config.fullChargeUntil.map { $0 > now } ?? true))
             || config.isTravelCharging(at: now)
             || (config.specialChargePlan.map { $0.expiresAt > now } ?? false)

@@ -21,18 +21,6 @@ enum StatusMessageLocalizer {
         if let values = captures(message, #"^Schutz pausiert bis (.+)$"#) {
             return L("Schutz pausiert bis %@", values[0])
         }
-        if let values = captures(message, #"^Kalibrierung nicht verfügbar: (.+)$"#) {
-            return L("Kalibrierung nicht verfügbar: %@", values[0])
-        }
-        if let values = captures(message, #"^Kalibrierung beendet: (.+)$"#) {
-            return L("Kalibrierung beendet: %@", values[0])
-        }
-        if let values = captures(message, #"^Kalibrierung pausiert: (.+)$"#) {
-            return L("Kalibrierung pausiert: %@", values[0])
-        }
-        if let values = captures(message, #"^Kalibrierung: (.+)$"#) {
-            return L("Kalibrierung: %@", values[0])
-        }
         if let values = captures(message, #"^Einmaliges Vollladen aktiv \((\d+) %\)$"#) {
             return L("Einmaliges Vollladen aktiv (%lld %%)", Int(values[0]) ?? 0)
         }

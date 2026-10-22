@@ -4,14 +4,14 @@ import BatteryGuardShared
 
 public enum BGuardIntentAction: String, AppEnum {
     case profile, protection, pause, resume, fullCharge, cancelFullCharge, travel, cancelTravel
-    case topUp, dischargeTo, holdCharge, cancelSpecial, calibration, cancelCalibration, stayAwakeUntilLimit, cancelStayAwake
+    case topUp, dischargeTo, holdCharge, cancelSpecial, stayAwakeUntilLimit, cancelStayAwake
     public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Ladeaktion")
     public static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
         .profile: "Profil wählen", .protection: "Schutz starten oder stoppen",
         .pause: "Schutz pausieren", .resume: "Schutz fortsetzen", .fullCharge: "Einmal voll laden",
         .cancelFullCharge: "Vollladen beenden", .travel: "Reise vorbereiten", .cancelTravel: "Reise abbrechen",
         .topUp: "Top Up bis Abstecken", .dischargeTo: "Einmal entladen", .holdCharge: "Ladestand halten",
-        .cancelSpecial: "Sonderaktion beenden", .calibration: "Kalibrierung starten · Hardware-Abnahme erforderlich", .cancelCalibration: "Kalibrierung abbrechen", .stayAwakeUntilLimit: "Bis zum Ladelimit wachhalten", .cancelStayAwake: "Wachhalten beenden"
+        .cancelSpecial: "Sonderaktion beenden", .stayAwakeUntilLimit: "Bis zum Ladelimit wachhalten", .cancelStayAwake: "Wachhalten beenden"
     ]
     public var chargingAction: BGChargingAction {
         switch self {
@@ -27,8 +27,6 @@ public enum BGuardIntentAction: String, AppEnum {
         case .dischargeTo: .dischargeTo
         case .holdCharge: .holdCharge
         case .cancelSpecial: .cancelSpecial
-        case .calibration: .calibration
-        case .cancelCalibration: .cancelCalibration
         case .stayAwakeUntilLimit: .stayAwakeUntilLimit
         case .cancelStayAwake: .cancelStayAwake
         }

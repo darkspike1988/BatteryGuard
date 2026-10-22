@@ -217,7 +217,7 @@ final class LocalAPIStore {
                     "availableActions": BGChargingAction.allCases.map(\.rawValue),
                     "topUpRequiresSeparateChargeControl": true,
                     "holdChargeHardwareVerified": false, "dischargeToHardwareVerified": false,
-                    "calibrationHardwareVerified": false, "schedulesRunInDaemon": true]
+                    "schedulesRunInDaemon": true]
                 return LocalHTTPResponse(status: 200, jsonData: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]))
             case "/api/v1/power-flow":
                 // Freshness represents collection freshness (when the sample was gathered by B-Guard),

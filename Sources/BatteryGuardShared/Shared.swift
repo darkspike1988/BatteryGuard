@@ -62,7 +62,6 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var specialChargePlan: BGSpecialChargePlan? = nil
 
     public var awakeUntilLimitUntil: Date? = nil
-    public var calibrationPlan: BGCalibrationPlan? = nil
     public var scheduledTasks: [BGScheduledTask] = []
     public var scheduleHistory: [BGScheduleRun] = []
     public var manualOverrideUntil: Date? = nil
@@ -100,7 +99,6 @@ public struct BGConfig: Codable, Equatable, Sendable {
         fullChargeRequestID = try c.decodeIfPresent(UUID.self, forKey: .fullChargeRequestID)
         travelRequestID = try c.decodeIfPresent(UUID.self, forKey: .travelRequestID)
         awakeUntilLimitUntil = try c.decodeIfPresent(Date.self, forKey: .awakeUntilLimitUntil)
-        calibrationPlan = try? c.decodeIfPresent(BGCalibrationPlan.self, forKey: .calibrationPlan)
         // Ein einzelner ungültiger oder neuerer Eintrag darf nie die ganze Konfiguration
         // unlesbar machen: sonst bleibt der Schutz aus und der Einstellungsdienst startet nicht.
         scheduledTasks = (try? c.decodeIfPresent(BGLossyArray<BGScheduledTask>.self, forKey: .scheduledTasks))?.elements ?? []
