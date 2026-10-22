@@ -80,6 +80,9 @@ final class UpdateDownloadProgress: NSObject, URLSessionDownloadDelegate, @unche
     let report: @Sendable (Int64) -> Void
     private let lock = NSLock()
     private var _hasSizeExceeded = false
+    private var lastReported: Int64 = -1
+    /// Höchstens etwa 200 Fortschrittsmeldungen pro Download statt einer pro Datenblock.
+    private var reportStep: Int64 { max(64 * 1024, (assetSize ?? 0) / 200) }
 
     var hasSizeExceeded: Bool {
         lock.withLock { _hasSizeExceeded }
@@ -108,7 +111,13 @@ final class UpdateDownloadProgress: NSObject, URLSessionDownloadDelegate, @unche
                 return
             }
         }
-        report(totalBytesWritten)
+        let shouldReport = lock.withLock { () -> Bool in
+            guard lastReported < 0 || totalBytesWritten - lastReported >= reportStep
+                    || totalBytesWritten == assetSize else { return false }
+            lastReported = totalBytesWritten
+            return true
+        }
+        if shouldReport { report(totalBytesWritten) }
     }
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
@@ -254,6 +263,17 @@ final class UpdateStore {
         } catch { /* The in-app notice remains visible when notifications fail. */ }
     }
 
+    nonisolated static func markAsDownloaded(_ file: URL, from origin: URL) throws {
+        var values = URLResourceValues()
+        values.quarantineProperties = [
+            kLSQuarantineTypeKey as String: kLSQuarantineTypeWebDownload as String,
+            kLSQuarantineAgentNameKey as String: "B-Guard",
+            kLSQuarantineDataURLKey as String: origin,
+        ]
+        var target = file
+        try target.setResourceValues(values)
+    }
+
     nonisolated static func verify(_ data: Data, asset: GitHubRelease.Asset) throws {
         guard data.count == asset.size, let digest = asset.digest else { throw UpdateError.checksum }
         let actual = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -302,6 +322,9 @@ final class UpdateStore {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let destination = directory.appendingPathComponent("B-Guard-\(release.version)-\(UUID().uuidString.prefix(8)).dmg")
             try FileManager.default.moveItem(at: temporary, to: destination)
+            // Wie ein Browser-Download kennzeichnen, damit Gatekeeper die App aus der
+            // DMG beim ersten Start prüft (URLSession setzt kein Quarantäne-Attribut).
+            try Self.markAsDownloaded(destination, from: asset.browser_download_url)
             downloadedURL = destination
             if NSWorkspace.shared.open(destination) {
                 message = L("Download geprüft und geöffnet. B-Guard beenden und die neue App auf Programme ziehen.")

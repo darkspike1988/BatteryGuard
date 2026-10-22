@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 import CryptoKit
+import CoreServices
 @testable import BatteryGuard
 
 @MainActor
@@ -163,6 +164,28 @@ struct UpdateTests {
         #expect(expectedProgress.hasSizeExceeded)
         #expect(expectedBytes.value == 0)
         #expect(expectedExceededTask.state == .canceling)
+    }
+
+    @Test func downloadProgressIsThrottled() {
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+        let task = session.downloadTask(with: URL(string: "https://example.com/B-Guard.dmg")!)
+        let counter = DownloadByteCounter()
+        let progress = UpdateDownloadProgress(assetSize: 10_000_000) { counter.set($0) }
+        progress.urlSession(session, downloadTask: task, didWriteData: 1000, totalBytesWritten: 1000, totalBytesExpectedToWrite: 10_000_000)
+        progress.urlSession(session, downloadTask: task, didWriteData: 1000, totalBytesWritten: 2000, totalBytesExpectedToWrite: 10_000_000)
+        #expect(counter.value == 1000)
+        progress.urlSession(session, downloadTask: task, didWriteData: 9_998_000, totalBytesWritten: 10_000_000, totalBytesExpectedToWrite: 10_000_000)
+        #expect(counter.value == 10_000_000)
+    }
+
+    @Test func downloadedDiskImageIsQuarantined() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).dmg")
+        try Data("dmg".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        try UpdateStore.markAsDownloaded(file, from: URL(string: "https://github.com/darkspike1988/BatteryGuard/releases/download/v0.5.0/B-Guard.dmg")!)
+        let properties = try file.resourceValues(forKeys: [.quarantinePropertiesKey]).quarantineProperties
+        #expect(properties?[kLSQuarantineTypeKey as String] as? String == kLSQuarantineTypeWebDownload as String)
     }
 
     @Test func storeTreatsSizeExceededAsLocalizedErrorWhenCancelled() async throws {
