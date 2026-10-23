@@ -1,5 +1,6 @@
 import Foundation
 import IOKit
+import BatteryGuardShared
 
 /// Struct-Layout für AppleSMC UserClient gemäß smcFanControl / Battery-Toolkit
 @frozen
@@ -76,6 +77,9 @@ public final class SMCClient: @unchecked Sendable {
     /// Die Schlüsselmenge ändert sich zur Laufzeit nicht. Nur eindeutige Antworten des SMC
     /// (vorhanden oder „nicht gefunden“) werden zwischengespeichert, nie IOKit-Fehler.
     private var keyExistence: [String: Bool] = [:]
+    private var capabilityCache: BGChargeCapability?
+    /// Im Probelauf wird nicht geschrieben; vorhandene Schlüssel gelten dann als `.unknown`.
+    public var allowsWriteProbe = true
 
     public init() {}
 
@@ -117,6 +121,7 @@ public final class SMCClient: @unchecked Sendable {
             connection = 0
         }
         keyExistence.removeAll()
+        capabilityCache = nil
     }
 
     public func keyExists(_ key: String) -> Bool {
@@ -205,12 +210,23 @@ public final class SMCClient: @unchecked Sendable {
         return (typeStr, dataSize, byteArray)
     }
 
+    public enum WriteResult: Equatable, Sendable {
+        case ok, notPrivileged, failed
+    }
+
+    /// kIOReturnNotPrivileged: Ab macOS 27 verweigert die Firmware gesperrte Schlüssel auch root.
+    static let notPrivileged = kern_return_t(bitPattern: 0xE000_02C1)
+
     public func writeKey(_ key: String, bytes: [UInt8]) -> Bool {
+        writeKeyResult(key, bytes: bytes) == .ok
+    }
+
+    public func writeKeyResult(_ key: String, bytes: [UInt8]) -> WriteResult {
         lock.lock()
         defer { lock.unlock() }
 
-        guard ensureConnected() else { return false }
-        guard bytes.count <= 32 else { return false }
+        guard ensureConnected() else { return .failed }
+        guard bytes.count <= 32 else { return .failed }
 
         var infoInput = SMCKeyData()
         infoInput.key = fourCharCode(key)
@@ -221,12 +237,12 @@ public final class SMCClient: @unchecked Sendable {
 
         let infoKr = IOConnectCallStructMethod(connection, selector, &infoInput, MemoryLayout<SMCKeyData>.size, &infoOutput, &infoOutSize)
         guard infoKr == KERN_SUCCESS && infoOutput.result == 0 else {
-            return false
+            return .failed
         }
 
         let expectedSize = infoOutput.keyInfo.dataSize
         guard bytes.count == Int(expectedSize) else {
-            return false
+            return .failed
         }
 
         var writeInput = SMCKeyData()
@@ -244,7 +260,8 @@ public final class SMCClient: @unchecked Sendable {
         var writeOutSize = MemoryLayout<SMCKeyData>.size
 
         let writeKr = IOConnectCallStructMethod(connection, selector, &writeInput, MemoryLayout<SMCKeyData>.size, &writeOutput, &writeOutSize)
-        return writeKr == KERN_SUCCESS && writeOutput.result == 0
+        if writeKr == Self.notPrivileged { return .notPrivileged }
+        return writeKr == KERN_SUCCESS && writeOutput.result == 0 ? .ok : .failed
     }
 
     /// Liest Akkutemperatur über SMC (z. B. TB0T, TB1T, TB2T)
@@ -289,12 +306,48 @@ public final class SMCClient: @unchecked Sendable {
         return keysToCheck.filter { keyExists($0) }
     }
 
+    /// Prüft einmal pro Verbindung, welche Steuerschlüssel tatsächlich beschreibbar sind.
+    /// Der Schreibtest schreibt den gelesenen Wert unverändert zurück und nur, wenn er einem
+    /// bekannten Registerlayout entspricht.
+    public func chargeCapability() -> BGChargeCapability {
+        lock.lock()
+        defer { lock.unlock() }
+        if let capabilityCache { return capabilityCache }
+        var keys: [String: BGSMCKeyState] = [:]
+        for key in BGChargeCapability.probedKeys {
+            keys[key] = probe(key)
+        }
+        let capability = BGChargeCapability(keys: keys)
+        // Ohne Verbindung nichts zwischenspeichern, sonst bliebe ein IOKit-Fehler bestehen.
+        if connection != 0 { capabilityCache = capability }
+        return capability
+    }
+
+    private func probe(_ key: String) -> BGSMCKeyState {
+        guard keyExists(key) else { return .absent }
+        guard let value = readKey(key) else { return .unknown }
+        if value.size == 0 { return .placeholder }
+        guard allowsWriteProbe,
+              Self.verifyControlRegister(key: key, size: value.size, bytes: value.bytes,
+                                         expectedEnabled: true) != .unavailable else { return .unknown }
+        switch writeKeyResult(key, bytes: value.bytes) {
+        case .ok: return .writable
+        case .notPrivileged: return .blocked
+        case .failed: return .unknown
+        }
+    }
+
+    private func usableKey(_ candidates: [String]) -> String? {
+        let capability = chargeCapability()
+        return candidates.first { capability.keys[$0] == .writable || capability.keys[$0] == .unknown }
+    }
+
     public var hasChargeControl: Bool {
-        return keyExists("CHTE") || keyExists("CH0B")
+        chargeCapability().chargeInhibitAvailable
     }
 
     public var hasDischargeControl: Bool {
-        return keyExists("CHIE") || keyExists("CH0J") || keyExists("CH0I")
+        chargeCapability().adapterSwitchAvailable
     }
 
     public enum ControlReadback: Equatable, Sendable {
@@ -325,10 +378,10 @@ public final class SMCClient: @unchecked Sendable {
     }
 
     public func verifyChargingEnabled(_ expected: Bool) -> ControlReadback {
-        if keyExists("CHTE") { return verifyRegister("CHTE", expectedEnabled: expected) }
-        guard keyExists("CH0B") else { return .unavailable }
+        guard let key = usableKey(["CHTE", "CH0B"]) else { return .unavailable }
+        if key == "CHTE" { return verifyRegister("CHTE", expectedEnabled: expected) }
         let primary = verifyRegister("CH0B", expectedEnabled: expected)
-        guard keyExists("CH0C") else { return primary }
+        guard usableKey(["CH0C"]) != nil else { return primary }
         let secondary = verifyRegister("CH0C", expectedEnabled: expected)
         // Both charge registers must be readable and agree with the applied target.
         if primary == .unavailable || secondary == .unavailable { return .unavailable }
@@ -336,25 +389,24 @@ public final class SMCClient: @unchecked Sendable {
     }
 
     public func verifyAdapterConnected(_ expected: Bool) -> ControlReadback {
-        for key in ["CHIE", "CH0J", "CH0I"] where keyExists(key) {
-            return verifyRegister(key, expectedEnabled: expected)
-        }
-        return .unavailable
+        guard let key = usableKey(BGChargeCapability.adapterKeys) else { return .unavailable }
+        return verifyRegister(key, expectedEnabled: expected)
     }
 
     /// Laden ein- oder ausschalten
     /// CHTE (4 Byte): aus = 01 00 00 00, an = 00 00 00 00
     /// CH0B / CH0C (1 Byte): aus = 02, an = 00
     public func setChargingEnabled(_ enabled: Bool) -> Bool {
-        if keyExists("CHTE") {
+        let key = usableKey(["CHTE", "CH0B"])
+        if key == "CHTE" {
             let bytes: [UInt8] = enabled ? [0x00, 0x00, 0x00, 0x00] : [0x01, 0x00, 0x00, 0x00]
             _ = writeKey("CHTE", bytes: bytes)
             return readKey("CHTE")?.bytes == bytes
-        } else if keyExists("CH0B") {
+        } else if key == "CH0B" {
             let byte: [UInt8] = enabled ? [0x00] : [0x02]
             var success = writeKey("CH0B", bytes: byte)
             if success { success = readKey("CH0B")?.bytes == byte }
-            if keyExists("CH0C") {
+            if usableKey(["CH0C"]) != nil {
                 let s2 = writeKey("CH0C", bytes: byte)
                 success = success && s2 && (readKey("CH0C")?.bytes == byte)
             }
@@ -368,20 +420,10 @@ public final class SMCClient: @unchecked Sendable {
     /// sonst CH0J = 01 / 00,
     /// sonst CH0I = 01 / 00.
     public func setAdapterConnected(_ connected: Bool) -> Bool {
-        if keyExists("CHIE") {
-            let bytes: [UInt8] = connected ? [0x00] : [0x08]
-            _ = writeKey("CHIE", bytes: bytes)
-            return readKey("CHIE")?.bytes == bytes
-        } else if keyExists("CH0J") {
-            let bytes: [UInt8] = connected ? [0x00] : [0x01]
-            _ = writeKey("CH0J", bytes: bytes)
-            return readKey("CH0J")?.bytes == bytes
-        } else if keyExists("CH0I") {
-            let bytes: [UInt8] = connected ? [0x00] : [0x01]
-            _ = writeKey("CH0I", bytes: bytes)
-            return readKey("CH0I")?.bytes == bytes
-        }
-        return false
+        guard let key = usableKey(BGChargeCapability.adapterKeys) else { return false }
+        let bytes: [UInt8] = connected ? [0x00] : [key == "CHIE" ? 0x08 : 0x01]
+        _ = writeKey(key, bytes: bytes)
+        return readKey(key)?.bytes == bytes
     }
 
     public enum MagSafeColor: UInt8 {

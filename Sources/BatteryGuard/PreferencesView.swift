@@ -136,7 +136,7 @@ struct PreferencesView: View {
                     Button("Wachhalten beenden") { configStore.performAction(.init(action: .cancelStayAwake)) }
                 } else {
                     Button("Bis zum Ladelimit wachhalten · höchstens 2 Stunden") { configStore.performAction(.init(action: .stayAwakeUntilLimit, minutes: 120)) }
-                        .disabled(!statusStore.supportsChargingPlans || !statusStore.status.smcKeysDetected.contains(where: { $0 == "CHTE" || $0 == "CH0B" }))
+                        .disabled(!statusStore.supportsChargingPlans || !statusStore.status.hasChargeInhibit)
                 }
                 Text("Verhindert nur automatischen Ruhezustand am Netzteil. Display und bewusst ausgelöster Schlaf bleiben möglich. Bei Abstecken, fehlenden Sensoren, erreichtem Ziel, Frist oder Fehler wird Wachhalten gelöst.").font(.caption).foregroundStyle(.secondary)
             } header: { Text("Sonderaktionen") }
@@ -283,6 +283,11 @@ struct PreferencesView: View {
                 if statusStore.isDaemonActive {
                     LabeledContent("Ladezyklen", value: statusStore.status.cycleCount.map(String.init) ?? "—")
                     LabeledContent("SMC-Unterstützung", value: statusStore.status.smcKeysDetected.joined(separator: ", "))
+                    if let capability = statusStore.status.chargeCapability {
+                        LabeledContent("Ladesperre", value: L(capability.chargeInhibitAvailable ? "verfügbar"
+                            : capability.chargeInhibitBlockedByFirmware ? "von der Firmware gesperrt" : "nicht vorhanden"))
+                        LabeledContent("Netzteil-Schalter", value: L(capability.adapterSwitchAvailable ? "verfügbar" : "nicht verfügbar"))
+                    }
                 }
                 HStack {
                     Button(L(statusStore.isDaemonActive ? "Dienst aktualisieren" : "Dienst installieren")) { services.install() }

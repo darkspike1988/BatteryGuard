@@ -209,6 +209,10 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var maxCapacityMah: Int? = nil
     public var designCapacityMah: Int? = nil
     public var smcKeysDetected: [String] = []
+    /// Ergebnis des Fähigkeitstests beim Dienststart. Fehlt bei älteren Diensten.
+    public var chargeCapability: BGChargeCapability? = nil
+    /// Netzteilwechsel in der letzten Stunde, ohne vom Dienst ausgelöste.
+    public var adapterReconnectsLastHour: Int? = nil
     public var daemonVersion: String = "0.2.0"
     public var updatedAt: Date = Date()
     public var message: String? = nil
@@ -246,6 +250,8 @@ public struct BGStatus: Codable, Equatable, Sendable {
         maxCapacityMah = try c.decodeIfPresent(Int.self, forKey: .maxCapacityMah)
         designCapacityMah = try c.decodeIfPresent(Int.self, forKey: .designCapacityMah)
         smcKeysDetected = try c.decodeIfPresent([String].self, forKey: .smcKeysDetected) ?? d.smcKeysDetected
+        chargeCapability = try? c.decodeIfPresent(BGChargeCapability.self, forKey: .chargeCapability)
+        adapterReconnectsLastHour = try? c.decodeIfPresent(Int.self, forKey: .adapterReconnectsLastHour)
         daemonVersion = try c.decodeIfPresent(String.self, forKey: .daemonVersion) ?? d.daemonVersion
         // Ohne Zeitstempel ist der Status nie frisch.
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .distantPast

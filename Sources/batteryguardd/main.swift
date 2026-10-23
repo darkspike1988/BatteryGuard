@@ -21,11 +21,14 @@ final class DaemonRunner: @unchecked Sendable {
     private let lowPowerMode = LowPowerModeController()
     private let dischargeSleep = DischargeSleepGuard()
     private var configurationNotice: String?
+    private var adapterFlaps = BGAdapterFlapCounter()
+    private var lastDecisionAdapterConnected = true
 
     public init(controller: BatteryController = BatteryController(), dryRun: Bool = false, isOnce: Bool = false) {
         self.controller = controller
         self.dryRun = dryRun
         self.isOnce = isOnce
+        controller.smc.allowsWriteProbe = !dryRun
     }
 
     private let timestampFormatter: ISO8601DateFormatter = {
@@ -184,6 +187,11 @@ final class DaemonRunner: @unchecked Sendable {
             resetChargeToFullOnceInConfig(snapshot: storedConfig, at: now)
         }
 
+        // Selbst ausgelöste Trennungen (aktives Entladen) sind keine Wackelkontakte.
+        let selfInitiated = !decision.adapterConnected || !lastDecisionAdapterConnected
+        lastDecisionAdapterConnected = decision.adapterConnected
+        let reconnects = adapterFlaps.observe(pluggedIn: battery.pluggedIn, selfInitiated: selfInitiated, at: now)
+
         let effective = config.effective(at: now)
         var status = BGStatus()
         status.measurements = battery.measurements
@@ -211,6 +219,8 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
+        status.chargeCapability = controller.smc.chargeCapability()
+        status.adapterReconnectsLastHour = reconnects
         status.daemonVersion = BGVersion.current
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
@@ -327,6 +337,12 @@ final class DaemonRunner: @unchecked Sendable {
 
         detectedSMCKeys = controller.smc.detectSupportedKeys()
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
+        let capability = controller.smc.chargeCapability()
+        log("Fähigkeitstest: " + capability.keys.sorted { $0.key < $1.key }
+            .filter { $0.value != .absent }.map { "\($0.key)=\($0.value.rawValue)" }.joined(separator: ", "))
+        if capability.chargeInhibitBlockedByFirmware {
+            log("Ladesperre von der Firmware gesperrt (ab macOS 27) – macOS-Ladelimit übernimmt.")
+        }
         if !controller.smc.hasChargeControl {
             log(controller.smc.hasDischargeControl
                 ? "SMC-Ladesperre nicht vorhanden – macOS hält das Ladelimit; Netzteil-Schalter nur für Sonderaktionen."
