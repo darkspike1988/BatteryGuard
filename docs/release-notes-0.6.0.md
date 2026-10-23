@@ -23,13 +23,17 @@ Low Power Mode und High Power Mode lassen sich getrennt auf „Nicht steuern“,
 - Eine bisherige Automatik „Low Power Mode auf Akkubetrieb“ wird als „Nur auf Akku“ übernommen. Unbekannte Werte schalten keinen Modus ein. Das alte Konfigurationsfeld bleibt für ältere Dienste erhalten.
 - Wird die Automatik ausgeschaltet, setzt der Dienst beide Stromquellen einmalig auf „Automatisch“ zurück.
 
+## SoC-Leistung im Energiefluss
+
+Der Hintergrunddienst misst etwa alle 30 Sekunden eine Sekunde lang mit Apples `powermetrics` die Leistung von CPU, GPU und Neural Engine (niedrige Priorität, ohne den Regeltakt aufzuhalten). Der Energiefluss zeigt daraus die SoC-Leistung mit Aufteilung und „Übrige Komponenten“ als Differenz zur abgeleiteten Mac-Leistung. Display und USB meldet macOS auf getesteten Macs nicht einzeln in Watt; B-Guard schätzt sie nicht. Apples IOReport-Energiemodell liefert unter macOS 27 für CPU, Neural Engine und DRAM keine Werte mehr und wird deshalb nicht verwendet.
+
 ## Netzteil und Energiewirkung in der Diagnose
 
 - **Netzteil:** Bezeichnung, Hersteller, Nennleistung, ausgehandelte Spannung und Stromstärke sowie Firmware aus `AppleSmartBattery/AdapterDetails`. Nennwerte beschreiben das Ladeprofil, nicht den aktuellen Verbrauch. Die Seriennummer erscheint erst nach Klick und in keinem Export.
-- **Hohe Energiewirkung:** Bis zu acht Prozesse aus der Energiespalte von `top`, gemessen über eine Sekunde und alle zehn Sekunden erneuert, solange die Diagnoseseite sichtbar ist. Der Wert ist Apples relative Energiewirkung, keine Wattangabe. Prozessnamen erscheinen in keinem Export.
+- **Hohe Energiewirkung:** Prozesse aus der Energiespalte von `top`, gemessen über eine Sekunde und alle zehn Sekunden erneuert, solange die Diagnoseseite sichtbar ist. Schwelle (ab 1, 5 oder 20) und Hintergrundprozesse sind wählbar. Sichtbare Apps lassen sich nach Rückfrage normal beenden. Der Wert ist Apples relative Energiewirkung, keine Wattangabe. Prozessnamen erscheinen in keinem Export.
 
-Beide Ansichten sind rein lesend und benötigen keinen aktualisierten Dienst.
+Netzteil und Energiewirkung benötigen keinen aktualisierten Dienst; die SoC-Leistung erscheint erst mit Dienst 0.6.0.
 
 ## Prüfstand
 
-245 Tests in 37 Suiten bestanden, darunter neue Tests für Regeln, Vorrang, Migration, Fehlerwiederholung, Probelauf, Netzteil-Parser, `top`-Parser sowie Stufenwahl, Hitzeschutz, Top Up und Rücklesen im macOS-Limit-Modus. Auf dem MacBookPro18,3 unter macOS 27.0 meldet PowerUI die Stufen 80–100 %; Lesen und ein Schreibtest mit unverändertem Wert gelangen ohne Administratorrechte. Auf einem MacBookPro18,3 (M1 Pro) bestätigt: Netzteilangaben werden gelesen, `pmset` bietet dort kein `powermode`, High Power Mode bleibt ausgeblendet. Die Umschaltung durch den installierten Dienst 0.6.0 ist noch nicht physisch abgenommen.
+248 Tests in 38 Suiten bestanden, darunter neue Tests für Regeln, Vorrang, Migration, Fehlerwiederholung, Probelauf, Netzteil-Parser, `top`-Parser sowie Stufenwahl, Hitzeschutz, Top Up und Rücklesen im macOS-Limit-Modus. Auf dem MacBookPro18,3 unter macOS 27.0 meldet PowerUI die Stufen 80–100 %; Lesen und ein Schreibtest mit unverändertem Wert gelangen ohne Administratorrechte. Auf einem MacBookPro18,3 (M1 Pro) bestätigt: Netzteilangaben werden gelesen, `pmset` bietet dort kein `powermode`, High Power Mode bleibt ausgeblendet. Die Umschaltung durch den installierten Dienst 0.6.0 ist noch nicht physisch abgenommen.

@@ -536,7 +536,6 @@
 "Mac" = "Mac";
 "Mac ist langsam" = "Mac is slow";
 "Mac wird heiß" = "Mac gets hot";
-"Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch." = "Mac power estimated from input minus battery flow. On battery power, input is 0 W. Rated power is not consumption.";
 "Mac-Verbrauch geschätzt %.1f Watt." = "Mac consumption estimated at %.1f watts.";
 "MagSafe-Farbe dem Ladezustand anpassen" = "Match MagSafe color to charge status";
 "Manuelle Übersteuerung bis %@" = "Manual override until %@";
@@ -936,7 +935,6 @@
 "Messung läuft …" = "Measuring …";
 "Keine Prozesse mit nennenswerter Energiewirkung." = "No processes with notable energy impact.";
 "Gemessen um %@" = "Measured at %@";
-"Werte aus der Energiespalte von top über eine Sekunde: Apples relative Energiewirkung, keine Watt. Enthält auch Hintergrunddienste. Prozessnamen erscheinen in keinem Export." = "Values from top's power column over one second: Apple's relative energy impact, not watts. Includes background services. Process names appear in no export.";
 "Energie im Blick" = "Energy at a glance";
 "Low Power Mode und High Power Mode getrennt für Akku und Netzteil: nicht steuern, immer, nur auf Akku oder nur am Netzteil." = "Low Power Mode and High Power Mode separately for battery and power adapter: don't control, always, battery only or power adapter only.";
 "High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang." = "High Power Mode only appears on Macs that offer it; when both overlap, Low Power Mode takes precedence.";
@@ -960,3 +958,19 @@
 "macOS-Ladelimit über B-Guard" = "macOS charge limit via B-Guard";
 "macOS-Limit %lld %%" = "macOS limit %lld %%";
 "B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch, auch wenn die App geschlossen ist." = "B-Guard sets Apple's native charge limit; macOS enforces it itself, even when the app is closed.";
+
+/* 0.6.0 Energie-Apps und SoC-Leistung */
+"Anzeigen ab" = "Show from";
+"Geringe Wirkung (ab 1)" = "Low impact (from 1)";
+"Mittlere Wirkung (ab 5)" = "Medium impact (from 5)";
+"Hohe Wirkung (ab 20)" = "High impact (from 20)";
+"Hintergrundprozesse einbeziehen" = "Include background processes";
+"%@ normal beenden; ungesicherte Änderungen fragt die App selbst ab." = "Quit %@ normally; the app asks about unsaved changes itself.";
+"%@ beenden?" = "Quit %@?";
+"Werte aus der Energiespalte von top über eine Sekunde: Apples relative Energiewirkung, keine Watt. Beenden schickt der App die normale Beenden-Anfrage. Prozessnamen erscheinen in keinem Export." = "Values from top's power column over one second: Apple's relative energy impact, not watts. Quit sends the app the normal quit request. Process names appear in no export.";
+"SoC" = "SoC";
+"CPU, GPU, Neural Engine (gemessen)" = "CPU, GPU, Neural Engine (measured)";
+"Übrige Komponenten" = "Other components";
+"Display, USB, RAM u. a. (abgeleitet)" = "Display, USB, RAM etc. (derived)";
+"Display und USB meldet dieser Mac nicht einzeln." = "This Mac does not report display and USB separately.";
+"Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch. SoC-Werte misst der Dienst etwa alle 30 Sekunden mit Apples powermetrics; „Übrige Komponenten“ ist die Differenz zur Mac-Leistung." = "Mac power estimated from input minus battery flow. On battery, input is 0 W. Rated power is not consumption. The service measures SoC values about every 30 seconds with Apple's powermetrics; “Other components” is the difference to Mac power.";

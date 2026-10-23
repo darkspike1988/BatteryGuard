@@ -16,6 +16,7 @@ final class DaemonRunner: @unchecked Sendable {
     private let configServer = ConfigServer()
     private let wakeUntilLimit = WakeUntilLimitGuard()
     private let powerMode = PowerModeController()
+    private let socPower = SoCPowerMonitor()
     private let dischargeSleep = DischargeSleepGuard()
     private var configurationNotice: String?
 
@@ -197,6 +198,8 @@ final class DaemonRunner: @unchecked Sendable {
         status.externalPowerAvailable = battery.externalPowerAvailable
         status.awakeUntilLimitActive = wakeUntilLimit.isActive
         status.highPowerModeSupported = powerMode.highPowerModeSupported
+        if !isOnce && !dryRun { socPower.refreshIfDue() }
+        status.socPower = socPower.latest
         let systemLimits = controller.systemLimit.availableLimits()
         status.systemChargeLimits = systemLimits
         status.systemChargeLimit = systemLimits.isEmpty ? nil : controller.systemLimit.currentLimit()

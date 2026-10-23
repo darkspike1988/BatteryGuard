@@ -536,7 +536,6 @@
 "Mac" = "Mac";
 "Mac ist langsam" = "Mac работает медленно";
 "Mac wird heiß" = "Mac нагревается";
-"Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch." = "Мощность Mac оценена как вход минус поток аккумулятора. При работе от аккумулятора вход равен 0 Вт. Номинальная мощность — не потребление.";
 "Mac-Verbrauch geschätzt %.1f Watt." = "Потребление Mac оценено в %.1f Вт.";
 "MagSafe-Farbe dem Ladezustand anpassen" = "Подстраивать цвет MagSafe под состояние заряда";
 "Manuelle Übersteuerung bis %@" = "Ручное переопределение до %@";
@@ -936,7 +935,6 @@
 "Messung läuft …" = "Идёт измерение …";
 "Keine Prozesse mit nennenswerter Energiewirkung." = "Нет процессов с заметным энергопотреблением.";
 "Gemessen um %@" = "Измерено в %@";
-"Werte aus der Energiespalte von top über eine Sekunde: Apples relative Energiewirkung, keine Watt. Enthält auch Hintergrunddienste. Prozessnamen erscheinen in keinem Export." = "Значения из столбца энергопотребления top за одну секунду: относительное энергопотребление по оценке Apple, а не ватты. Включает фоновые службы. Имена процессов не попадают ни в один экспорт.";
 "Energie im Blick" = "Энергия под контролем";
 "Low Power Mode und High Power Mode getrennt für Akku und Netzteil: nicht steuern, immer, nur auf Akku oder nur am Netzteil." = "Режимы энергосбережения и высокой мощности отдельно для аккумулятора и адаптера питания: не управлять, всегда, только от аккумулятора или только от адаптера.";
 "High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang." = "Режим высокой мощности показывается только на Mac, которые его поддерживают; при пересечении приоритет у режима энергосбережения.";
@@ -960,3 +958,19 @@
 "macOS-Ladelimit über B-Guard" = "Лимит зарядки macOS через B-Guard";
 "macOS-Limit %lld %%" = "Лимит macOS %lld %%";
 "B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch, auch wenn die App geschlossen ist." = "B-Guard задаёт встроенный лимит Apple; macOS соблюдает его сама, даже когда приложение закрыто.";
+
+/* 0.6.0 Energie-Apps und SoC-Leistung */
+"Anzeigen ab" = "Показывать от";
+"Geringe Wirkung (ab 1)" = "Низкое (от 1)";
+"Mittlere Wirkung (ab 5)" = "Среднее (от 5)";
+"Hohe Wirkung (ab 20)" = "Высокое (от 20)";
+"Hintergrundprozesse einbeziehen" = "Включать фоновые процессы";
+"%@ normal beenden; ungesicherte Änderungen fragt die App selbst ab." = "Обычно завершить %@; о несохранённых изменениях приложение спросит само.";
+"%@ beenden?" = "Завершить %@?";
+"Werte aus der Energiespalte von top über eine Sekunde: Apples relative Energiewirkung, keine Watt. Beenden schickt der App die normale Beenden-Anfrage. Prozessnamen erscheinen in keinem Export." = "Значения из столбца энергопотребления top за одну секунду: относительное энергопотребление по оценке Apple, а не ватты. «Завершить» отправляет приложению обычный запрос на выход. Имена процессов не попадают ни в один экспорт.";
+"SoC" = "SoC";
+"CPU, GPU, Neural Engine (gemessen)" = "CPU, GPU, Neural Engine (измерено)";
+"Übrige Komponenten" = "Прочие компоненты";
+"Display, USB, RAM u. a. (abgeleitet)" = "Дисплей, USB, ОЗУ и др. (расчёт)";
+"Display und USB meldet dieser Mac nicht einzeln." = "Этот Mac не сообщает дисплей и USB отдельно.";
+"Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch. SoC-Werte misst der Dienst etwa alle 30 Sekunden mit Apples powermetrics; „Übrige Komponenten“ ist die Differenz zur Mac-Leistung." = "Мощность Mac оценивается как вход минус поток аккумулятора. При работе от аккумулятора вход равен 0 Вт. Номинальная мощность — не потребление. Значения SoC служба измеряет примерно каждые 30 секунд с помощью powermetrics от Apple; «Прочие компоненты» — разница с мощностью Mac.";

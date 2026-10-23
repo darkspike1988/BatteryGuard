@@ -209,6 +209,8 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var systemChargeLimits: [Int]? = nil
     /// Zuletzt gelesenes natives macOS-Ladelimit über PowerUI (unabhängig vom SMC-Layout).
     public var systemChargeLimit: Int? = nil
+    /// Letzte SoC-Leistungsmessung des Dienstes; nil, wenn powermetrics nichts liefert.
+    public var socPower: BGSoCPower? = nil
     public var hasBatteryPercent: Bool { percentAvailable != false }
     public var hasExternalPower: Bool { externalPowerAvailable != false }
     public var pluggedIn: Bool = false
