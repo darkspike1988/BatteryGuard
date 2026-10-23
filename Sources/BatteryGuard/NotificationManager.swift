@@ -17,6 +17,7 @@ final class NotificationManager: Sendable {
         static let lastCalibrationReminder = "bg.lastCalibrationReminderAt"
         static let lastWeeklyReport = "bg.lastWeeklyReportAt"
         static let lastHealthAlert = "bg.lastHealthAlertAt"
+        static let appleCareReminderFor = "bg.appleCareReminderFor"
     }
     static let calibrationInterval: TimeInterval = 42 * 86400
     static let calibrationRepeat: TimeInterval = 14 * 86400
@@ -168,6 +169,21 @@ final class NotificationManager: Sendable {
     func requestAuthorization() {
         guard Bundle.main.bundleIdentifier != nil else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    /// Einmal je eingetragenem Enddatum, wenn der Akku vor Ablauf von AppleCare+ unter 80 % fallen dürfte.
+    func checkAppleCare(days: [BGCapacityDay], status: BGStatus) {
+        guard Bundle.main.bundleIdentifier != nil,
+              let end = ReplacementForecastView.appleCareEndDate() else { return }
+        let defaults = UserDefaults.standard
+        guard defaults.double(forKey: Key.appleCareReminderFor) != end.timeIntervalSince1970 else { return }
+        let forecast = BGReplacementForecast.evaluate(days: days, currentCycles: status.cycleCount, cycleLimit: nil,
+                                                      appleCareEnd: end, limitChange: LimitChangeStore.current())
+        guard forecast.appleCareReminderDue else { return }
+        defaults.set(end.timeIntervalSince1970, forKey: Key.appleCareReminderFor)
+        send(title: L("AppleCare endet bald"),
+             body: L("Der Schutz endet am %@, und die Akkukapazität liegt nahe an 80 %%. Lass den Akku vorher prüfen.",
+                     end.formatted(date: .abbreviated, time: .omitted)))
     }
 
     func notifySleepDrain(_ report: BGSleepReport) {

@@ -129,6 +129,7 @@ struct DiagnosticsView: View {
                         }
                     }
                 }
+                ReplacementForecastView(statusStore: statusStore, history: history)
             }.padding(28).frame(maxWidth: 900)
         }
         .onAppear { statusStore.beginDiagnostics() }
