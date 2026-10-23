@@ -158,8 +158,10 @@ final class HistoryStore {
         if longTermCapacityEnabled {
             Task { [weak self, capacityRepository] in
                 do {
-                    self?.capacityDays = try await capacityRepository.record(status)
+                    let days = try await capacityRepository.record(status)
+                    self?.capacityDays = days
                     self?.capacityError = nil
+                    NotificationManager.shared.checkAppleCare(days: days, status: status)
                 } catch { self?.capacityError = L("Kapazitätsverlauf konnte nicht gespeichert werden. Bestehende Daten bleiben erhalten.") }
             }
         }

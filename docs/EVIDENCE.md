@@ -52,6 +52,14 @@ Das macOS-Ladelimit lädt bei mehr als 5 % Abfall nach und lädt gelegentlich au
 - Wie viel Kapazität ein Limit im Alltag spart, ist für Laptops nicht gemessen. Eine grobe Abschätzung für einen warmen, meist angeschlossenen MacBook liegt bei einigen bis etwa 10 Prozentpunkten über zwei bis drei Jahre. Das ist eine Schätzung, kein Messwert.
 - Realistische, wechselnde Last kann die Lebensdauer gegenüber Laborzyklen deutlich verlängern; Laborzahlen überschätzen den absoluten Verschleiß eher. ([Geslin et al. 2024](https://doi.org/10.1038/s41560-024-01675-8))
 
+## Erklären statt Steuern
+
+- Seit der Firmware von macOS 27 sind die Ladesperre-Schlüssel CHTE, CH0B und CH0C gesperrt: Sie erscheinen als Platzhalter der Größe null oder liefern selbst für root `kIOReturnNotPrivileged`. Der Netzteil-Schalter CHIE bleibt beschreibbar. B-Guard prüft deshalb die Fähigkeit und nicht die macOS-Version.
+- macOS lädt trotz Ladelimit gelegentlich auf 100 %, damit die Ladestandsschätzung genau bleibt. ([Apple 102338](https://support.apple.com/en-us/102338)) Steht der Akku deutlich über Ziel und Limit, nennt B-Guard das als wahrscheinliche Ursache.
+- Das Energieprotokoll `pmset -g log` ist ohne Administratorrechte lesbar, sein Format aber nicht dokumentiert ([pmset(1)](https://keith.github.io/xcode-man-pages/pmset.1.html)). Unbekannte Zeilen werden übersprungen. Aktive Energie-Assertions liefert die öffentliche Funktion `IOPMCopyAssertionsByProcess` aus IOKit.
+- USB-C-Kabel ohne E-Marker sind für 3 A ausgelegt und begrenzen bei 20 V auf 60 W; für bis zu 100 W oder 240 W braucht es 5-A-Kabel (USB Power Delivery). Weicht die ausgehandelte Leistung deutlich von der angebotenen ab, liegt die Grenze meist im Kabel oder Dock.
+- AppleCare+ deckt einen Akkutausch, wenn der Akku weniger als 80 % seiner ursprünglichen Kapazität hält. ([Apple: Akkuservice](https://support.apple.com/mac/repair/battery)) Die Prognose nutzt die Kapazitätsquote aus Maximal- und Designkapazität, nicht Apples Anzeige „Maximale Kapazität“; Alterung verläuft nicht linear, und nach einer Limitänderung ist die Messung einige Wochen verzerrt ([Lewerenz et al. 2018](https://doi.org/10.1016/j.est.2018.04.029)).
+
 ## Weitere Quellen
 
 - Wikner E, Thiringer T (2018). Extending Battery Lifetime by Avoiding High SOC. [doi:10.3390/app8101825](https://doi.org/10.3390/app8101825)
