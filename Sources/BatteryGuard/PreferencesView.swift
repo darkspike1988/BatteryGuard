@@ -30,6 +30,7 @@ struct PreferencesView: View {
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
     @AppStorage(MenuBarExtraItem.appStorageKey) private var menuBarExtras = ""
+    @AppStorage(LidLockGuard.appStorageKey) private var lockScreenWhenLidClosed = false
 
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
@@ -110,8 +111,18 @@ struct PreferencesView: View {
                 Toggle("Oberhalb des Limits aktiv entladen", isOn: $configStore.config.activeDischargeAboveUpper)
                 Text("Aktives Entladen trennt das Netzteil softwareseitig. Im Pendelmodus geschieht dies bereits automatisch. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt.")
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("MagSafe-Farbe dem Ladezustand anpassen", isOn: $configStore.config.magsafeLed)
-                    .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
+                Picker("MagSafe-LED", selection: Binding(
+                    get: { configStore.config.magsafeLedOff ? 2 : (configStore.config.magsafeLed ? 1 : 0) },
+                    set: { configStore.config.magsafeLedOff = $0 == 2; configStore.config.magsafeLed = $0 == 1 }
+                )) {
+                    Text("macOS steuert").tag(0)
+                    Text("Ladezustand anzeigen").tag(1)
+                    Text("Aus").tag(2)
+                }
+                .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
+                Toggle("Laden im Schlaf angehalten lassen", isOn: $configStore.config.stopChargingWhenSleeping)
+                Text("Standardmäßig gibt B-Guard das Laden vor dem Schlaf frei. Mit dieser Option bleibt eine SMC-Ladesperre aktiv; im Modus „macOS-Limit“ wird das Limit auf die nächste Stufe über dem aktuellen Ladestand gesetzt. Vollladen, Reise und Top Up haben Vorrang. Hardware-Abnahme steht aus.")
+                    .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Schutz") }
                 .disabled(!canConfigure)
 
@@ -140,6 +151,9 @@ struct PreferencesView: View {
                     }
                 }
                 Text("Nutzt die öffentliche macOS-Einstellung über pmset getrennt für Akku und Netzteil; macOS wechselt dann selbst. Die jeweils andere Stromquelle steht auf Automatisch. B-Guard schreibt dafür keine privaten SMC-Schlüssel.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Bildschirm sperren, wenn der Deckel beim Wachhalten geschlossen wird", isOn: $lockScreenWhenLidClosed)
+                Text("Gilt nur, während „Bis zum Ladelimit wachhalten“ aktiv ist und die App läuft. Sonst schläft der Mac beim Zuklappen und macOS sperrt selbst.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Systemschlaf beim aktiven Entladen bis zu 30 Minuten verhindern", isOn: $configStore.config.preventSleepWhileDischarging)
                 Text("Gilt nur, solange B-Guard den Adapter selbst getrennt hat. Bewusster Schlaf und Deckelschließen bleiben möglich; die Sperre endet spätestens nach 30 Minuten.")

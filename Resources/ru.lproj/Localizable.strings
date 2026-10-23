@@ -537,7 +537,6 @@
 "Mac ist langsam" = "Mac работает медленно";
 "Mac wird heiß" = "Mac нагревается";
 "Mac-Verbrauch geschätzt %.1f Watt." = "Потребление Mac оценено в %.1f Вт.";
-"MagSafe-Farbe dem Ladezustand anpassen" = "Подстраивать цвет MagSafe под состояние заряда";
 "Manuelle Übersteuerung bis %@" = "Ручное переопределение до %@";
 "Maximal 50 Zeitpläne sind erlaubt." = "Допускается не более 50 расписаний.";
 "Maximal- / Designkapazität" = "Максимальная / проектная ёмкость";
@@ -988,3 +987,13 @@
 "Legt fest, wann Low Power Mode und High Power Mode gelten. Leere Parameter bleiben unverändert." = "Определяет, когда действуют режимы энергосбережения и высокой мощности. Пустые параметры не меняются.";
 "Energiemodus" = "Режим энергии";
 "Mindestens ein Energiemodus ist erforderlich." = "Требуется хотя бы один режим энергии.";
+
+/* 0.6.0 Schlaf, LED und Sperre */
+"MagSafe-LED" = "Индикатор MagSafe";
+"macOS steuert" = "Управляет macOS";
+"Ladezustand anzeigen" = "Показывать состояние зарядки";
+"Aus" = "Выкл.";
+"Laden im Schlaf angehalten lassen" = "Не заряжать во время сна";
+"Standardmäßig gibt B-Guard das Laden vor dem Schlaf frei. Mit dieser Option bleibt eine SMC-Ladesperre aktiv; im Modus „macOS-Limit“ wird das Limit auf die nächste Stufe über dem aktuellen Ladestand gesetzt. Vollladen, Reise und Top Up haben Vorrang. Hardware-Abnahme steht aus." = "По умолчанию B-Guard разрешает зарядку перед сном. С этой опцией блокировка зарядки SMC остаётся активной; в режиме «Лимит macOS» лимит устанавливается на ближайшую ступень выше текущего заряда. Полная зарядка, поездка и Top Up имеют приоритет. Аппаратная проверка ещё не проведена.";
+"Bildschirm sperren, wenn der Deckel beim Wachhalten geschlossen wird" = "Блокировать экран при закрытии крышки во время удержания без сна";
+"Gilt nur, während „Bis zum Ladelimit wachhalten“ aktiv ist und die App läuft. Sonst schläft der Mac beim Zuklappen und macOS sperrt selbst." = "Действует, только пока активно «Не засыпать до лимита зарядки» и приложение запущено. Иначе Mac засыпает при закрытии, и macOS блокирует экран сама.";

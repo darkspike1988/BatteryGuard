@@ -256,8 +256,8 @@ final class DaemonRunner: @unchecked Sendable {
                 runner.sleeping = true
                 runner.wakeUntilLimit.release()
                 runner.dischargeSleep.release()
-                if !runner.dryRun { runner.controller.restoreNormal(logger: { runner.log($0) }) }
-                runner.log("Schlafmodus: Normalbetrieb wiederhergestellt, Steuerung pausiert.")
+                runner.controller.prepareForSleep(config: runner.loadConfig().sanitized(), battery: BatteryReader.read(smcClient: runner.controller.smc),
+                                                  dryRun: runner.dryRun, logger: { runner.log($0) })
                 IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
             case 0xe0000300 /* kIOMessageSystemHasPoweredOn */:
                 // Firmware may have changed SMC registers while asleep. Forget all cached writes.

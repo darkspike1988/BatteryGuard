@@ -8,7 +8,11 @@ Diese Roadmap führt die bisherige Umsetzungshistorie fort. Die zwei früher dok
 
 - Low Power Mode und High Power Mode je Stromquelle über `pmset` (nicht steuern, immer, nur Akku, nur Netzteil); High Power Mode nur bei angebotenem `powermode`.
 - Diagnose mit Netzteil-Angaben und Prozessen hoher Energiewirkung, rein lesend.
-- **Offen:** physische Abnahme der Umschaltung mit installiertem Dienst 0.6.0, insbesondere auf einem Mac mit High Power Mode. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md).
+- Modus „macOS-Limit“ für Macs ohne SMC-Ladesperre (macOS 27): natives Ladelimit 80–100 % über PowerUI, Top Up über 100 %, Hitzeschutz über die niedrigste Stufe.
+- SoC-Leistung (CPU, GPU, Neural Engine) per `powermetrics` im Energiefluss; Energie-Apps mit Schwelle, Hintergrundfilter und Beenden.
+- Menüleisten-Zusatzwerte, Kurzbefehl und API-Aktion für Energiemodi.
+- Opt-in: Laden im Schlaf angehalten lassen, MagSafe-LED aus, Bildschirmsperre beim Zuklappen während des Wachhaltens.
+- **Offen:** physische Abnahme mit installiertem Dienst 0.6.0: macOS-Limit über mehrere Lade-/Schlafzyklen, Energiemodi (insbesondere High Power Mode), LED aus, Laden im Schlaf; Limits unter 80 % auf macOS 27 bleiben ohne privates Entitlement nur über den Netzteil-Schalter möglich. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md).
 
 ## P0/P1-Ausbau im Arbeitsstand 0.5.0
 

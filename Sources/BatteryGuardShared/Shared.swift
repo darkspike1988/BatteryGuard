@@ -68,6 +68,10 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var chargeToFullOnce: Bool = false
     /// MagSafe LED steuern (Grün beim Halten)
     public var magsafeLed: Bool = true
+    /// MagSafe-LED dauerhaft aus, solange der Dienst läuft (hat Vorrang vor `magsafeLed`).
+    public var magsafeLedOff: Bool = false
+    /// Vor dem Systemschlaf Laden anhalten statt freigeben (opt-in).
+    public var stopChargingWhenSleeping: Bool = false
     /// Durchsetzungs-Modus (siehe BGMode).
     public var mode: BGMode = .auto
     /// Zeitlich begrenzte Pause. Die ursprünglichen Schutzeinstellungen bleiben erhalten.
@@ -115,6 +119,8 @@ public struct BGConfig: Codable, Equatable, Sendable {
         heatProtectionCelsius = try c.decodeIfPresent(Int.self, forKey: .heatProtectionCelsius) ?? d.heatProtectionCelsius
         chargeToFullOnce = try c.decodeIfPresent(Bool.self, forKey: .chargeToFullOnce) ?? d.chargeToFullOnce
         magsafeLed = try c.decodeIfPresent(Bool.self, forKey: .magsafeLed) ?? d.magsafeLed
+        magsafeLedOff = try c.decodeIfPresent(Bool.self, forKey: .magsafeLedOff) ?? d.magsafeLedOff
+        stopChargingWhenSleeping = try c.decodeIfPresent(Bool.self, forKey: .stopChargingWhenSleeping) ?? d.stopChargingWhenSleeping
         // Missing legacy values retain their default. Explicit unknown modes must
         // never silently enable active adapter switching.
         if let rawMode = try c.decodeIfPresent(String.self, forKey: .mode) {

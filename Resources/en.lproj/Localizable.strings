@@ -537,7 +537,6 @@
 "Mac ist langsam" = "Mac is slow";
 "Mac wird heiß" = "Mac gets hot";
 "Mac-Verbrauch geschätzt %.1f Watt." = "Mac consumption estimated at %.1f watts.";
-"MagSafe-Farbe dem Ladezustand anpassen" = "Match MagSafe color to charge status";
 "Manuelle Übersteuerung bis %@" = "Manual override until %@";
 "Maximal 50 Zeitpläne sind erlaubt." = "A maximum of 50 schedules is allowed.";
 "Maximal- / Designkapazität" = "Maximum / design capacity";
@@ -988,3 +987,13 @@
 "Legt fest, wann Low Power Mode und High Power Mode gelten. Leere Parameter bleiben unverändert." = "Sets when Low Power Mode and High Power Mode apply. Empty parameters stay unchanged.";
 "Energiemodus" = "Energy mode";
 "Mindestens ein Energiemodus ist erforderlich." = "At least one energy mode is required.";
+
+/* 0.6.0 Schlaf, LED und Sperre */
+"MagSafe-LED" = "MagSafe LED";
+"macOS steuert" = "macOS controls";
+"Ladezustand anzeigen" = "Show charge state";
+"Aus" = "Off";
+"Laden im Schlaf angehalten lassen" = "Keep charging paused during sleep";
+"Standardmäßig gibt B-Guard das Laden vor dem Schlaf frei. Mit dieser Option bleibt eine SMC-Ladesperre aktiv; im Modus „macOS-Limit“ wird das Limit auf die nächste Stufe über dem aktuellen Ladestand gesetzt. Vollladen, Reise und Top Up haben Vorrang. Hardware-Abnahme steht aus." = "By default B-Guard releases charging before sleep. With this option an SMC charge lock stays active; in “macOS limit” mode the limit is set to the next step above the current charge level. Full charge, travel and Top Up take precedence. Hardware acceptance is pending.";
+"Bildschirm sperren, wenn der Deckel beim Wachhalten geschlossen wird" = "Lock screen when the lid is closed while kept awake";
+"Gilt nur, während „Bis zum Ladelimit wachhalten“ aktiv ist und die App läuft. Sonst schläft der Mac beim Zuklappen und macOS sperrt selbst." = "Applies only while “Keep awake until charge limit” is active and the app is running. Otherwise the Mac sleeps when closed and macOS locks itself.";

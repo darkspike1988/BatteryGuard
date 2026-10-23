@@ -130,7 +130,11 @@ struct BatteryGuardApp: App {
         AppDelegate.updateStore = updater
         _updates = State(wrappedValue: updater)
         AppDelegate.configStore = config
-        status.onFreshStatus = { [weak history] in history?.record($0) }
+        let lidLock = LidLockGuard()
+        status.onFreshStatus = { [weak history] fresh in
+            history?.record(fresh)
+            if !preview { lidLock.observe(fresh, enabled: UserDefaults.standard.bool(forKey: LidLockGuard.appStorageKey)) }
+        }
         if status.isDaemonActive { history.record(status.status) }
         _historyStore = State(wrappedValue: history)
         status.configRefresh = { [weak config] in config?.loadConfig() }

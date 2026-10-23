@@ -499,6 +499,29 @@ public enum ControllerLogic {
 }
 
 
+/// Was vor dem Systemschlaf passiert. Standard bleibt die Freigabe auf Normalbetrieb.
+public enum SleepChargePolicy: Equatable, Sendable {
+    case release
+    /// SMC-Ladesperre aktiv lassen; Netzteil bleibt verbunden.
+    case inhibitCharging
+    /// macOS-Limit auf die nächste Stufe über dem aktuellen Ladestand setzen.
+    case systemLimit(Int)
+
+    public static func decide(config: BGConfig, battery: BatteryInfo, hasChargeControl: Bool,
+                              systemChargeLimits: [Int], now: Date = Date()) -> SleepChargePolicy {
+        guard config.stopChargingWhenSleeping, config.enabled, !config.isPaused(at: now),
+              config.mode != .native, config.mode != .direct, battery.pluggedIn, battery.percentAvailable else { return .release }
+        let effective = config.effective(at: now)
+        // Vollladen, Reise und Top Up haben Vorrang: dann wie bisher freigeben.
+        guard !effective.chargeToFullOnce, effective.specialChargePlan == nil else { return .release }
+        if config.mode == .systemLimit {
+            guard let limit = BGSystemChargeLimit.target(for: max(battery.percent, 1), available: systemChargeLimits) else { return .release }
+            return .systemLimit(limit)
+        }
+        return hasChargeControl ? .inhibitCharging : .release
+    }
+}
+
 public final class BatteryController: @unchecked Sendable {
     public let smc: SMCClient
     let systemLimit: SystemChargeLimitController
@@ -568,7 +591,9 @@ public final class BatteryController: @unchecked Sendable {
 
         // MagSafe LED bestimmen
         let targetLED: SMCClient.MagSafeColor
-        if !config.magsafeLed || !config.enabled {
+        if config.magsafeLedOff {
+            targetLED = .off
+        } else if !config.magsafeLed || !config.enabled {
             targetLED = .auto
         } else if decision.state == .holding {
             targetLED = .green
@@ -632,6 +657,36 @@ public final class BatteryController: @unchecked Sendable {
         }
         previousDecision = decision
         return decision
+    }
+
+    /// Vor dem Schlaf: Freigabe oder, falls gewünscht, Laden angehalten lassen.
+    public func prepareForSleep(config: BGConfig, battery: BatteryInfo, dryRun: Bool, logger: ((String) -> Void)? = nil) {
+        let policy = SleepChargePolicy.decide(config: config, battery: battery, hasChargeControl: smc.hasChargeControl,
+            systemChargeLimits: config.mode == .systemLimit ? systemLimit.availableLimits() : [])
+        switch policy {
+        case .release:
+            if !dryRun { restoreNormal(logger: logger) }
+            logger?("Schlafmodus: Normalbetrieb wiederhergestellt, Steuerung pausiert.")
+        case .inhibitCharging:
+            guard !dryRun else { logger?("[DRY-RUN] Schlafmodus: Laden würde angehalten bleiben"); return }
+            let held: Bool = {
+                lock.lock(); defer { lock.unlock() }
+                let charging = smc.setChargingEnabled(false)
+                let adapter = !smc.hasDischargeControl || smc.setAdapterConnected(true)
+                if smc.keyExists("ACLC") { smc.setMagSafeLED(.auto) }
+                previousDecision = nil; lastAppliedCharging = nil; lastAppliedAdapter = nil; lastAppliedMagSafeLED = nil
+                return charging && adapter
+            }()
+            if held {
+                logger?("Schlafmodus: Laden bleibt angehalten, Netzteil verbunden.")
+            } else {
+                logger?("Schlafmodus: Laden konnte nicht angehalten werden.")
+                restoreNormal(logger: logger)
+            }
+        case .systemLimit(let limit):
+            let success = systemLimit.apply(limit, dryRun: dryRun, logger: logger)
+            logger?(success ? "Schlafmodus: macOS-Limit auf \(limit) % gesetzt." : "Schlafmodus: macOS-Limit unverändert.")
+        }
     }
 
     public func invalidateHardwareCache() {
