@@ -1004,3 +1004,16 @@
 "Apple: Deckungsstatus prüfen" = "Apple: проверить покрытие";
 "AppleCare endet bald" = "AppleCare скоро закончится";
 "Der Schutz endet am %@, und die Akkukapazität liegt nahe an 80 %%. Lass den Akku vorher prüfen." = "Покрытие заканчивается %@, а ёмкость аккумулятора близка к 80 %%. Проверьте аккумулятор заранее.";
+"Ohne SMC-Ladesperre (z. B. ab macOS 27) setzt B-Guard das Ladelimit aus den Systemeinstellungen selbst. macOS hält es auch im Schlaf und wenn B-Guard nicht läuft. Änderungen in den Systemeinstellungen überschreibt B-Guard, solange diese Option an ist. Werte unter 80 % nutzt macOS nicht offiziell; der Weg ist nicht von Apple dokumentiert." = "Без блокировки зарядки через SMC (например, начиная с macOS 27) B-Guard сам задаёт лимит зарядки из Системных настроек. macOS удерживает его во сне и когда B-Guard не запущен. Пока опция включена, B-Guard перезаписывает изменения в Системных настройках. Значения ниже 80 % macOS официально не использует; способ не задокументирован Apple.";
+"Ziele unter 80 % erlauben (experimentell)" = "Разрешить цели ниже 80 % (экспериментально)";
+"macOS-Ladelimit durch B-Guard setzen" = "Лимит зарядки macOS задаёт B-Guard";
+"B-Guard kann das macOS-Ladelimit setzen" = "B-Guard может задать лимит зарядки macOS";
+"Dann hält macOS dein Ziel auch im Schlaf, auf Wunsch auch unter 80 %. Die Einstellung lässt sich jederzeit abschalten." = "Тогда macOS удерживает цель и во сне, по желанию и ниже 80 %. Настройку можно выключить в любой момент.";
+"macOS hält diesen Wert auch im Schlaf und wenn B-Guard nicht läuft. Gelegentliche Vollladungen zur Kalibrierung bleiben möglich." = "macOS удерживает это значение во сне и когда B-Guard не запущен. Периодические полные зарядки для калибровки по-прежнему возможны.";
+"macOS kalibriert gerade" = "macOS выполняет калибровку";
+"macOS lädt zur Kalibrierung der Ladestandsanzeige auf 100 % und setzt das Ladelimit dafür kurz aus. Danach gilt dein Ziel wieder." = "macOS заряжает до 100 % для калибровки показаний заряда и ненадолго отключает лимит. Затем снова действует ваша цель.";
+"macOS-Ladelimit von B-Guard gesetzt: %lld %%" = "Лимит зарядки macOS задан B-Guard: %lld %%";
+"B-Guard setzt dein Ziel über das macOS-Ladelimit durch. macOS hält es auch im Schlaf." = "B-Guard обеспечивает цель через лимит зарядки macOS. macOS удерживает её и во сне.";
+"macOS-Ladelimit, von B-Guard gesetzt" = "Лимит зарядки macOS, задан B-Guard";
+"macOS-Ladelimit (B-Guard)" = "Лимит зарядки macOS (B-Guard)";
+"macOS-Ladelimit konnte nicht gesetzt werden – macOS lädt nach seinen eigenen Einstellungen" = "Не удалось задать лимит зарядки macOS – macOS заряжает по собственным настройкам";

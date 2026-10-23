@@ -96,6 +96,9 @@ struct EffectivenessView: View {
             if effectiveness.controlPath == .macOS {
                 return L("macOS hält dein Ladelimit. B-Guard beobachtet den Zustand und greift nicht ein.")
             }
+            if effectiveness.controlPath == .nativeLimit {
+                return L("B-Guard setzt dein Ziel über das macOS-Ladelimit durch. macOS hält es auch im Schlaf.")
+            }
             return L("B-Guard setzt dein Ziel über den erkannten Steuerungsweg durch. Messwerte und Verlauf bleiben lokal.")
         case .limitedByNative:
             return L("macOS begrenzt früher als dein B-Guard-Ziel. Hebe das native Limit in den Batterieeinstellungen an, wenn du höher laden willst. B-Guard ändert diese Systemeinstellung nicht.")
@@ -137,6 +140,7 @@ struct EffectivenessView: View {
         case .chargeLock: L("SMC-Ladesperre")
         case .adapterSwitch: L("Netzteil-Schalter")
         case .macOS: L("macOS-Ladelimit")
+        case .nativeLimit: L("macOS-Ladelimit, von B-Guard gesetzt")
         }
     }
 

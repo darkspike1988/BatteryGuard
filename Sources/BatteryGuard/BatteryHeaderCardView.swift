@@ -64,6 +64,9 @@ struct BatteryHeaderCardView: View {
     private var mechanismText: String? {
         guard isDaemonActive else { return nil }
         
+        if status.nativeLimitControlled != nil {
+            return L("macOS-Ladelimit (B-Guard)")
+        }
         if status.hasChargeInhibit {
             return L("Native SMC-Sperre")
         } else if status.hasAdapterSwitch || status.chargeCapability?.chargeInhibitBlockedByFirmware == true {

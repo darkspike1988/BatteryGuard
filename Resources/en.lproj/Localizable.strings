@@ -1004,3 +1004,16 @@
 "Apple: Deckungsstatus prüfen" = "Apple: check coverage";
 "AppleCare endet bald" = "AppleCare ends soon";
 "Der Schutz endet am %@, und die Akkukapazität liegt nahe an 80 %%. Lass den Akku vorher prüfen." = "Coverage ends on %@ and the battery capacity is close to 80 %%. Have the battery checked before then.";
+"Ohne SMC-Ladesperre (z. B. ab macOS 27) setzt B-Guard das Ladelimit aus den Systemeinstellungen selbst. macOS hält es auch im Schlaf und wenn B-Guard nicht läuft. Änderungen in den Systemeinstellungen überschreibt B-Guard, solange diese Option an ist. Werte unter 80 % nutzt macOS nicht offiziell; der Weg ist nicht von Apple dokumentiert." = "Without an SMC charge inhibit (e.g. from macOS 27), B-Guard sets the charge limit from System Settings itself. macOS holds it during sleep and while B-Guard is not running. While this option is on, B-Guard overrides changes made in System Settings. macOS does not officially use values below 80 %; the method is not documented by Apple.";
+"Ziele unter 80 % erlauben (experimentell)" = "Allow targets below 80 % (experimental)";
+"macOS-Ladelimit durch B-Guard setzen" = "Let B-Guard set the macOS charge limit";
+"B-Guard kann das macOS-Ladelimit setzen" = "B-Guard can set the macOS charge limit";
+"Dann hält macOS dein Ziel auch im Schlaf, auf Wunsch auch unter 80 %. Die Einstellung lässt sich jederzeit abschalten." = "macOS then holds your target during sleep too, and below 80 % if you want. You can turn this off at any time.";
+"macOS hält diesen Wert auch im Schlaf und wenn B-Guard nicht läuft. Gelegentliche Vollladungen zur Kalibrierung bleiben möglich." = "macOS holds this value during sleep and while B-Guard is not running. Occasional full charges for calibration can still happen.";
+"macOS kalibriert gerade" = "macOS is calibrating";
+"macOS lädt zur Kalibrierung der Ladestandsanzeige auf 100 % und setzt das Ladelimit dafür kurz aus. Danach gilt dein Ziel wieder." = "macOS is charging to 100 % to calibrate the charge reading and briefly suspends the charge limit. Your target applies again afterwards.";
+"macOS-Ladelimit von B-Guard gesetzt: %lld %%" = "macOS charge limit set by B-Guard: %lld %%";
+"B-Guard setzt dein Ziel über das macOS-Ladelimit durch. macOS hält es auch im Schlaf." = "B-Guard enforces your target through the macOS charge limit. macOS holds it during sleep too.";
+"macOS-Ladelimit, von B-Guard gesetzt" = "macOS charge limit, set by B-Guard";
+"macOS-Ladelimit (B-Guard)" = "macOS charge limit (B-Guard)";
+"macOS-Ladelimit konnte nicht gesetzt werden – macOS lädt nach seinen eigenen Einstellungen" = "Could not set the macOS charge limit – macOS charges according to its own settings";

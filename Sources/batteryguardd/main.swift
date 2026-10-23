@@ -24,7 +24,8 @@ final class DaemonRunner: @unchecked Sendable {
     private var adapterFlaps = BGAdapterFlapCounter()
     private var lastDecisionAdapterConnected = true
 
-    public init(controller: BatteryController = BatteryController(), dryRun: Bool = false, isOnce: Bool = false) {
+    public init(controller: BatteryController = BatteryController(nativeLimit: NativeChargeLimit()),
+                dryRun: Bool = false, isOnce: Bool = false) {
         self.controller = controller
         self.dryRun = dryRun
         self.isOnce = isOnce
@@ -221,6 +222,9 @@ final class DaemonRunner: @unchecked Sendable {
         status.smcKeysDetected = detectedSMCKeys
         status.chargeCapability = controller.smc.chargeCapability()
         status.adapterReconnectsLastHour = reconnects
+        status.nativeLimitControlled = controller.nativeLimitControlled
+        status.nativeLimitSupported = controller.smc.hasChargeControl ? nil : controller.nativeLimit?.isSupported
+        status.macOSChargingToFull = NativeChargeLimit.macOSChargingToFull()
         status.daemonVersion = BGVersion.current
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
@@ -441,6 +445,11 @@ if args.contains("--check-config-service") {
     let smc = SMCClient.shared
     _ = smc.open()
     let restored = smc.restoreNormal()
+    // Ein von B-Guard gesetztes macOS-Ladelimit geht auf den vorherigen Wert zurück.
+    let nativeLimit = NativeChargeLimit()
+    if nativeLimit.hasTakenControl, !nativeLimit.release() {
+        fputs("macOS-Ladelimit konnte nicht zurückgegeben werden; bitte in den Systemeinstellungen prüfen.\n", stderr)
+    }
     guard restored else {
         fputs("Normalbetrieb konnte nicht vollständig wiederhergestellt werden.\n", stderr)
         exit(1)

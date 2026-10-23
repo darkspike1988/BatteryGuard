@@ -99,6 +99,14 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("MagSafe-Farbe dem Ladezustand anpassen", isOn: $configStore.config.magsafeLed)
                     .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
+                if statusStore.status.nativeLimitSupported == true || configStore.config.controlsNativeLimit {
+                    Toggle("macOS-Ladelimit durch B-Guard setzen", isOn: $configStore.config.controlsNativeLimit)
+                    if configStore.config.controlsNativeLimit {
+                        Toggle("Ziele unter 80 % erlauben (experimentell)", isOn: $configStore.config.nativeLimitBelow80)
+                    }
+                    Text("Ohne SMC-Ladesperre (z. B. ab macOS 27) setzt B-Guard das Ladelimit aus den Systemeinstellungen selbst. macOS hält es auch im Schlaf und wenn B-Guard nicht läuft. Änderungen in den Systemeinstellungen überschreibt B-Guard, solange diese Option an ist. Werte unter 80 % nutzt macOS nicht offiziell; der Weg ist nicht von Apple dokumentiert.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             } header: { Text("Schutz") }
                 .disabled(!canConfigure)
 

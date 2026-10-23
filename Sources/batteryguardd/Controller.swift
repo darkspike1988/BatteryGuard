@@ -31,8 +31,53 @@ public struct ControllerDecision: Sendable, Equatable {
     }
 }
 
+/// Setzt das macOS-Ladelimit über PowerUIAgent. Nur im Dienst, nur mit root.
+public protocol NativeChargeLimitDriving: AnyObject, Sendable {
+    var isSupported: Bool { get }
+    /// Der Dienst hat das Limit übernommen und den vorherigen Wert gesichert.
+    var hasTakenControl: Bool { get }
+    /// Der Wert, den PowerUIAgent gerade anwendet.
+    func currentLimit() -> Int?
+    /// Schreibt das Limit und prüft, ob macOS es übernommen hat.
+    func apply(_ percent: Int) -> Bool
+    /// Stellt den vorherigen Wert wieder her (mindestens 80 %, damit er in den
+    /// Systemeinstellungen sichtbar bleibt) und gibt die Kontrolle ab.
+    @discardableResult func release() -> Bool
+}
+
 public enum ControllerLogic {
     public static let heatRecoveryMarginCelsius = 2.0
+    /// macOS selbst bietet nur 80–100 % an.
+    public static let nativeLimitSystemMinimum = 80
+    /// Darunter lädt der Mac praktisch nicht mehr; Werte unter 80 % sind ohnehin experimentell.
+    public static let nativeLimitAbsoluteMinimum = 20
+
+    /// Leitet das macOS-Ladelimit aus derselben Entscheidung ab wie die SMC-Ladesperre.
+    /// „Laden aus“ unterhalb des Ziels hält den aktuellen Stand, so bleiben Hysterese und
+    /// Hitzeschutz erhalten. Liegt das Limit unter dem Ladestand, entlädt macOS am Netzteil
+    /// bis dorthin; das geschieht nur mit aktivem Entladen über dem Limit.
+    public static func nativeCeiling(decision: ControllerDecision, config: BGConfig, battery: BatteryInfo,
+                                     allowBelow80: Bool, now: Date = Date()) -> Int {
+        let effective = config.effective(at: now)
+        let target: Int
+        if let plan = effective.specialChargePlan, plan.kind == .hold {
+            target = plan.targetPercent
+        } else if effective.chargeToFullOnce {
+            target = 100
+        } else {
+            target = effective.upperLimit
+        }
+        let ceiling: Int
+        if decision.heatProtectionActive || (!decision.chargingEnabled && battery.percent < target) {
+            ceiling = battery.percent
+        } else if effective.activeDischargeAboveUpper {
+            ceiling = target
+        } else {
+            ceiling = max(target, battery.percent)
+        }
+        let minimum = allowBelow80 ? nativeLimitAbsoluteMinimum : nativeLimitSystemMinimum
+        return min(100, max(minimum, ceiling))
+    }
 
     private static func needsHeatProtection(config: BGConfig, battery: BatteryInfo,
                                             previousDecision: ControllerDecision?) -> Bool {
@@ -316,9 +361,25 @@ public final class BatteryController: @unchecked Sendable {
     private var lastAppliedMagSafeLED: SMCClient.MagSafeColor?
     private var lastHardwareCheckUptime: TimeInterval?
     private let lock = NSLock()
+    public let nativeLimit: NativeChargeLimitDriving?
+    private var lastAppliedNativeLimit: Int?
+    /// Nach einem Fehlschlag nicht bei jedem Durchlauf erneut schreiben und warten.
+    private var nativeRetryAfterUptime: TimeInterval?
+    static let nativeRetryInterval: TimeInterval = 300
+    /// Der vom Dienst gesetzte macOS-Ladelimitwert, solange er die Steuerung hält.
+    public private(set) var nativeLimitControlled: Int?
 
-    public init(smc: SMCClient = .shared) {
+    public init(smc: SMCClient = .shared, nativeLimit: NativeChargeLimitDriving? = nil) {
         self.smc = smc
+        self.nativeLimit = nativeLimit
+    }
+
+    /// Ohne SMC-Ladesperre übernimmt das macOS-Ladelimit die Rolle der Sperre, wenn der Nutzer
+    /// das erlaubt hat. Pause, ausgeschalteter Schutz und der macOS-Modus geben es zurück.
+    private func usesNativeLimit(config: BGConfig, battery: BatteryInfo, now: Date) -> Bool {
+        guard let nativeLimit, !smc.hasChargeControl, config.controlsNativeLimit, config.mode == .auto,
+              battery.percentAvailable, config.effective(at: now).enabled else { return false }
+        return nativeLimit.isSupported
     }
 
     public func step(
@@ -331,9 +392,16 @@ public final class BatteryController: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
 
+        let now = Date()
+        let native = usesNativeLimit(config: config, battery: battery, now: now)
         let uptime = ProcessInfo.processInfo.systemUptime
         if !dryRun && (lastHardwareCheckUptime.map { uptime - $0 >= 60 } ?? true) {
             lastHardwareCheckUptime = uptime
+            if native, let expected = lastAppliedNativeLimit, nativeLimit?.currentLimit() != expected {
+                // Etwa nach einer Änderung in den Systemeinstellungen: Ziel erneut setzen.
+                lastAppliedNativeLimit = nil
+                logger?("macOS-Ladelimit weicht ab – B-Guard setzt \(expected) % erneut.")
+            }
             if smc.hasChargeControl, let expected = lastAppliedCharging {
                 let result = smc.verifyChargingEnabled(expected)
                 if result != .matches {
@@ -355,12 +423,46 @@ public final class BatteryController: @unchecked Sendable {
             config: config,
             battery: battery,
             previousDecision: previousDecision,
-            hasChargeControl: smc.hasChargeControl,
-            hasDischargeControl: smc.hasDischargeControl,
-            allowsAdapterDisconnect: (desktop ?? DesktopEnvironment.snapshot()).allowsAdapterDisconnect
+            hasChargeControl: smc.hasChargeControl || native,
+            // Bei aktivem macOS-Limit ignoriert macOS den Netzteil-Schalter; entladen wird über das Limit.
+            hasDischargeControl: smc.hasDischargeControl && !native,
+            allowsAdapterDisconnect: (desktop ?? DesktopEnvironment.snapshot()).allowsAdapterDisconnect,
+            now: now
         )
 
         var controlFailed = false
+        var nativeFailed = false
+        if native {
+            // Ohne Netzteil gibt es nichts zu begrenzen; erst beim Anstecken zählt der neue Stand.
+            if battery.pluggedIn {
+                let ceiling = ControllerLogic.nativeCeiling(decision: decision, config: config, battery: battery,
+                                                            allowBelow80: config.nativeLimitBelow80, now: now)
+                if ceiling != lastAppliedNativeLimit, nativeRetryAfterUptime.map({ uptime >= $0 }) ?? true {
+                    if dryRun {
+                        logger?("[DRY-RUN] Würde das macOS-Ladelimit auf \(ceiling) % setzen")
+                        lastAppliedNativeLimit = ceiling
+                    } else if nativeLimit?.apply(ceiling) == true {
+                        logger?("macOS-Ladelimit auf \(ceiling) % gesetzt.")
+                        lastAppliedNativeLimit = ceiling
+                        nativeRetryAfterUptime = nil
+                    } else {
+                        logger?("macOS-Ladelimit konnte nicht auf \(ceiling) % gesetzt werden.")
+                        lastAppliedNativeLimit = nil
+                        nativeRetryAfterUptime = uptime + Self.nativeRetryInterval
+                    }
+                }
+                nativeFailed = nativeRetryAfterUptime.map { uptime < $0 } ?? false
+            }
+            nativeLimitControlled = nativeFailed ? nil : lastAppliedNativeLimit
+        } else {
+            if !dryRun, nativeLimit?.hasTakenControl == true {
+                let restored = nativeLimit?.release() ?? false
+                logger?(restored ? "macOS-Ladelimit an macOS zurückgegeben."
+                                 : "macOS-Ladelimit konnte nicht zurückgegeben werden.")
+            }
+            lastAppliedNativeLimit = nil
+            nativeLimitControlled = nil
+        }
 
         // MagSafe LED bestimmen
         let targetLED: SMCClient.MagSafeColor
@@ -419,6 +521,10 @@ public final class BatteryController: @unchecked Sendable {
             }
         }
 
+        if nativeFailed {
+            return ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                message: "macOS-Ladelimit konnte nicht gesetzt werden – macOS lädt nach seinen eigenen Einstellungen")
+        }
         if controlFailed {
             // Nicht als erfolgreiches Halten/Entladen anzeigen, wenn SMC ablehnt.
             return ControllerDecision(state: .unsupported,

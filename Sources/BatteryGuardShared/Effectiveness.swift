@@ -7,6 +7,8 @@ public enum BGControlPath: String, Codable, Sendable {
     /// Nur noch für ältere Dienste (Pendelbetrieb); B-Guard begrenzt so nicht mehr.
     case adapterSwitch
     case macOS
+    /// Der Dienst setzt das macOS-Ladelimit selbst (ohne SMC-Ladesperre, ab macOS 26.4).
+    case nativeLimit
 
     public init(smcKeys: [String], mode: BGMode) {
         if mode == .native { self = .macOS; return }
@@ -22,6 +24,10 @@ public enum BGControlPath: String, Codable, Sendable {
 
     /// Bevorzugt das Ergebnis des Fähigkeitstests; ältere Dienste melden nur vorhandene Schlüssel.
     public init(status: BGStatus, mode: BGMode) {
+        if mode != .native, status.nativeLimitControlled != nil {
+            self = .nativeLimit
+            return
+        }
         guard mode != .native, let capability = status.chargeCapability else {
             self.init(smcKeys: status.smcKeysDetected, mode: mode)
             return
@@ -112,7 +118,7 @@ public struct BGEffectiveness: Equatable, Sendable {
             target = effective.upperLimit
         }
         let path = BGControlPath(status: status, mode: config.mode)
-        let applied = daemonCurrent ? (status.effectiveUpperLimit ?? target) : nil
+        let applied = daemonCurrent ? (status.nativeLimitControlled ?? status.effectiveUpperLimit ?? target) : nil
 
         func result(_ state: BGEffectivenessState) -> BGEffectiveness {
             BGEffectiveness(state: state, targetUpperLimit: target, appliedUpperLimit: applied,
@@ -134,6 +140,8 @@ public struct BGEffectiveness: Equatable, Sendable {
             return handled
         }
         if status.state == .unsupported || path == .none { return result(.unsupported) }
+        // Das gemeldete macOS-Limit ist hier der von B-Guard gesetzte Wert, keine fremde Grenze.
+        if path == .nativeLimit { return result(.effective) }
         if status.state == .disabled,
            status.adapterDisconnectAllowed == false,
            status.externalDisplayConnected == true || status.lidClosed == true {

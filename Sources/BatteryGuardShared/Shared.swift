@@ -73,6 +73,10 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var lowPowerModeOnBattery: Bool = false
     /// Systemschlaf während aktivem Entladen kurzzeitig verhindern (opt-in, zeitlich begrenzt).
     public var preventSleepWhileDischarging: Bool = false
+    /// Ohne SMC-Ladesperre setzt der Dienst das macOS-Ladelimit selbst (macOS 26.4+, opt-in).
+    public var controlsNativeLimit: Bool = false
+    /// Erlaubt dabei Werte unter 80 %, die macOS in den Systemeinstellungen nicht anbietet.
+    public var nativeLimitBelow80: Bool = false
 
     public init() {}
 
@@ -110,6 +114,8 @@ public struct BGConfig: Codable, Equatable, Sendable {
         } else { desktopProfile = nil }
         lowPowerModeOnBattery = try c.decodeIfPresent(Bool.self, forKey: .lowPowerModeOnBattery) ?? d.lowPowerModeOnBattery
         preventSleepWhileDischarging = try c.decodeIfPresent(Bool.self, forKey: .preventSleepWhileDischarging) ?? d.preventSleepWhileDischarging
+        controlsNativeLimit = try c.decodeIfPresent(Bool.self, forKey: .controlsNativeLimit) ?? d.controlsNativeLimit
+        nativeLimitBelow80 = try c.decodeIfPresent(Bool.self, forKey: .nativeLimitBelow80) ?? d.nativeLimitBelow80
         do {
             if let decoded = try c.decodeIfPresent(BGSpecialChargePlan.self, forKey: .specialChargePlan) {
                 specialChargePlan = decoded.isValid ? decoded : nil
@@ -213,6 +219,12 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var chargeCapability: BGChargeCapability? = nil
     /// Netzteilwechsel in der letzten Stunde, ohne vom Dienst ausgelöste.
     public var adapterReconnectsLastHour: Int? = nil
+    /// Der Dienst setzt gerade das macOS-Ladelimit auf diesen Wert.
+    public var nativeLimitControlled: Int? = nil
+    /// macOS lädt gerade zur Kalibrierung auf 100 % und setzt das Limit aus.
+    public var macOSChargingToFull: Bool? = nil
+    /// Der Dienst kann das macOS-Ladelimit setzen (PowerUI vorhanden und Limit unterstützt).
+    public var nativeLimitSupported: Bool? = nil
     public var daemonVersion: String = "0.2.0"
     public var updatedAt: Date = Date()
     public var message: String? = nil
@@ -252,6 +264,9 @@ public struct BGStatus: Codable, Equatable, Sendable {
         smcKeysDetected = try c.decodeIfPresent([String].self, forKey: .smcKeysDetected) ?? d.smcKeysDetected
         chargeCapability = try? c.decodeIfPresent(BGChargeCapability.self, forKey: .chargeCapability)
         adapterReconnectsLastHour = try? c.decodeIfPresent(Int.self, forKey: .adapterReconnectsLastHour)
+        nativeLimitControlled = try? c.decodeIfPresent(Int.self, forKey: .nativeLimitControlled)
+        macOSChargingToFull = try? c.decodeIfPresent(Bool.self, forKey: .macOSChargingToFull)
+        nativeLimitSupported = try? c.decodeIfPresent(Bool.self, forKey: .nativeLimitSupported)
         daemonVersion = try c.decodeIfPresent(String.self, forKey: .daemonVersion) ?? d.daemonVersion
         // Ohne Zeitstempel ist der Status nie frisch.
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .distantPast

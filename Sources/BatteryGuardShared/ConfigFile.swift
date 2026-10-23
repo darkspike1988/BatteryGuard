@@ -158,6 +158,8 @@ public extension BGConfig {
         if desktopProfile != baseline.desktopProfile { result.desktopProfile = desktopProfile }
         if lowPowerModeOnBattery != baseline.lowPowerModeOnBattery { result.lowPowerModeOnBattery = lowPowerModeOnBattery }
         if preventSleepWhileDischarging != baseline.preventSleepWhileDischarging { result.preventSleepWhileDischarging = preventSleepWhileDischarging }
+        if controlsNativeLimit != baseline.controlsNativeLimit { result.controlsNativeLimit = controlsNativeLimit }
+        if nativeLimitBelow80 != baseline.nativeLimitBelow80 { result.nativeLimitBelow80 = nativeLimitBelow80 }
         if mode != baseline.mode { result.mode = mode }
         // Legacy edits get the same bounds as typed actions: pause ≤ 12 h,
         // travel within 30 days, full charge ≤ 8 h with a deadline.

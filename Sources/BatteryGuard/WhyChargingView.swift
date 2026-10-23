@@ -4,10 +4,10 @@ import BatteryGuardShared
 /// Beantwortet „Warum lädt mein Mac (nicht)?“ mit dem wichtigsten Grund zuerst.
 struct WhyChargingView: View {
     let statusStore: StatusStore
-    let config: BGConfig
+    let configStore: ConfigStore
 
     private var reasons: [BGChargingReason] {
-        BGChargingExplanation.reasons(config: config, status: statusStore.status,
+        BGChargingExplanation.reasons(config: configStore.config, status: statusStore.status,
                                       daemonActive: statusStore.isDaemonActive)
     }
 
@@ -22,7 +22,12 @@ struct WhyChargingView: View {
                 ForEach(Array(reasons.dropFirst().enumerated()), id: \.offset) { _, reason in
                     reasonRow(reason, prominent: false)
                 }
-                if reasons.contains(where: Self.needsBatterySettings) {
+                if reasons.contains(.canControlMacOSLimit) {
+                    Button("macOS-Ladelimit durch B-Guard setzen") {
+                        configStore.config.controlsNativeLimit = true
+                    }.font(.caption)
+                }
+                if reasons.contains(where: Self.needsBatterySettings), !reasons.contains(.canControlMacOSLimit) {
                     Button("Batterieeinstellungen öffnen") {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)
                     }.font(.caption)
@@ -68,6 +73,9 @@ struct WhyChargingView: View {
         case .travelCharging: "airplane"
         case .adapterFlapping: "cable.connector"
         case .firmwareBlocksChargeInhibit: "lock"
+        case .canControlMacOSLimit: "slider.horizontal.3"
+        case .bGuardSetsMacOSLimit: "checkmark.shield"
+        case .macOSCalibrating: "gauge.with.dots.needle.100percent"
         case .likelyMacOSCalibration: "gauge.with.dots.needle.67percent"
         case .belowLowerLimit, .chargingTowardsLimit: "bolt"
         case .holdingAtLimit: "hand.raised"
@@ -104,6 +112,15 @@ struct WhyChargingView: View {
         case .firmwareBlocksChargeInhibit:
             return (L("Ladesperre von macOS gesperrt"),
                     L("Seit macOS 27 erlaubt die Firmware keine separate Ladesperre mehr. Ziele unter 80 % sind deshalb nicht erreichbar; macOS hält sein eigenes Ladelimit."))
+        case .canControlMacOSLimit:
+            return (L("B-Guard kann das macOS-Ladelimit setzen"),
+                    L("Dann hält macOS dein Ziel auch im Schlaf, auf Wunsch auch unter 80 %. Die Einstellung lässt sich jederzeit abschalten."))
+        case .bGuardSetsMacOSLimit(let limit):
+            return (L("macOS-Ladelimit von B-Guard gesetzt: %lld %%", limit),
+                    L("macOS hält diesen Wert auch im Schlaf und wenn B-Guard nicht läuft. Gelegentliche Vollladungen zur Kalibrierung bleiben möglich."))
+        case .macOSCalibrating:
+            return (L("macOS kalibriert gerade"),
+                    L("macOS lädt zur Kalibrierung der Ladestandsanzeige auf 100 % und setzt das Ladelimit dafür kurz aus. Danach gilt dein Ziel wieder."))
         case .macOSHoldsLimit(let limit, let target):
             guard let limit else {
                 return (L("macOS hält das Ladelimit"),
