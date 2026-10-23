@@ -72,6 +72,12 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var magsafeLedOff: Bool = false
     /// Vor dem Systemschlaf Laden anhalten statt freigeben (opt-in).
     public var stopChargingWhenSleeping: Bool = false
+    /// macOS-Limit-Modus: Ziele unter der kleinsten macOS-Stufe über den Netzteil-Schalter halten (opt-in).
+    public var allowLimitsBelowSystemMinimum: Bool = false
+    /// Laden unterhalb dieser Akkutemperatur sperren (0 = aus, sonst 1–15 °C).
+    public var coldProtectionCelsius: Int = 0
+    /// Beim Wachhalten bis zum Limit auch zugeklappt nicht schlafen (opt-in, mit Sicherheitsabschaltung).
+    public var keepAwakeWhenLidClosed: Bool = false
     /// Durchsetzungs-Modus (siehe BGMode).
     public var mode: BGMode = .auto
     /// Zeitlich begrenzte Pause. Die ursprünglichen Schutzeinstellungen bleiben erhalten.
@@ -121,6 +127,9 @@ public struct BGConfig: Codable, Equatable, Sendable {
         magsafeLed = try c.decodeIfPresent(Bool.self, forKey: .magsafeLed) ?? d.magsafeLed
         magsafeLedOff = try c.decodeIfPresent(Bool.self, forKey: .magsafeLedOff) ?? d.magsafeLedOff
         stopChargingWhenSleeping = try c.decodeIfPresent(Bool.self, forKey: .stopChargingWhenSleeping) ?? d.stopChargingWhenSleeping
+        allowLimitsBelowSystemMinimum = try c.decodeIfPresent(Bool.self, forKey: .allowLimitsBelowSystemMinimum) ?? d.allowLimitsBelowSystemMinimum
+        coldProtectionCelsius = try c.decodeIfPresent(Int.self, forKey: .coldProtectionCelsius) ?? d.coldProtectionCelsius
+        keepAwakeWhenLidClosed = try c.decodeIfPresent(Bool.self, forKey: .keepAwakeWhenLidClosed) ?? d.keepAwakeWhenLidClosed
         // Missing legacy values retain their default. Explicit unknown modes must
         // never silently enable active adapter switching.
         if let rawMode = try c.decodeIfPresent(String.self, forKey: .mode) {
@@ -169,6 +178,7 @@ public struct BGConfig: Codable, Equatable, Sendable {
         if c.upperLimit <= c.lowerLimit { c.lowerLimit = max(5, c.upperLimit - 5) }
         c.heatProtectionCelsius = (c.heatProtectionCelsius == 0) ? 0 : min(max(c.heatProtectionCelsius, 30), 50)
         c.lowPowerModeOnBattery = c.lowPowerModeRule == .onBattery
+        c.coldProtectionCelsius = min(max(c.coldProtectionCelsius, 0), 15)
         if !c.chargeToFullOnce { c.fullChargeRequestID = nil }
         if c.travelReadyAt == nil { c.travelRequestID = nil }
         if let plan = c.specialChargePlan {

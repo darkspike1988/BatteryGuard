@@ -22,6 +22,8 @@ Abgeleitet aus der [Funktionsrecherche](docs/research/2026-10-23-funktionsrecher
 
 ### 0.7 — Ladesteuerung erweitern (P1)
 
+**Stand:** R6, R7, R9, R10 umgesetzt ([0.7.0](docs/release-notes-0.7.0.md)), Hardware-Abnahme offen; R8 bleibt gesperrt (Apple-Kalibrierung wird erkannt); „Display aus bei Inaktivität“ nicht umgesetzt.
+
 | ID | Paket | Warum | Abnahme |
 |---|---|---|---|
 | R6 | **Einmal entladen auf 80–95 % über das macOS-Limit** (Firmware entlädt am Netzteil bis zur Stufe) | Erster Entladeweg auf macOS 27 ohne gesperrte SMC-Schlüssel | Physische Messung von Strom und Ladestand; Abbruch und Rückkehr zum Profil |

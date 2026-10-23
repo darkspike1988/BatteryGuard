@@ -1034,3 +1034,27 @@
 "Fähigkeiten mit Firmware-Version in der Diagnose; nach Firmware-Updates meldet B-Guard geänderte Steuerwege." = "Возможности с версией прошивки в диагностике; после обновлений прошивки B-Guard сообщает об изменённых способах управления.";
 "Mitteilungen bei Laden über das Limit und wenn ein Netzteil oder Monitor keinen Strom liefert." = "Уведомления при заряде выше лимита и когда адаптер или монитор не подаёт питание.";
 "Hintergrunddienst 0.6.1 erforderlich." = "Требуется фоновая служба 0.6.1.";
+
+/* 0.7.0 */
+"Mehr Steuerung auf macOS 27" = "Больше управления на macOS 27";
+"macOS-Limit: Ziele unter 80 % optional über den Netzteil-Schalter halten; das macOS-Limit bleibt Sicherheitsnetz." = "Лимит macOS: при желании удерживать цели ниже 80 % переключателем адаптера; лимит macOS остаётся страховкой.";
+"Einmal entladen auf eine macOS-Stufe: Die Firmware entlädt am Netzteil (experimentell)." = "Однократная разрядка до ступени macOS: прошивка разряжает при подключённом адаптере (экспериментально).";
+"Wachhalten bis zum Limit auch im macOS-Limit-Modus und optional bei geschlossenem Deckel, mit Sicherheitsabschaltung." = "Не засыпать до лимита также в режиме лимита macOS и при желании с закрытой крышкой, с защитным отключением.";
+"Kälteschutz und stummer Ladeton." = "Защита от холода и беззвучный сигнал зарядки.";
+"Hintergrunddienst 0.7.0 erforderlich. Hardware-Abnahme der neuen Wege steht aus." = "Требуется фоновая служба 0.7.0. Аппаратная проверка новых способов ещё не проведена.";
+"Ziele unter der kleinsten macOS-Stufe über den Netzteil-Schalter halten" = "Удерживать цели ниже минимальной ступени macOS переключателем адаптера";
+"Hält zum Beispiel 60 % mit dem Netzteil-Schalter; das macOS-Limit bleibt als Sicherheitsnetz auf der kleinsten Stufe. Während des Haltens meldet macOS „kein Netzteil“, obwohl es den Mac versorgt; Energieeinstellungen für Akkubetrieb können dann gelten. Bei externem Monitor oder geschlossenem Deckel gilt nur das macOS-Limit. Hardware-Abnahme steht aus." = "Удерживает, например, 60 % переключателем адаптера; лимит macOS остаётся страховкой на минимальной ступени. Во время удержания macOS сообщает «нет адаптера», хотя он питает Mac; могут действовать настройки для работы от аккумулятора. При внешнем мониторе или закрытой крышке действует только лимит macOS. Аппаратная проверка ещё не проведена.";
+"Kälteschutz: aus" = "Защита от холода: выкл.";
+"Kälteschutz: Laden unter %lld °C sperren" = "Защита от холода: запрет зарядки ниже %lld °C";
+"Beim Wachhalten bis zum Limit auch zugeklappt nicht schlafen" = "При удержании до лимита не засыпать и с закрытой крышкой";
+"Nur am Netzteil. Wird das Netzteil bei geschlossenem Deckel getrennt, schläft der Mac sofort. Die Sperre endet mit dem Wachhalten, spätestens nach zwei Stunden." = "Только от адаптера. Если отключить адаптер при закрытой крышке, Mac сразу засыпает. Блокировка заканчивается вместе с удержанием, не позднее чем через два часа.";
+"Ladeton beim Anstecken stumm" = "Беззвучный сигнал при подключении";
+"Einmal entladen ist möglich, sobald der Akku über einer macOS-Stufe unter 100 % liegt." = "Однократная разрядка возможна, когда заряд выше ступени macOS ниже 100 %.";
+"Entladen auf" = "Разрядить до";
+"Einmal entladen · experimentell" = "Разрядить один раз · экспериментально";
+"Setzt das macOS-Limit vorübergehend auf die Stufe; die Firmware entlädt dann am Netzteil. Danach gilt wieder dein Profil. Hardware-Abnahme steht aus." = "Временно устанавливает лимит macOS на ступень; прошивка затем разряжает при подключённом адаптере. После этого снова действует ваш профиль. Аппаратная проверка ещё не проведена.";
+"Kälteschutz aktiv: %.1f°C – Laden ab %lld°C" = "Защита от холода: %.1f°C — зарядка с %lld°C";
+"Kälteschutz bleibt aktiv – Temperatur momentan nicht verfügbar" = "Защита от холода активна — температура сейчас недоступна";
+"Ladelimit von %lld %% gehalten (Netzteil-Schalter, macOS-Limit %lld %%)" = "Лимит %lld %% удерживается (переключатель адаптера, лимит macOS %lld %%)";
+"Laden aktiv bis %lld %% (Netzteil-Schalter)" = "Зарядка до %lld %% (переключатель адаптера)";
+"Im macOS-Limit-Modus ist Entladen nur auf eine angebotene Stufe unter 100 % möglich." = "В режиме лимита macOS разрядка возможна только до предложенной ступени ниже 100 %.";

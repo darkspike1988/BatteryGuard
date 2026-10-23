@@ -32,6 +32,7 @@ struct PreferencesView: View {
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
     @AppStorage(MenuBarExtraItem.appStorageKey) private var menuBarExtras = ""
     @AppStorage(LidLockGuard.appStorageKey) private var lockScreenWhenLidClosed = false
+    @State private var chimeMuted = PowerChimeSetting.isMuted
 
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
@@ -85,6 +86,11 @@ struct PreferencesView: View {
                     Text("Dieser Mac hat keine separate SMC-Ladesperre. „macOS-Limit“ hält dein Profil auch bei externem Monitor und geschlossenem Deckel ein, allerdings nur in den Stufen 80–100 %.")
                         .font(.caption).foregroundStyle(.orange)
                 }
+                if configStore.config.mode == .systemLimit {
+                    Toggle("Ziele unter der kleinsten macOS-Stufe über den Netzteil-Schalter halten", isOn: $configStore.config.allowLimitsBelowSystemMinimum)
+                    Text("Hält zum Beispiel 60 % mit dem Netzteil-Schalter; das macOS-Limit bleibt als Sicherheitsnetz auf der kleinsten Stufe. Während des Haltens meldet macOS „kein Netzteil“, obwohl es den Mac versorgt; Energieeinstellungen für Akkubetrieb können dann gelten. Bei externem Monitor oder geschlossenem Deckel gilt nur das macOS-Limit. Hardware-Abnahme steht aus.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if configStore.config.mode == .native {
                     Button("macOS-Batterieeinstellungen öffnen") {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)
@@ -118,6 +124,9 @@ struct PreferencesView: View {
                     Text("Aus").tag(BGMagSafeLEDMode.off)
                 }
                 .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
+                Stepper(configStore.config.coldProtectionCelsius == 0 ? L("Kälteschutz: aus")
+                        : L("Kälteschutz: Laden unter %lld °C sperren", configStore.config.coldProtectionCelsius),
+                        value: $configStore.config.coldProtectionCelsius, in: 0...15)
                 Toggle("Laden im Schlaf angehalten lassen", isOn: $configStore.config.stopChargingWhenSleeping)
                 Text("Standardmäßig gibt B-Guard das Laden vor dem Schlaf frei. Mit dieser Option bleibt eine SMC-Ladesperre aktiv; im Modus „macOS-Limit“ wird das Limit auf die nächste Stufe über dem aktuellen Ladestand gesetzt. Vollladen, Reise und Top Up haben Vorrang. Hardware-Abnahme steht aus.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -149,6 +158,9 @@ struct PreferencesView: View {
                     }
                 }
                 Text("Nutzt die öffentliche macOS-Einstellung über pmset getrennt für Akku und Netzteil; macOS wechselt dann selbst. Die jeweils andere Stromquelle steht auf Automatisch. B-Guard schreibt dafür keine privaten SMC-Schlüssel.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Beim Wachhalten bis zum Limit auch zugeklappt nicht schlafen", isOn: $configStore.config.keepAwakeWhenLidClosed)
+                Text("Nur am Netzteil. Wird das Netzteil bei geschlossenem Deckel getrennt, schläft der Mac sofort. Die Sperre endet mit dem Wachhalten, spätestens nach zwei Stunden.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Bildschirm sperren, wenn der Deckel beim Wachhalten geschlossen wird", isOn: $lockScreenWhenLidClosed)
                 Text("Gilt nur, während „Bis zum Ladelimit wachhalten“ aktiv ist und die App läuft. Sonst schläft der Mac beim Zuklappen und macOS sperrt selbst.")
@@ -207,6 +219,8 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Beim Erreichen des Ladelimits", isOn: $notifyLimit)
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
+                Toggle("Ladeton beim Anstecken stumm", isOn: $chimeMuted)
+                    .onChange(of: chimeMuted) { _, muted in PowerChimeSetting.setMuted(muted) }
                 Toggle("Bei Auffälligkeiten (über Limit geladen, Apple-Kalibrierung, Netzteil ohne Strom)", isOn: $notifyAnomalies)
                 Toggle("Wartungshinweis bei niedriger Akkukapazität", isOn: $notifyHealth)
                     .help("Meldet höchstens alle 30 Tage, wenn die geschätzte Kapazität unter die Grenze fällt. Das ist kein Hardwaretest.")

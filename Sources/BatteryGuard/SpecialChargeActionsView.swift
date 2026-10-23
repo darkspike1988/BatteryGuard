@@ -33,8 +33,13 @@ struct SpecialChargeActionsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            Text("Einmalentladung und „Laden hier halten“ sind vorbereitet, bleiben aber bis zur physischen Hardware-Abnahme gesperrt.")
-                .font(.caption).foregroundStyle(.secondary)
+            if configStore.config.mode == .systemLimit, configStore.config.specialChargePlan == nil,
+               let steps = statusStore.status.systemChargeLimits, statusStore.supportsChargingPlans {
+                SystemLimitDischargeView(steps: steps, percent: statusStore.status.percent, perform: perform)
+            } else {
+                Text("Einmalentladung und „Laden hier halten“ sind vorbereitet, bleiben aber bis zur physischen Hardware-Abnahme gesperrt.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let error { Text(error).font(.caption).foregroundStyle(.orange) }
         }
     }

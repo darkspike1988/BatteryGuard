@@ -7,6 +7,13 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.7.0", title: "Mehr Steuerung auf macOS 27", changes: [
+            "macOS-Limit: Ziele unter 80 % optional über den Netzteil-Schalter halten; das macOS-Limit bleibt Sicherheitsnetz.",
+            "Einmal entladen auf eine macOS-Stufe: Die Firmware entlädt am Netzteil (experimentell).",
+            "Wachhalten bis zum Limit auch im macOS-Limit-Modus und optional bei geschlossenem Deckel, mit Sicherheitsabschaltung.",
+            "Kälteschutz und stummer Ladeton.",
+            "Hintergrunddienst 0.7.0 erforderlich. Hardware-Abnahme der neuen Wege steht aus."
+        ]),
         .init(version: "0.6.1", title: "Verlässlich auf macOS 27", changes: [
             "Erkennt Apples Akku-Kalibrierung und erklärt, warum macOS dann über das Ziel lädt.",
             "Fähigkeiten mit Firmware-Version in der Diagnose; nach Firmware-Updates meldet B-Guard geänderte Steuerwege.",

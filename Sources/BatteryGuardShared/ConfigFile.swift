@@ -88,6 +88,9 @@ public extension BGConfig {
         if magsafeLed != baseline.magsafeLed { result.magsafeLed = magsafeLed }
         if magsafeLedOff != baseline.magsafeLedOff { result.magsafeLedOff = magsafeLedOff }
         if stopChargingWhenSleeping != baseline.stopChargingWhenSleeping { result.stopChargingWhenSleeping = stopChargingWhenSleeping }
+        if allowLimitsBelowSystemMinimum != baseline.allowLimitsBelowSystemMinimum { result.allowLimitsBelowSystemMinimum = allowLimitsBelowSystemMinimum }
+        if coldProtectionCelsius != baseline.coldProtectionCelsius { result.coldProtectionCelsius = coldProtectionCelsius }
+        if keepAwakeWhenLidClosed != baseline.keepAwakeWhenLidClosed { result.keepAwakeWhenLidClosed = keepAwakeWhenLidClosed }
         if desktopProfileEnabled != baseline.desktopProfileEnabled { result.desktopProfileEnabled = desktopProfileEnabled }
         if desktopProfile != baseline.desktopProfile { result.desktopProfile = desktopProfile }
         if lowPowerModeRule != baseline.lowPowerModeRule {

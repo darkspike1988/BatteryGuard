@@ -152,13 +152,14 @@ final class ConfigServer: @unchecked Sendable {
     /// Im macOS-Limit-Modus blockiert Apples natives Limit das Laden; Top Up setzt es auf 100 %.
     static func currentSpecialContext(for config: BGConfig) -> BGSpecialPlanEvaluationContext {
         let battery = BatteryReader.read()
-        let systemLimit = config.mode == .systemLimit && SystemChargeLimitClient()?.availableLimits()?.contains(100) == true
+        let systemLimits = config.mode == .systemLimit ? (SystemChargeLimitClient()?.availableLimits() ?? []) : []
+        let systemLimit = systemLimits.contains(100)
         return BGSpecialPlanEvaluationContext(percent: battery.percentAvailable ? battery.percent : nil,
             externalPower: battery.externalPowerAvailable ? (battery.pluggedIn ? .connected : .disconnected) : .unknown,
             canBlockCharging: SMCClient.shared.hasChargeControl || systemLimit,
-            // Key discovery/readback is not physical certification. Keep P3 discharge gated.
-            canDisconnectAdapter: false,
-            allowsAdapterDisconnect: DesktopEnvironment.allowsAdapterDisconnect())
+            // SMC discharge stays gated. In macOS limit mode the firmware itself discharges to an offered step.
+            canDisconnectAdapter: systemLimit,
+            allowsAdapterDisconnect: systemLimit || DesktopEnvironment.allowsAdapterDisconnect())
     }
 
     /// Testable authorization and transactional merge; the endpoint never
@@ -199,6 +200,12 @@ final class ConfigServer: @unchecked Sendable {
                     if action.action == .dischargeTo {
                         guard context.canDisconnectAdapter && context.allowsAdapterDisconnect else {
                             throw BGChargingActionError.invalidRequest("Entladen nicht bestätigt oder Monitor-/Deckelkonflikt.")
+                        }
+                        if latest.mode == .systemLimit, specialContext == nil {
+                            let steps = SystemChargeLimitClient()?.availableLimits() ?? []
+                            guard let target = action.targetPercent, steps.contains(target), target < 100 else {
+                                throw BGChargingActionError.invalidRequest("Im macOS-Limit-Modus ist Entladen nur auf eine angebotene Stufe unter 100 % möglich.")
+                            }
                         }
                     }
                     latest = try validated.applying(to: latest)

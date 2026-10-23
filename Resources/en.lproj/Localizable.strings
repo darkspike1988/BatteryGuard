@@ -1034,3 +1034,27 @@
 "Fähigkeiten mit Firmware-Version in der Diagnose; nach Firmware-Updates meldet B-Guard geänderte Steuerwege." = "Capabilities with firmware version in diagnostics; after firmware updates B-Guard reports changed control paths.";
 "Mitteilungen bei Laden über das Limit und wenn ein Netzteil oder Monitor keinen Strom liefert." = "Notifications when charged above the limit and when an adapter or display supplies no power.";
 "Hintergrunddienst 0.6.1 erforderlich." = "Background service 0.6.1 required.";
+
+/* 0.7.0 */
+"Mehr Steuerung auf macOS 27" = "More control on macOS 27";
+"macOS-Limit: Ziele unter 80 % optional über den Netzteil-Schalter halten; das macOS-Limit bleibt Sicherheitsnetz." = "macOS limit: optionally hold targets below 80 % with the adapter switch; the macOS limit remains the safety net.";
+"Einmal entladen auf eine macOS-Stufe: Die Firmware entlädt am Netzteil (experimentell)." = "Discharge once to a macOS step: the firmware discharges while plugged in (experimental).";
+"Wachhalten bis zum Limit auch im macOS-Limit-Modus und optional bei geschlossenem Deckel, mit Sicherheitsabschaltung." = "Keep awake until the limit also in macOS limit mode and optionally with the lid closed, with a safety cut-off.";
+"Kälteschutz und stummer Ladeton." = "Cold protection and silent charging chime.";
+"Hintergrunddienst 0.7.0 erforderlich. Hardware-Abnahme der neuen Wege steht aus." = "Background service 0.7.0 required. Hardware acceptance of the new paths is pending.";
+"Ziele unter der kleinsten macOS-Stufe über den Netzteil-Schalter halten" = "Hold targets below the lowest macOS step with the adapter switch";
+"Hält zum Beispiel 60 % mit dem Netzteil-Schalter; das macOS-Limit bleibt als Sicherheitsnetz auf der kleinsten Stufe. Während des Haltens meldet macOS „kein Netzteil“, obwohl es den Mac versorgt; Energieeinstellungen für Akkubetrieb können dann gelten. Bei externem Monitor oder geschlossenem Deckel gilt nur das macOS-Limit. Hardware-Abnahme steht aus." = "Holds, for example, 60 % with the adapter switch; the macOS limit stays at the lowest step as a safety net. While holding, macOS reports “no power adapter” although it powers the Mac; battery energy settings may then apply. With an external display or closed lid only the macOS limit applies. Hardware acceptance is pending.";
+"Kälteschutz: aus" = "Cold protection: off";
+"Kälteschutz: Laden unter %lld °C sperren" = "Cold protection: block charging below %lld °C";
+"Beim Wachhalten bis zum Limit auch zugeklappt nicht schlafen" = "While keeping awake until the limit, do not sleep with the lid closed";
+"Nur am Netzteil. Wird das Netzteil bei geschlossenem Deckel getrennt, schläft der Mac sofort. Die Sperre endet mit dem Wachhalten, spätestens nach zwei Stunden." = "Only on the power adapter. If the adapter is unplugged with the lid closed, the Mac sleeps immediately. The block ends with keep-awake, after two hours at the latest.";
+"Ladeton beim Anstecken stumm" = "Mute the charging chime when plugging in";
+"Einmal entladen ist möglich, sobald der Akku über einer macOS-Stufe unter 100 % liegt." = "Discharging once is possible as soon as the battery is above a macOS step below 100 %.";
+"Entladen auf" = "Discharge to";
+"Einmal entladen · experimentell" = "Discharge once · experimental";
+"Setzt das macOS-Limit vorübergehend auf die Stufe; die Firmware entlädt dann am Netzteil. Danach gilt wieder dein Profil. Hardware-Abnahme steht aus." = "Temporarily sets the macOS limit to the step; the firmware then discharges while plugged in. Your profile applies again afterwards. Hardware acceptance is pending.";
+"Kälteschutz aktiv: %.1f°C – Laden ab %lld°C" = "Cold protection active: %.1f°C – charging from %lld°C";
+"Kälteschutz bleibt aktiv – Temperatur momentan nicht verfügbar" = "Cold protection remains active – temperature currently unavailable";
+"Ladelimit von %lld %% gehalten (Netzteil-Schalter, macOS-Limit %lld %%)" = "Charge limit of %lld %% held (adapter switch, macOS limit %lld %%)";
+"Laden aktiv bis %lld %% (Netzteil-Schalter)" = "Charging up to %lld %% (adapter switch)";
+"Im macOS-Limit-Modus ist Entladen nur auf eine angebotene Stufe unter 100 % möglich." = "In macOS limit mode, discharging is only possible to an offered step below 100 %.";

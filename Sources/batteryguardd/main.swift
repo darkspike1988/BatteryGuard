@@ -18,6 +18,7 @@ final class DaemonRunner: @unchecked Sendable {
     private var powerNotifier: io_object_t = 0
     private let configServer = ConfigServer()
     private let wakeUntilLimit = WakeUntilLimitGuard()
+    private let clamshellSleep = ClamshellSleepGuard()
     private let powerMode = PowerModeController()
     private let socPower = SoCPowerMonitor()
     private let dischargeSleep = DischargeSleepGuard()
@@ -156,7 +157,7 @@ final class DaemonRunner: @unchecked Sendable {
 
         if !dryRun {
             wakeUntilLimit.reconcile(config: config, battery: battery, now: now,
-                controlSupported: controller.smc.hasChargeControl && decision.state != .unsupported)
+                controlSupported: (controller.smc.hasChargeControl || decision.systemChargeLimit != nil) && decision.state != .unsupported)
         }
         dischargeSleep.reconcile(config: config, state: decision.state, now: now, dryRun: dryRun)
         if !isOnce {
@@ -200,6 +201,11 @@ final class DaemonRunner: @unchecked Sendable {
         status.percentAvailable = battery.percentAvailable
         status.externalPowerAvailable = battery.externalPowerAvailable
         status.awakeUntilLimitActive = wakeUntilLimit.isActive
+        if !isOnce {
+            clamshellSleep.reconcile(wanted: config.keepAwakeWhenLidClosed && wakeUntilLimit.isActive,
+                                     pluggedIn: battery.pluggedIn || decision.adapterConnected == false,
+                                     lidClosed: desktop.lidClosed, dryRun: dryRun, logger: { [weak self] in self?.log($0) })
+        }
         status.highPowerModeSupported = powerMode.highPowerModeSupported
         if !isOnce && !dryRun { socPower.refreshIfDue() }
         status.socPower = socPower.latest
@@ -222,7 +228,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.6.1"
+        status.daemonVersion = "0.7.0"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
@@ -284,6 +290,7 @@ final class DaemonRunner: @unchecked Sendable {
             case 0xe0000280 /* kIOMessageSystemWillSleep */:
                 runner.sleeping = true
                 runner.wakeUntilLimit.release()
+                runner.clamshellSleep.release(dryRun: runner.dryRun, logger: { runner.log($0) })
                 runner.dischargeSleep.release()
                 runner.controller.prepareForSleep(config: runner.loadConfig().sanitized(), battery: BatteryReader.read(smcClient: runner.controller.smc),
                                                   dryRun: runner.dryRun, logger: { runner.log($0) })
@@ -348,6 +355,7 @@ final class DaemonRunner: @unchecked Sendable {
         detectedSMCKeys = controller.smc.detectSupportedKeys()
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
         refreshCapabilities()
+        if !dryRun { clamshellSleep.recoverAfterCrash(logger: { [weak self] in self?.log($0) }) }
         if !controller.smc.hasChargeControl {
             log(controller.smc.hasDischargeControl
                 ? "SMC-Ladesperre nicht vorhanden – Pendelsteuerung verfügbar."
@@ -361,6 +369,7 @@ final class DaemonRunner: @unchecked Sendable {
             self.log("SIGTERM empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
             self.configServer.stop()
             self.wakeUntilLimit.release()
+            self.clamshellSleep.release(dryRun: self.dryRun, logger: { self.log($0) })
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
@@ -373,6 +382,7 @@ final class DaemonRunner: @unchecked Sendable {
             self.log("SIGINT empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
             self.configServer.stop()
             self.wakeUntilLimit.release()
+            self.clamshellSleep.release(dryRun: self.dryRun, logger: { self.log($0) })
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
