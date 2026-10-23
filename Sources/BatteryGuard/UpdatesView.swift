@@ -7,6 +7,12 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.6.1", title: "Verlässlich auf macOS 27", changes: [
+            "Erkennt Apples Akku-Kalibrierung und erklärt, warum macOS dann über das Ziel lädt.",
+            "Fähigkeiten mit Firmware-Version in der Diagnose; nach Firmware-Updates meldet B-Guard geänderte Steuerwege.",
+            "Mitteilungen bei Laden über das Limit und wenn ein Netzteil oder Monitor keinen Strom liefert.",
+            "Hintergrunddienst 0.6.1 erforderlich."
+        ]),
         .init(version: "0.6.0", title: "Energie im Blick", changes: [
             "Low Power Mode und High Power Mode getrennt für Akku und Netzteil: nicht steuern, immer, nur auf Akku oder nur am Netzteil.",
             "High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang.",

@@ -23,6 +23,11 @@ struct EffectivenessView: View {
                 Text(stateExplanation)
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if statusStore.status.appleCalibrationActive == true {
+                    Label("macOS kalibriert gerade den Akku und lädt dafür vorübergehend über dein Ziel. Das lässt sich nicht verhindern und ist kein Fehler.", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.callout).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Divider()
                 Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 9) {
                     row("Dein Ziel", value: limitText(effectiveness.targetUpperLimit))

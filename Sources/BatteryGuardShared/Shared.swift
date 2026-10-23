@@ -217,6 +217,12 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var systemChargeLimit: Int? = nil
     /// Letzte SoC-Leistungsmessung des Dienstes; nil, wenn powermetrics nichts liefert.
     public var socPower: BGSoCPower? = nil
+    /// Erkannte Fähigkeiten dieses Macs inklusive Firmware-Version.
+    public var capabilities: BGCapabilities? = nil
+    /// Letzte beobachtete Fähigkeitsänderung (z. B. nach Firmware-Update).
+    public var capabilityChange: BGCapabilityChange? = nil
+    /// macOS kalibriert gerade den Akku und ignoriert dafür das Ladelimit.
+    public var appleCalibrationActive: Bool? = nil
     public var hasBatteryPercent: Bool { percentAvailable != false }
     public var hasExternalPower: Bool { externalPowerAvailable != false }
     public var pluggedIn: Bool = false

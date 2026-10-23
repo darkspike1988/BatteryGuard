@@ -84,6 +84,7 @@ struct DiagnosticsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                CapabilitiesView(status: statusStore.status)
                 PowerDetailsView()
                 BGPanel {
                     VStack(alignment: .leading, spacing: 12) {

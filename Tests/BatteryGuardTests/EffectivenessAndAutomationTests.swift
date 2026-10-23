@@ -19,7 +19,7 @@ struct EffectivenessAndAutomationTests {
         s.lidClosed = lidClosed
         s.adapterDisconnectAllowed = allowsDisconnect
         s.effectiveUpperLimit = effectiveUpper
-        s.daemonVersion = "0.6.0"
+        s.daemonVersion = "0.6.1"
         s.updatedAt = now
         return s
     }

@@ -10,6 +10,8 @@ Abgeleitet aus der [Funktionsrecherche](docs/research/2026-10-23-funktionsrecher
 
 ### 0.6.1 — Verlässlichkeit auf macOS 27 (P0)
 
+**Stand:** R2–R5 umgesetzt ([0.6.1](docs/release-notes-0.6.1.md)); R2 gemessen: `CHIE = 08` hält das Laden an, statt das Netzteil zu trennen. R1 läuft im Alltag weiter.
+
 | ID | Paket | Warum | Abnahme |
 |---|---|---|---|
 | R1 | Abnahme 0.6.0 im Alltag: macOS-Limit über Lade-, Schlaf- und Neustartzyklen, Top Up, Hitzeschutz, LED aus, Laden im Schlaf | Neue Steuerung ist nur kurz auf einem Mac geprüft | Journal-Einträge je Fall; keine Überladung über die Stufe |

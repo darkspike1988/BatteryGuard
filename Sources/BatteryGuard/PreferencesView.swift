@@ -26,6 +26,7 @@ struct PreferencesView: View {
     @AppStorage("bg.notifyCalibration") private var notifyCalibration = true
     @AppStorage("bg.notifyWeekly") private var notifyWeekly = false
     @AppStorage("bg.notifyHealth") private var notifyHealth = true
+    @AppStorage("bg.notifyAnomalies") private var notifyAnomalies = true
     @AppStorage("bg.healthThreshold") private var healthThreshold = 80
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
@@ -111,13 +112,10 @@ struct PreferencesView: View {
                 Toggle("Oberhalb des Limits aktiv entladen", isOn: $configStore.config.activeDischargeAboveUpper)
                 Text("Aktives Entladen trennt das Netzteil softwareseitig. Im Pendelmodus geschieht dies bereits automatisch. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt.")
                     .font(.caption).foregroundStyle(.secondary)
-                Picker("MagSafe-LED", selection: Binding(
-                    get: { configStore.config.magsafeLedOff ? 2 : (configStore.config.magsafeLed ? 1 : 0) },
-                    set: { configStore.config.magsafeLedOff = $0 == 2; configStore.config.magsafeLed = $0 == 1 }
-                )) {
-                    Text("macOS steuert").tag(0)
-                    Text("Ladezustand anzeigen").tag(1)
-                    Text("Aus").tag(2)
+                Picker("MagSafe-LED", selection: $configStore.config.magsafeLedMode) {
+                    Text("macOS steuert").tag(BGMagSafeLEDMode.system)
+                    Text("Ladezustand anzeigen").tag(BGMagSafeLEDMode.indicate)
+                    Text("Aus").tag(BGMagSafeLEDMode.off)
                 }
                 .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
                 Toggle("Laden im Schlaf angehalten lassen", isOn: $configStore.config.stopChargingWhenSleeping)
@@ -209,6 +207,7 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Beim Erreichen des Ladelimits", isOn: $notifyLimit)
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
+                Toggle("Bei Auffälligkeiten (über Limit geladen, Apple-Kalibrierung, Netzteil ohne Strom)", isOn: $notifyAnomalies)
                 Toggle("Wartungshinweis bei niedriger Akkukapazität", isOn: $notifyHealth)
                     .help("Meldet höchstens alle 30 Tage, wenn die geschätzte Kapazität unter die Grenze fällt. Das ist kein Hardwaretest.")
                 if notifyHealth {

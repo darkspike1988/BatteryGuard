@@ -9,6 +9,9 @@ final class DaemonRunner: @unchecked Sendable {
     private let dryRun: Bool
     private let isOnce: Bool
     private var detectedSMCKeys: [String] = []
+    private var capabilities: BGCapabilities?
+    private var capabilityChange: BGCapabilityChange?
+    private var appleCalibration: (value: Bool?, readAt: TimeInterval)?
     private var sleeping = false
     private var powerConnection: io_connect_t = 0
     private var powerPort: IONotificationPortRef?
@@ -200,6 +203,9 @@ final class DaemonRunner: @unchecked Sendable {
         status.highPowerModeSupported = powerMode.highPowerModeSupported
         if !isOnce && !dryRun { socPower.refreshIfDue() }
         status.socPower = socPower.latest
+        status.capabilities = capabilities
+        status.capabilityChange = capabilityChange
+        status.appleCalibrationActive = currentAppleCalibration()
         let systemLimits = controller.systemLimit.availableLimits()
         status.systemChargeLimits = systemLimits
         status.systemChargeLimit = systemLimits.isEmpty ? nil : controller.systemLimit.currentLimit()
@@ -216,7 +222,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.6.0"
+        status.daemonVersion = "0.6.1"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
@@ -237,12 +243,35 @@ final class DaemonRunner: @unchecked Sendable {
 
 
         detectedSMCKeys = controller.smc.detectSupportedKeys()
+        refreshCapabilities()
         let status = tick()
 
         if let data = try? BGJSON.encoder().encode(status),
            let jsonString = String(data: data, encoding: .utf8) {
             print(jsonString)
         }
+    }
+
+    /// Erkennt Firmware- und Fähigkeitsänderungen gegenüber dem letzten Dienststart.
+    private func refreshCapabilities() {
+        let keys = detectedSMCKeys + (controller.smc.keyExists("ACLC") ? ["ACLC"] : [])
+        let current = BGCapabilities(smcKeys: keys, firmwareVersion: PlatformInfo.firmwareVersion(),
+            macOSVersion: PlatformInfo.macOSVersion(), systemChargeLimits: controller.systemLimit.availableLimits(),
+            highPowerMode: powerMode.highPowerModeSupported)
+        capabilities = current
+        guard !dryRun && !isOnce, let change = PlatformInfo.recordCapabilities(current) else { return }
+        capabilityChange = change
+        log("Fähigkeiten geändert: " + change.changes.joined(separator: "; "))
+    }
+
+    /// Apples Kalibrierungszustand höchstens alle fünf Minuten abfragen.
+    private func currentAppleCalibration() -> Bool? {
+        let uptime = ProcessInfo.processInfo.systemUptime
+        if let cached = appleCalibration, uptime - cached.readAt < 300 { return cached.value }
+        let value = PlatformInfo.appleCalibrationActive()
+        if value == true && appleCalibration?.value != true { log("macOS kalibriert den Akku; das Ladelimit ist vorübergehend ausgesetzt.") }
+        appleCalibration = (value, uptime)
+        return value
     }
 
     private func registerSleepWakeNotifications() {
@@ -318,6 +347,7 @@ final class DaemonRunner: @unchecked Sendable {
 
         detectedSMCKeys = controller.smc.detectSupportedKeys()
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
+        refreshCapabilities()
         if !controller.smc.hasChargeControl {
             log(controller.smc.hasDischargeControl
                 ? "SMC-Ladesperre nicht vorhanden – Pendelsteuerung verfügbar."

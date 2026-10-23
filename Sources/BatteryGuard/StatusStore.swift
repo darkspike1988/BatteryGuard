@@ -80,6 +80,7 @@ final class StatusStore: Sendable {
 
             if isDaemonActive, let config = configProvider?() {
                 NotificationManager.shared.checkNotifications(status: decoded, config: config)
+                NotificationManager.shared.checkAnomalies(status: decoded, config: config, powerFlow: powerFlow)
             }
         } catch {
             self.isDaemonActive = false
