@@ -142,6 +142,7 @@ Zusätzliche `POST /api/v1/actions`-Aktionen:
 | `hold-charge` | optional `minutes`: 1–1440 | Aktuellen Ladestand im Dienst erfassen; derzeit ohne physisch bestätigte Hardware abgelehnt. |
 | `discharge-to` | `targetPercent`: 10–95; optional `minutes` | Einmalentladung; derzeit ohne physisch bestätigte Hardware abgelehnt. |
 | `cancel-special` | keine | Sonderaktion beenden, Basisprofil erhalten. |
+| `power-mode` | `lowPowerMode` und/oder `highPowerMode`: `off`, `always`, `onBattery`, `onAdapter` | Regeln für die macOS-Energiemodi setzen (ab 0.6.0). Ändert keine Ladegrenzen und setzt keinen manuellen Vorrang. High Power Mode wirkt nur auf Macs mit `pmset powermode`. |
 | `upsert-schedule` | `scheduledTask`: validiertes Aufgabenobjekt | Zeitplan hinzufügen/ersetzen, gespeicherten Ausführungsstand bewahren. |
 | `delete-schedule` | `scheduleID`: UUID | Zeitplan entfernen. |
 | `calibration` | keine | Vorbereitet; ohne physisch bestätigte Hardware abgelehnt. |

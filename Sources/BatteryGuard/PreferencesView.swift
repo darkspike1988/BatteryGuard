@@ -29,6 +29,7 @@ struct PreferencesView: View {
     @AppStorage("bg.healthThreshold") private var healthThreshold = 80
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
+    @AppStorage(MenuBarExtraItem.appStorageKey) private var menuBarExtras = ""
 
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
@@ -251,6 +252,16 @@ struct PreferencesView: View {
                 }
                 Text("Wähle das Menüleistensymbol und die Zusatzanzeige. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung.")
                     .font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Weitere Werte in der Menüleiste").font(.subheadline.weight(.medium))
+                    ForEach(MenuBarExtraItem.allCases) { item in
+                        Toggle(item.localizedTitle, isOn: Binding(
+                            get: { MenuBarExtraItem.decode(menuBarExtras).contains(item) },
+                            set: { _ in menuBarExtras = MenuBarExtraItem.toggled(item, in: menuBarExtras) }))
+                    }
+                    Text("Werte erscheinen nur, wenn sie aktuell gemeldet werden. Die SoC-Leistung misst der Dienst etwa alle 30 Sekunden.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Toggle("Temperatur im Menüfenster", isOn: $menuShowTemperature)
                 Toggle("Akku-Leistung im Menüfenster", isOn: $menuShowPower)
                 Toggle("Akkugesundheit im Menüfenster", isOn: $menuShowHealth)
@@ -292,6 +303,7 @@ struct PreferencesView: View {
                     // AppStorage bindings respect an injected preview store.
                     menuBarIconStyle = .ring
                     menuBarDisplay = .percent
+                    menuBarExtras = ""
                     menuShowTemperature = false
                     menuShowPower = false
                     menuShowHealth = false

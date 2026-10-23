@@ -974,3 +974,17 @@
 "Display, USB, RAM u. a. (abgeleitet)" = "Display, USB, RAM etc. (derived)";
 "Display und USB meldet dieser Mac nicht einzeln." = "This Mac does not report display and USB separately.";
 "Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch. SoC-Werte misst der Dienst etwa alle 30 Sekunden mit Apples powermetrics; „Übrige Komponenten“ ist die Differenz zur Mac-Leistung." = "Mac power estimated from input minus battery flow. On battery, input is 0 W. Rated power is not consumption. The service measures SoC values about every 30 seconds with Apple's powermetrics; “Other components” is the difference to Mac power.";
+
+/* 0.6.0 Menüleiste und Kurzbefehle */
+"Restlaufzeit" = "Time remaining";
+"Wirksames Ladeziel" = "Effective charge target";
+"SoC-Leistung" = "SoC power";
+"Low-Power-Symbol" = "Low Power symbol";
+"Low Power Mode aktiv" = "Low Power Mode active";
+"Weitere Werte in der Menüleiste" = "More values in the menu bar";
+"Werte erscheinen nur, wenn sie aktuell gemeldet werden. Die SoC-Leistung misst der Dienst etwa alle 30 Sekunden." = "Values only appear when they are currently reported. The service measures SoC power about every 30 seconds.";
+"Energiemodus-Regel" = "Energy mode rule";
+"Energiemodus festlegen" = "Set energy mode";
+"Legt fest, wann Low Power Mode und High Power Mode gelten. Leere Parameter bleiben unverändert." = "Sets when Low Power Mode and High Power Mode apply. Empty parameters stay unchanged.";
+"Energiemodus" = "Energy mode";
+"Mindestens ein Energiemodus ist erforderlich." = "At least one energy mode is required.";

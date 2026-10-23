@@ -221,5 +221,14 @@ public struct BGuardShortcutsProvider: AppShortcutsProvider {
                 shortTitle: "Ladeziel",
                 systemImageName: "target"
             )
+            AppShortcut(
+                intent: SetPowerModeIntent(),
+                phrases: [
+                    "\(.applicationName) Energiemodus",
+                    "Energiemodus mit \(.applicationName) festlegen"
+                ],
+                shortTitle: "Energiemodus",
+                systemImageName: "leaf"
+            )
     }
 }

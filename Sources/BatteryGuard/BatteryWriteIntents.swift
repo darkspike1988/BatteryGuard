@@ -177,3 +177,28 @@ public struct ApplySavedProfileIntent: AppIntent {
         return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
     }
 }
+
+public enum BGuardIntentPowerModeRule: String, AppEnum {
+    case off, always, onBattery, onAdapter
+    public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Energiemodus-Regel")
+    public static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .off: "Nicht steuern", .always: "Immer", .onBattery: "Nur auf Akku", .onAdapter: "Nur am Netzteil"
+    ]
+    var rule: BGPowerModeRule { BGPowerModeRule(rawValue: rawValue) ?? .off }
+}
+
+/// Setzt die Regeln für Low Power Mode und High Power Mode. High Power Mode wirkt nur auf Macs,
+/// deren pmset `powermode` anbietet; der Dienst übernimmt die Umschaltung.
+public struct SetPowerModeIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Energiemodus festlegen"
+    public static let description = IntentDescription("Legt fest, wann Low Power Mode und High Power Mode gelten. Leere Parameter bleiben unverändert.")
+    public static let openAppWhenRun = false
+    @Parameter(title: "Low Power Mode") public var lowPowerMode: BGuardIntentPowerModeRule?
+    @Parameter(title: "High Power Mode") public var highPowerMode: BGuardIntentPowerModeRule?
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .powerMode,
+            lowPowerMode: lowPowerMode?.rule, highPowerMode: highPowerMode?.rule))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}

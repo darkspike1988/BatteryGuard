@@ -974,3 +974,17 @@
 "Display, USB, RAM u. a. (abgeleitet)" = "Дисплей, USB, ОЗУ и др. (расчёт)";
 "Display und USB meldet dieser Mac nicht einzeln." = "Этот Mac не сообщает дисплей и USB отдельно.";
 "Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch. SoC-Werte misst der Dienst etwa alle 30 Sekunden mit Apples powermetrics; „Übrige Komponenten“ ist die Differenz zur Mac-Leistung." = "Мощность Mac оценивается как вход минус поток аккумулятора. При работе от аккумулятора вход равен 0 Вт. Номинальная мощность — не потребление. Значения SoC служба измеряет примерно каждые 30 секунд с помощью powermetrics от Apple; «Прочие компоненты» — разница с мощностью Mac.";
+
+/* 0.6.0 Menüleiste und Kurzbefehle */
+"Restlaufzeit" = "Оставшееся время";
+"Wirksames Ladeziel" = "Действующая цель зарядки";
+"SoC-Leistung" = "Мощность SoC";
+"Low-Power-Symbol" = "Значок энергосбережения";
+"Low Power Mode aktiv" = "Режим энергосбережения включён";
+"Weitere Werte in der Menüleiste" = "Дополнительные значения в строке меню";
+"Werte erscheinen nur, wenn sie aktuell gemeldet werden. Die SoC-Leistung misst der Dienst etwa alle 30 Sekunden." = "Значения показываются только при актуальных данных. Мощность SoC служба измеряет примерно каждые 30 секунд.";
+"Energiemodus-Regel" = "Правило режима энергии";
+"Energiemodus festlegen" = "Задать режим энергии";
+"Legt fest, wann Low Power Mode und High Power Mode gelten. Leere Parameter bleiben unverändert." = "Определяет, когда действуют режимы энергосбережения и высокой мощности. Пустые параметры не меняются.";
+"Energiemodus" = "Режим энергии";
+"Mindestens ein Energiemodus ist erforderlich." = "Требуется хотя бы один режим энергии.";

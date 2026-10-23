@@ -182,7 +182,11 @@ struct MenuBarLabelView: View {
     var updateAvailable = false
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage(MenuBarDisplayMode.appStorageKey) private var menuBarDisplay: MenuBarDisplayMode = .percent
-    
+    @AppStorage(MenuBarExtraItem.appStorageKey) private var menuBarExtras = ""
+    @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+
+    private var extraItems: [MenuBarExtraItem] { MenuBarExtraItem.decode(menuBarExtras) }
+
     var body: some View {
         HStack(spacing: 5) {
             MenuBarIconView(
@@ -196,12 +200,21 @@ struct MenuBarLabelView: View {
                     .foregroundStyle(Color.accentColor).help("Neue B-Guard-Version verfügbar")
             }
 
-            let displayText = MenuBarDisplayFormatter.text(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive)
+            let displayText = ([MenuBarDisplayFormatter.text(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive)]
+                + MenuBarExtraFormatter.texts(for: extraItems, status: status, isDaemonActive: isDaemonActive))
+                .filter { !$0.isEmpty }.joined(separator: " · ")
+            if MenuBarExtraFormatter.showsLowPowerSymbol(for: extraItems, lowPowerModeEnabled: lowPowerModeEnabled) {
+                Image(systemName: "leaf.fill").font(.system(size: 10)).foregroundStyle(.yellow)
+                    .accessibilityLabel(L("Low Power Mode aktiv"))
+            }
             if !displayText.isEmpty {
                 Text(displayText)
                     .monospacedDigit()
                     .font(.system(size: 13, weight: .medium, design: .rounded))
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
+            lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
         .help(MenuBarDisplayFormatter.tooltip(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive, localize: true))
         .accessibilityElement(children: .combine)

@@ -143,6 +143,7 @@ public enum MenuBarAppearance {
     public static func resetDisplayPreferences(userDefaults: UserDefaults = .standard) {
         userDefaults.set(MenuBarIconStyle.ring.rawValue, forKey: MenuBarAppearanceKeys.iconStyle)
         userDefaults.set(MenuBarDisplayMode.percent.rawValue, forKey: MenuBarAppearanceKeys.displayMode)
+        userDefaults.removeObject(forKey: MenuBarExtraItem.appStorageKey)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showTemperature)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPower)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showHealth)

@@ -34,6 +34,11 @@ Der Hintergrunddienst misst etwa alle 30 Sekunden eine Sekunde lang mit Apples `
 
 Netzteil und Energiewirkung benötigen keinen aktualisierten Dienst; die SoC-Leistung erscheint erst mit Dienst 0.6.0.
 
+## Menüleiste und Kurzbefehle
+
+- **Weitere Werte in der Menüleiste:** Restlaufzeit, wirksames Ladeziel, SoC-Leistung und ein gelbes Blatt bei aktivem Low Power Mode lassen sich einzeln zuschalten. Sie erscheinen hinter der bisherigen Anzeige und nur, wenn aktuelle Werte vorliegen.
+- **Kurzbefehl „Energiemodus festlegen“:** setzt die Regeln für Low Power Mode und High Power Mode; leere Parameter bleiben unverändert. Dieselbe Aktion steht in der lokalen API als `power-mode` bereit und setzt keinen manuellen Vorrang für Ladeprofile.
+
 ## Prüfstand
 
-248 Tests in 38 Suiten bestanden, darunter neue Tests für Regeln, Vorrang, Migration, Fehlerwiederholung, Probelauf, Netzteil-Parser, `top`-Parser sowie Stufenwahl, Hitzeschutz, Top Up und Rücklesen im macOS-Limit-Modus. Auf dem MacBookPro18,3 unter macOS 27.0 meldet PowerUI die Stufen 80–100 %; Lesen und ein Schreibtest mit unverändertem Wert gelangen ohne Administratorrechte. Auf einem MacBookPro18,3 (M1 Pro) bestätigt: Netzteilangaben werden gelesen, `pmset` bietet dort kein `powermode`, High Power Mode bleibt ausgeblendet. Die Umschaltung durch den installierten Dienst 0.6.0 ist noch nicht physisch abgenommen.
+252 Tests in 39 Suiten (Swift Testing) und 106 XCTests bestanden, darunter neue Tests für Regeln, Vorrang, Migration, Fehlerwiederholung, Probelauf, Netzteil-Parser, `top`-Parser sowie Stufenwahl, Hitzeschutz, Top Up und Rücklesen im macOS-Limit-Modus. Auf dem MacBookPro18,3 unter macOS 27.0 meldet PowerUI die Stufen 80–100 %; Lesen und ein Schreibtest mit unverändertem Wert gelangen ohne Administratorrechte. Auf einem MacBookPro18,3 (M1 Pro) bestätigt: Netzteilangaben werden gelesen, `pmset` bietet dort kein `powermode`, High Power Mode bleibt ausgeblendet. Die Umschaltung durch den installierten Dienst 0.6.0 ist noch nicht physisch abgenommen.
