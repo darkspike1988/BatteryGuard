@@ -44,6 +44,7 @@ struct DiagnosticsView: View {
                         if let exportMessage { Text(exportMessage).font(.caption) }
                     }
                 }
+                ChargeChainView(statusStore: statusStore)
                 SleepReportView()
                 BGPanel {
                     VStack(alignment: .leading, spacing: 12) {

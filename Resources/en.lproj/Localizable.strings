@@ -973,3 +973,15 @@
 "Der Schlafbericht unten liest das Energieprotokoll von macOS: Ladestand vor und nach dem Schlaf, dunkles Aufwachen und seine Gründe. Darunter steht, was den Mac gerade wach hält." = "The sleep report below reads the macOS power log: charge before and after sleep, dark wakes and their reasons. Below that you see what is keeping the Mac awake right now.";
 "Meldet höchstens alle 30 Tage, wenn die geschätzte Kapazität unter die Grenze fällt. Das ist kein Hardwaretest." = "Reports at most every 30 days when the estimated capacity falls below the threshold. This is not a hardware test.";
 "Seit %lld Wochen wurde keine Vollladung beobachtet. Eine gelegentliche Vollladung kann die Ladestandsschätzung unterstützen. B-Guard startet sie nicht automatisch." = "No full charge has been observed for %lld weeks. An occasional full charge can help the charge estimate. B-Guard does not start it automatically.";
+"%lld W" = "%lld W";
+"Ausgehandelt" = "Negotiated";
+"Das Netzteil bietet bis zu %lld W, ausgehandelt sind nur %lld W. Meist begrenzt ein 3-A-Kabel oder ein Dock. Für mehr als 60 W braucht es ein USB-C-Kabel mit 5 A (100 W oder 240 W)." = "The adapter offers up to %lld W, but only %lld W were negotiated. Usually a 3 A cable or a dock is the limit. More than 60 W needs a 5 A USB-C cable (100 W or 240 W).";
+"Das Netzteil wurde in der letzten Stunde %lld-mal getrennt und verbunden. Prüfe Stecker, Kabel und Dock auf Wackelkontakt." = "The adapter was disconnected and reconnected %lld times in the last hour. Check the plug, cable and dock for a loose connection.";
+"Der Akku entlädt sich trotz Netzteil (%.1f W). Netzteil oder Kabel reichen für die aktuelle Last nicht aus." = "The battery is discharging despite the adapter (%.1f W). The adapter or cable is not enough for the current load.";
+"Dieses Netzteil lieferte früher %lld W, jetzt %lld W. Wahrscheinlich hängt ein anderes Kabel oder Dock dazwischen." = "This adapter used to deliver %lld W, now %lld W. A different cable or dock is probably in between.";
+"Kein Netzteil angeschlossen." = "No power adapter connected.";
+"Keine Auffälligkeiten erkannt." = "No issues detected.";
+"Ladekette in Ordnung: %lld W ausgehandelt." = "Charging chain OK: %lld W negotiated.";
+"Ladekette: Netzteil, Kabel, Dock" = "Charging chain: adapter, cable, dock";
+"Schwaches Netzteil (%lld W). Laden dauert lange, und unter Last kann der Akku trotz Netzteil sinken." = "Weak power adapter (%lld W). Charging takes long, and under load the battery can drop despite the adapter.";
+"Vom Netzteil angeboten" = "Offered by adapter";
