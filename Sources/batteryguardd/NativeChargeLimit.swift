@@ -24,13 +24,13 @@ import notify
 /// dokumentiert; dieselbe Technik nutzen BatLimit und Battery Toolkit für macOS 27.
 /// Der Wert gilt auch im Schlaf und während der Dienst gestoppt ist.
 public final class NativeChargeLimit: NativeChargeLimitDriving, @unchecked Sendable {
-    static let domain = "com.apple.smartcharging.topoffprotection" as CFString
+    static let domain = "com.apple.smartcharging.topoffprotection"
     static let changedNotification = "com.apple.smartcharging.defaultschanged"
     private static let frameworkPath = "/System/Library/PrivateFrameworks/PowerUI.framework/Versions/A/PowerUI"
-    private static let limitKey = "mclLimitValue" as CFString
-    private static let featureStateKey = "MCLFeatureState" as CFString
+    private static let limitKey = "mclLimitValue"
+    private static let featureStateKey = "MCLFeatureState"
     /// „Jetzt vollständig laden“ im Batteriemenü; solange der Schlüssel existiert, gilt kein Limit.
-    private static let tempDisabledKey = "MCLTempDisabledUntilDate" as CFString
+    private static let tempDisabledKey = "MCLTempDisabledUntilDate"
     /// powerd hebt diesen Zustand während der Kalibrierungsladung auf 1 (ohne Rechte lesbar).
     static let chargingToFullOverride = "com.apple.system.powersources.chargingtofulloverride"
 
@@ -127,17 +127,18 @@ public final class NativeChargeLimit: NativeChargeLimitDriving, @unchecked Senda
     }
 
     private func write(_ value: Int, client: PowerUISmartChargeClient) -> Bool {
+        let domain = Self.domain as CFString
         // Ein Wert allein wirkt nicht, solange das Limit in den Systemeinstellungen aus ist.
         if !isEnabled(client) {
             var error: NSError?
             _ = client.enableMCL(&error)
             if !isEnabled(client) {
-                CFPreferencesSetAppValue(Self.featureStateKey, 1 as CFNumber, Self.domain)
+                CFPreferencesSetAppValue(Self.featureStateKey as CFString, 1 as CFNumber, domain)
             }
         }
-        CFPreferencesSetAppValue(Self.tempDisabledKey, nil, Self.domain)
-        CFPreferencesSetAppValue(Self.limitKey, value as CFNumber, Self.domain)
-        guard CFPreferencesAppSynchronize(Self.domain) else { return false }
+        CFPreferencesSetAppValue(Self.tempDisabledKey as CFString, nil, domain)
+        CFPreferencesSetAppValue(Self.limitKey as CFString, value as CFNumber, domain)
+        guard CFPreferencesAppSynchronize(domain) else { return false }
         CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
                                              CFNotificationName(Self.changedNotification as CFString),
                                              nil, nil, true)
