@@ -279,7 +279,8 @@ struct MenuBarLabelView: View {
                     .font(.system(size: 13, weight: .medium, design: .rounded))
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
+        // Die Meldung kommt auf einem beliebigen Thread; @State nur auf dem Hauptthread ändern.
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange).receive(on: RunLoop.main)) { _ in
             lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
         .help(MenuBarDisplayFormatter.tooltip(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive, localize: true))

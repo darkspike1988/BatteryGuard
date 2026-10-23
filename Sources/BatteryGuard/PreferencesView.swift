@@ -257,7 +257,10 @@ struct PreferencesView: View {
                 Toggle("Beim Erreichen des Ladelimits", isOn: $notifyLimit)
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
                 Toggle("Ladeton beim Anstecken stumm", isOn: $chimeMuted)
-                    .onChange(of: chimeMuted) { _, muted in PowerChimeSetting.setMuted(muted) }
+                    .onChange(of: chimeMuted) { _, muted in
+                        // killall wartet auf den Prozess; nicht auf dem Hauptthread blockieren.
+                        Task.detached(priority: .utility) { PowerChimeSetting.setMuted(muted) }
+                    }
                 Toggle("Bei Auffälligkeiten (über Limit geladen, Apple-Kalibrierung, Netzteil ohne Strom)", isOn: $notifyAnomalies)
                 Toggle("Wartungshinweis bei niedriger Akkukapazität", isOn: $notifyHealth)
                     .help("Meldet höchstens alle 30 Tage, wenn die geschätzte Kapazität unter die Grenze fällt. Das ist kein Hardwaretest.")

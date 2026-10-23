@@ -29,11 +29,18 @@ struct SoCPowerMonitorTests {
     }
 
     @Test func refreshIsThrottledAndRunsInBackground() async throws {
-        final class Counter: @unchecked Sendable { var calls = 0 }
+        // Die Messung läuft im Hintergrund; der Zähler braucht deshalb eine Sperre (Thread Sanitizer).
+        final class Counter: @unchecked Sendable {
+            private let lock = NSLock()
+            private var value = 0
+            var calls: Int { lock.withLock { value } }
+            func increment() { lock.withLock { value += 1 } }
+        }
         let counter = Counter()
+        let data = plist(["cpu_power": 1000.0])
         let monitor = SoCPowerMonitor(measure: {
-            counter.calls += 1
-            return self.plist(["cpu_power": 1000.0])
+            counter.increment()
+            return data
         })
         monitor.refreshIfDue(now: now)
         monitor.refreshIfDue(now: now.addingTimeInterval(5))
