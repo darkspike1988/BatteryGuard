@@ -45,6 +45,10 @@ Netzteil und Energiewirkung benötigen keinen aktualisierten Dienst; die SoC-Lei
 - **MagSafe-LED:** „macOS steuert“, „Ladezustand anzeigen“ oder „Aus“ (`ACLC` = 1, solange der Dienst läuft). Ein Blinkmodus fehlt bewusst, weil der passende Wert nicht belegt ist.
 - **Bildschirm sperren beim Zuklappen:** Wird der Deckel geschlossen, während „Bis zum Ladelimit wachhalten“ den Mac wach hält, sperrt die App den Bildschirm (privat: `SACLockScreenImmediate`). Funktioniert nur bei laufender App.
 
+## Korrektur MagSafe-LED
+
+Der Dienst prüfte LED-Schreibvorgänge durch sofortiges Zurücklesen. `ACLC` meldet Farben aber erst nach etwa 0,3 s, und „Firmware steuert“ (0) liest sich nie als 0 zurück. Folge: jeder Wechsel auf „Auto“ galt als fehlgeschlagen, wurde in jedem Regeltakt wiederholt und ließ die Wiederherstellung vor dem Schlaf als Fehler erscheinen. Jetzt zählt bei „Auto“ das Schreibergebnis, Farben werden bis 0,7 s nachgeprüft, und ein fehlgeschlagenes Ziel wird erst bei neuem Ziel oder nach dem Aufwachen erneut versucht.
+
 ## Prüfstand
 
-257 Tests in 40 Suiten (Swift Testing) und 106 XCTests bestanden, darunter neue Tests für Regeln, Vorrang, Migration, Fehlerwiederholung, Probelauf, Netzteil-Parser, `top`-Parser sowie Stufenwahl, Hitzeschutz, Top Up und Rücklesen im macOS-Limit-Modus. Auf dem MacBookPro18,3 unter macOS 27.0 meldet PowerUI die Stufen 80–100 %; Lesen und ein Schreibtest mit unverändertem Wert gelangen ohne Administratorrechte. Auf einem MacBookPro18,3 (M1 Pro) bestätigt: Netzteilangaben werden gelesen, `pmset` bietet dort kein `powermode`, High Power Mode bleibt ausgeblendet. Die Umschaltung durch den installierten Dienst 0.6.0 ist noch nicht physisch abgenommen.
+260 Tests in 41 Suiten (Swift Testing) und 106 XCTests bestanden, darunter neue Tests für Regeln, Vorrang, Migration, Fehlerwiederholung, Probelauf, Netzteil-Parser, `top`-Parser sowie Stufenwahl, Hitzeschutz, Top Up und Rücklesen im macOS-Limit-Modus. Auf dem MacBookPro18,3 unter macOS 27.0 meldet PowerUI die Stufen 80–100 %; Lesen und ein Schreibtest mit unverändertem Wert gelangen ohne Administratorrechte. Auf einem MacBookPro18,3 (M1 Pro) bestätigt: Netzteilangaben werden gelesen, `pmset` bietet dort kein `powermode`, High Power Mode bleibt ausgeblendet. Die Umschaltung durch den installierten Dienst 0.6.0 ist noch nicht physisch abgenommen.

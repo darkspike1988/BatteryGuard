@@ -529,6 +529,8 @@ public final class BatteryController: @unchecked Sendable {
     private var lastAppliedCharging: Bool?
     private var lastAppliedAdapter: Bool?
     private var lastAppliedMagSafeLED: SMCClient.MagSafeColor?
+    /// Fehlgeschlagenes LED-Ziel; erst bei neuem Ziel oder nach dem Aufwachen erneut versuchen.
+    private var failedMagSafeLED: SMCClient.MagSafeColor?
     private var lastHardwareCheckUptime: TimeInterval?
     private let lock = NSLock()
 
@@ -626,11 +628,15 @@ public final class BatteryController: @unchecked Sendable {
                 }
             }
             
-            if smc.keyExists("ACLC") && targetLED != lastAppliedMagSafeLED {
+            if smc.keyExists("ACLC") && targetLED != lastAppliedMagSafeLED && targetLED != failedMagSafeLED {
                 let success = smc.setMagSafeLED(targetLED)
                 logger?("SMC: setMagSafeLED(\(targetLED)) => \(success ? "ok" : "failed")")
                 if success {
                     lastAppliedMagSafeLED = targetLED
+                    failedMagSafeLED = nil
+                } else {
+                    // Die LED ist rein kosmetisch: kein Schreibversuch in jedem Regeltakt.
+                    failedMagSafeLED = targetLED
                 }
             }
         } else if dryRun {
@@ -696,6 +702,7 @@ public final class BatteryController: @unchecked Sendable {
         lastAppliedCharging = nil
         lastAppliedAdapter = nil
         lastAppliedMagSafeLED = nil
+        failedMagSafeLED = nil
         lastHardwareCheckUptime = nil
     }
 
