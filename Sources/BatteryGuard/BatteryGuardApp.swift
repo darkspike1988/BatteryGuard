@@ -118,7 +118,10 @@ struct BatteryGuardApp: App {
     
     init() {
         let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates") || ProcessInfo.processInfo.arguments.contains("--read-power-flow") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-status") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-power")
-        if !preview { BGuardShortcutsProvider.updateAppShortcutParameters() }
+        if !preview {
+            BGuardShortcutsProvider.updateAppShortcutParameters()
+            SleepReportStore.shared.start()
+        }
         let config = preview ? ConfigStore.preview : ConfigStore()
         let status = preview ? StatusStore.preview : StatusStore()
         let history = HistoryStore(preview: preview)

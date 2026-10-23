@@ -26,6 +26,7 @@ struct PreferencesView: View {
     @AppStorage("bg.notifyCalibration") private var notifyCalibration = true
     @AppStorage("bg.notifyWeekly") private var notifyWeekly = false
     @AppStorage("bg.notifyHealth") private var notifyHealth = true
+    @AppStorage(SleepReportStore.notifyKey) private var notifySleepDrain = true
     @AppStorage("bg.healthThreshold") private var healthThreshold = 80
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
@@ -180,6 +181,8 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Sechs Wochen ohne Vollladung", isOn: $notifyCalibration)
                     .help("Erinnert höchstens alle zwei Wochen. Eine gelegentliche Vollladung kann die Ladestandsschätzung unterstützen; sie ist kein Gesundheitstest und wird nicht automatisch gestartet.")
+                Toggle("Ungewöhnlicher Verbrauch im Schlaf", isOn: $notifySleepDrain)
+                    .help("Vergleicht nach dem Aufwachen den Verbrauch der letzten Schlafphase mit den vorherigen. Grundlage ist das Energieprotokoll von macOS.")
                 Toggle("Wochenbericht", isOn: $notifyWeekly)
                     .help("Ein lokaler Hinweis pro Woche mit aufgezeichneter Zeit, Ladung über 90 % und Temperatur über 40 °C. Es werden keine Daten gesendet.")
                 LabeledContent("macOS-Freigabe", value: notificationPermissionDescription)
