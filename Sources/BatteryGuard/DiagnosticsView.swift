@@ -12,7 +12,7 @@ private enum DiagnosticQuestion: String, CaseIterable, Identifiable {
         case .battery: "Vergleiche die gemeldeten Kapazitäten und Zyklen mit macOS. Für Laufzeitvergleiche Arbeit, Helligkeit und Anschluss gleich halten. Die Kapazitätsquote ist keine Lebensdauerprognose."
         case .charging: "Prüfe Netzteil, Kabel/Dock, Ladeprofil und Apples natives Limit. Ein gespeicherter Auftrag bestätigt noch keine Hardwarewirkung. Netzteil-Nennleistung und aktueller Energiefluss sind verschiedene Werte."
         case .heat: "Beobachte Systemthermik zusammen mit Last und Akkutemperatur. Hohe Arbeitslast kann normal sein. Systemthermik ist keine CPU-Temperaturmessung und nennt keine genaue Drosselungsquote."
-        case .sleep: "Notiere Ladestand und Versorgung vor Schlaf und nach Wake. Die App zeichnet im Schlaf nicht auf. Eine Differenz allein trennt Schlaf, Aufwachphasen und zwischenzeitliches Laden nicht."
+        case .sleep: "Der Schlafbericht unten liest das Energieprotokoll von macOS: Ladestand vor und nach dem Schlaf, dunkles Aufwachen und seine Gründe. Darunter steht, was den Mac gerade wach hält."
         case .performance: "Prüfe CPU-Last, RAM-Kategorien, Swap und verfügbaren Speicher. Ein einzelner Lastwert oder wenig freier RAM beweist keinen Defekt. Für weitere Details Aktivitätsanzeige verwenden."
         }
     }
@@ -44,6 +44,7 @@ struct DiagnosticsView: View {
                         if let exportMessage { Text(exportMessage).font(.caption) }
                     }
                 }
+                SleepReportView()
                 BGPanel {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Akku und Quellen").font(.headline)

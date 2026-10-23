@@ -170,6 +170,17 @@ final class NotificationManager: Sendable {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
+    func notifySleepDrain(_ report: BGSleepReport) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        let session = report.session
+        var body = L("Im Schlaf %lld Prozentpunkte in %@ verloren (%.1f %%/h).", session.drainPoints,
+                     SleepReportView.durationText(session.duration), session.drainPerHour)
+        if let top = session.darkWakeReasons.first {
+            body += " " + L("Häufigster Aufweckgrund: %@.", SleepReportView.reasonText(top.reason))
+        }
+        send(title: L("Ungewöhnlicher Verbrauch im Schlaf"), body: body)
+    }
+
     private func send(title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title
