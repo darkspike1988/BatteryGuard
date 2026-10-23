@@ -19,6 +19,21 @@ public enum BGControlPath: String, Codable, Sendable {
             self = .none
         }
     }
+
+    /// Bevorzugt das Ergebnis des Fähigkeitstests; ältere Dienste melden nur vorhandene Schlüssel.
+    public init(status: BGStatus, mode: BGMode) {
+        guard mode != .native, let capability = status.chargeCapability else {
+            self.init(smcKeys: status.smcKeysDetected, mode: mode)
+            return
+        }
+        if capability.chargeInhibitAvailable {
+            self = .chargeLock
+        } else if capability.keys.values.contains(where: { $0 != .absent }) {
+            self = .macOS
+        } else {
+            self = .none
+        }
+    }
 }
 
 /// Empfehlung für das macOS-eigene Ladelimit (macOS Tahoe 26.4+, Apple silicon:
@@ -96,7 +111,7 @@ public struct BGEffectiveness: Equatable, Sendable {
         } else {
             target = effective.upperLimit
         }
-        let path = BGControlPath(smcKeys: status.smcKeysDetected, mode: config.mode)
+        let path = BGControlPath(status: status, mode: config.mode)
         let applied = daemonCurrent ? (status.effectiveUpperLimit ?? target) : nil
 
         func result(_ state: BGEffectivenessState) -> BGEffectiveness {

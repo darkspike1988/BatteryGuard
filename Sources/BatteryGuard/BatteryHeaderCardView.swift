@@ -64,10 +64,9 @@ struct BatteryHeaderCardView: View {
     private var mechanismText: String? {
         guard isDaemonActive else { return nil }
         
-        let keys = status.smcKeysDetected
-        if keys.contains("CHTE") || keys.contains("CH0B") {
+        if status.hasChargeInhibit {
             return L("Native SMC-Sperre")
-        } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
+        } else if status.hasAdapterSwitch || status.chargeCapability?.chargeInhibitBlockedByFirmware == true {
             return L("macOS-Ladelimit")
         }
 
@@ -80,9 +79,9 @@ struct BatteryHeaderCardView: View {
     private var mechanismTooltip: String {
         guard isDaemonActive else { return "" }
         let keys = status.smcKeysDetected
-        if keys.contains("CHTE") || keys.contains("CH0B") {
+        if status.hasChargeInhibit {
             return L("Hardware-Ladesperre aktiv (%@). Die Batterie wird präzise auf dem Zielwert gehalten.", keys.joined(separator: ", "))
-        } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
+        } else if status.hasAdapterSwitch || status.chargeCapability?.chargeInhibitBlockedByFirmware == true {
             return L("Keine separate Ladesperre erkannt (%@). macOS hält das Ladelimit; B-Guard beobachtet und warnt.", keys.joined(separator: ", "))
         }
         return L("Steuert die Ladeelektronik.")

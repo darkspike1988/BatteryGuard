@@ -109,6 +109,7 @@ struct OverviewView: View {
                         .font(.callout).foregroundStyle(.orange)
                 }
                 EffectivenessView(statusStore: statusStore, config: configStore.config)
+                WhyChargingView(statusStore: statusStore, config: configStore.config)
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
                     metric("Kapazitätsquote", value: statusStore.status.capacityRatioText(), symbol: "battery.100")
@@ -157,7 +158,7 @@ struct OverviewView: View {
         if let t = statusStore.status.temperatureCelsius, t >= 40 {
             return L("Der Akku ist warm. Prüfe Hitzeschutz und Belüftung, bevor du länger lädst.")
         }
-        if !statusStore.status.smcKeysDetected.contains("CHTE") && !statusStore.status.smcKeysDetected.contains("CH0B") && configStore.config.mode == .auto {
+        if !statusStore.status.hasChargeInhibit && configStore.config.mode == .auto {
             return L("Dieser Mac hat keine separate Ladesperre. macOS hält das Ladelimit – stelle es in den Batterieeinstellungen passend zu deinem Profil ein.")
         }
         return L("Dein Verlauf bleibt auf diesem Mac. B-Guard zeichnet nur auf, während die App läuft und aktuelle Messwerte verfügbar sind.")
