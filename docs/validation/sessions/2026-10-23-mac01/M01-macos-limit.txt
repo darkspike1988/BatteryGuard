@@ -1,0 +1,23 @@
+M01 macOS-Limit-Modus — 23. Oktober 2026, MacBookPro18,3, macOS 27.0
+App und Dienst 0.6.0 aus scripts/build-app.sh installiert (install-app.sh, install-daemon.sh).
+Ausgangslage: Modus auto, Profil 75–80 %, Ladestand 80 %, am Netzteil.
+
+== Status vor dem Umschalten (Dienst 0.6.0, Modus auto) ==
+state=disabled, systemChargeLimits=[80, 85, 90, 95, 100], systemChargeLimit=80
+message: Monitor-/Deckelschutz … Ohne separate Ladesperre übernimmt macOS das Ladelimit.
+
+== Modus systemLimit gesetzt (nur Feld mode geändert, unter flock) ==
+state=holding, message "macOS-Limit von 80 % gehalten", systemChargeLimit=80, effectiveUpperLimit=80
+socPower: cpu 0.82 W, gpu 0.03 W, ane 0 W (powermetrics, Dienst)
+
+== Schreibweg ==
+upperLimit 85 → Log "macOS-Limit: setMCLLimit(85) => ok", PowerUI getMCLLimit = 85
+upperLimit 80 → Log "macOS-Limit: setMCLLimit(80) => ok", PowerUI getMCLLimit = 80
+Profil danach wieder 75–80 %.
+
+== Nebenbefund ==
+Beim Dienststart: "SMC: setMagSafeLED(auto) => failed" (Readback weicht ab); kurz danach "setMagSafeLED(green) => ok".
+Besteht unabhängig vom neuen Modus; Ursache offen.
+
+== Nicht geprüft ==
+Laden über mehrere Zyklen, Schlaf/Wake, ausgeschalteter Mac, Top Up, Hitzeschutz, LED aus, Laden im Schlaf.
