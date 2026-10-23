@@ -68,6 +68,9 @@ struct NativeLimitControlTests {
         #expect(ceiling(full, battery(70)) == 100)
     }
 
+    // Diese Tests brauchen eine SMC-Attrappe mit frei wählbaren Schlüsseln. Auf macOS spricht
+    // SMCClient mit echter Hardware; dort decken die Logiktests oben und unten den Ablauf ab.
+    #if os(Linux)
     @Test func controllerAppliesOnlyChangesAndReleasesWhenTurnedOff() {
         let smc = SMCClient()
         smc.keys = ["CHIE"]
@@ -118,6 +121,8 @@ struct NativeLimitControlTests {
         _ = controller.step(config: config(), battery: battery(70), dryRun: false)
         #expect(fake.applied.isEmpty)
     }
+
+    #endif
 
     @Test func explanationAndEffectivenessShowNativeControl() {
         var status = BGStatus()
