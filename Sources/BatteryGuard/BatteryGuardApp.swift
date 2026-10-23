@@ -190,8 +190,14 @@ struct BatteryGuardApp: App {
     @AppStorage("bg.showMenuBarIcon") private var showMenuBarIcon = true
     @AppStorage(AccentPreference.appStorageKey) private var accent: AccentPreference = .system
 
+    /// MenuBarExtra schreibt `isInserted` bei jeder Aktualisierung zurück. Direkt an @AppStorage gebunden,
+    /// löst jeder Schreibvorgang eine neue Aktualisierung aus (Endlosschleife, 100 % CPU). Daher nur echte Änderungen speichern.
+    private var menuBarIconInserted: Binding<Bool> {
+        Binding(get: { showMenuBarIcon }, set: { if $0 != showMenuBarIcon { showMenuBarIcon = $0 } })
+    }
+
     var body: some Scene {
-        MenuBarExtra(isInserted: $showMenuBarIcon) {
+        MenuBarExtra(isInserted: menuBarIconInserted) {
             PopoverContentView(
                 statusStore: statusStore,
                 configStore: configStore,
