@@ -25,6 +25,22 @@ public enum BGMode: String, Codable, CaseIterable, Sendable {
     case direct
 }
 
+/// Für welche Stromquelle ein macOS-Energiemodus gelten soll. `.off` lässt die Systemeinstellung unberührt.
+public enum BGPowerModeRule: String, Codable, CaseIterable, Sendable, Identifiable {
+    case off, always, onBattery, onAdapter
+    public var id: String { rawValue }
+    public var appliesOnBattery: Bool { self == .always || self == .onBattery }
+    public var appliesOnAdapter: Bool { self == .always || self == .onAdapter }
+    public var localizedTitle: String {
+        switch self {
+        case .off: BGLocalized("Nicht steuern")
+        case .always: BGLocalized("Immer")
+        case .onBattery: BGLocalized("Nur auf Akku")
+        case .onAdapter: BGLocalized("Nur am Netzteil")
+        }
+    }
+}
+
 public struct BGConfig: Codable, Equatable, Sendable {
     /// Schutz aktiv? false => Laden immer erlaubt, Adapter an.
     public var enabled: Bool = true
@@ -65,8 +81,12 @@ public struct BGConfig: Codable, Equatable, Sendable {
     /// Es ändert weder das gespeicherte Profil noch Pause, Reise- oder Sonderpläne.
     public var desktopProfileEnabled: Bool = false
     public var desktopProfile: BGProfile? = nil
-    /// Low Power Mode folgt dem Netzteilzustand (nur wenn ausdrücklich aktiviert).
+    /// Altes Feld für Dienste vor 0.6.0; spiegelt `lowPowerModeRule == .onBattery`.
     public var lowPowerModeOnBattery: Bool = false
+    /// Low Power Mode je Stromquelle über `pmset` (nur wenn ausdrücklich aktiviert).
+    public var lowPowerModeRule: BGPowerModeRule = .off
+    /// High Power Mode je Stromquelle; nur auf Macs mit `pmset powermode`. Low Power Mode hat Vorrang.
+    public var highPowerModeRule: BGPowerModeRule = .off
     /// Systemschlaf während aktivem Entladen kurzzeitig verhindern (opt-in, zeitlich begrenzt).
     public var preventSleepWhileDischarging: Bool = false
 
@@ -103,6 +123,14 @@ public struct BGConfig: Codable, Equatable, Sendable {
             desktopProfile = BGProfile(rawValue: rawProfile)
         } else { desktopProfile = nil }
         lowPowerModeOnBattery = try c.decodeIfPresent(Bool.self, forKey: .lowPowerModeOnBattery) ?? d.lowPowerModeOnBattery
+        // Unbekannte Regeln schalten nie einen Modus ein; fehlende übernehmen das alte Feld.
+        if let rawRule = try c.decodeIfPresent(String.self, forKey: .lowPowerModeRule) {
+            lowPowerModeRule = BGPowerModeRule(rawValue: rawRule) ?? .off
+        } else { lowPowerModeRule = lowPowerModeOnBattery ? .onBattery : .off }
+        if let rawRule = try c.decodeIfPresent(String.self, forKey: .highPowerModeRule) {
+            highPowerModeRule = BGPowerModeRule(rawValue: rawRule) ?? .off
+        } else { highPowerModeRule = d.highPowerModeRule }
+        lowPowerModeOnBattery = lowPowerModeRule == .onBattery
         preventSleepWhileDischarging = try c.decodeIfPresent(Bool.self, forKey: .preventSleepWhileDischarging) ?? d.preventSleepWhileDischarging
         do {
             if let decoded = try c.decodeIfPresent(BGSpecialChargePlan.self, forKey: .specialChargePlan) {
@@ -122,6 +150,7 @@ public struct BGConfig: Codable, Equatable, Sendable {
         c.upperLimit = min(max(c.upperLimit, 20), 100)
         if c.upperLimit <= c.lowerLimit { c.lowerLimit = max(5, c.upperLimit - 5) }
         c.heatProtectionCelsius = (c.heatProtectionCelsius == 0) ? 0 : min(max(c.heatProtectionCelsius, 30), 50)
+        c.lowPowerModeOnBattery = c.lowPowerModeRule == .onBattery
         if !c.chargeToFullOnce { c.fullChargeRequestID = nil }
         if c.travelReadyAt == nil { c.travelRequestID = nil }
         if let plan = c.specialChargePlan {
@@ -162,6 +191,8 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var percentAvailable: Bool? = nil
     public var externalPowerAvailable: Bool? = nil
     public var awakeUntilLimitActive: Bool? = nil
+    /// Ob dieser Mac `pmset powermode` (und damit High Power Mode) anbietet.
+    public var highPowerModeSupported: Bool? = nil
     public var hasBatteryPercent: Bool { percentAvailable != false }
     public var hasExternalPower: Bool { externalPowerAvailable != false }
     public var pluggedIn: Bool = false

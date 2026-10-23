@@ -88,7 +88,14 @@ public extension BGConfig {
         if magsafeLed != baseline.magsafeLed { result.magsafeLed = magsafeLed }
         if desktopProfileEnabled != baseline.desktopProfileEnabled { result.desktopProfileEnabled = desktopProfileEnabled }
         if desktopProfile != baseline.desktopProfile { result.desktopProfile = desktopProfile }
-        if lowPowerModeOnBattery != baseline.lowPowerModeOnBattery { result.lowPowerModeOnBattery = lowPowerModeOnBattery }
+        if lowPowerModeRule != baseline.lowPowerModeRule {
+            result.lowPowerModeRule = lowPowerModeRule
+        } else if lowPowerModeOnBattery != baseline.lowPowerModeOnBattery {
+            // Edits through the legacy field keep their former meaning.
+            result.lowPowerModeRule = lowPowerModeOnBattery ? .onBattery : .off
+        }
+        result.lowPowerModeOnBattery = result.lowPowerModeRule == .onBattery
+        if highPowerModeRule != baseline.highPowerModeRule { result.highPowerModeRule = highPowerModeRule }
         if preventSleepWhileDischarging != baseline.preventSleepWhileDischarging { result.preventSleepWhileDischarging = preventSleepWhileDischarging }
         if mode != baseline.mode { result.mode = mode }
         if pauseUntil != baseline.pauseUntil { result.pauseUntil = pauseUntil }

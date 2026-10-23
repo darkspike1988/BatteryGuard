@@ -7,6 +7,12 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.6.0", title: "Energie im Blick", changes: [
+            "Low Power Mode und High Power Mode getrennt für Akku und Netzteil: nicht steuern, immer, nur auf Akku oder nur am Netzteil.",
+            "High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang.",
+            "Diagnose zeigt Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend und ohne Export von Seriennummer oder Prozessnamen.",
+            "Hintergrunddienst 0.6.0 erforderlich. Eine bisherige Low-Power-Automatik wird übernommen."
+        ]),
         .init(version: "0.5.0", title: "Was wirklich gilt", changes: [
             "Neues Panel zeigt Ziel, tatsächlich angewendeten Wert, macOS-Limit und erkannten Steuerungsweg.",
             "Akkugesundheit bis zwölf Monate mit Kapazitätsquote, Zyklen und Temperatur; Lücken bleiben sichtbar.",

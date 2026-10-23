@@ -15,7 +15,7 @@ final class DaemonRunner: @unchecked Sendable {
     private var powerNotifier: io_object_t = 0
     private let configServer = ConfigServer()
     private let wakeUntilLimit = WakeUntilLimitGuard()
-    private let lowPowerMode = LowPowerModeController()
+    private let powerMode = PowerModeController()
     private let dischargeSleep = DischargeSleepGuard()
     private var configurationNotice: String?
 
@@ -156,8 +156,8 @@ final class DaemonRunner: @unchecked Sendable {
         }
         dischargeSleep.reconcile(config: config, state: decision.state, now: now, dryRun: dryRun)
         if !isOnce {
-            lowPowerMode.reconcile(config: config, pluggedIn: battery.pluggedIn,
-                                   dryRun: dryRun, logger: { [weak self] msg in self?.log(msg) })
+            powerMode.reconcile(config: config, dryRun: dryRun,
+                                logger: { [weak self] msg in self?.log(msg) })
         }
 
         if !dryRun, let snapshot = storedConfig.calibrationPlan,
@@ -196,6 +196,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.percentAvailable = battery.percentAvailable
         status.externalPowerAvailable = battery.externalPowerAvailable
         status.awakeUntilLimitActive = wakeUntilLimit.isActive
+        status.highPowerModeSupported = powerMode.highPowerModeSupported
         status.pluggedIn = battery.pluggedIn
         status.isChargingHardware = battery.isCharging
         status.state = decision.state
@@ -209,7 +210,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.5.0"
+        status.daemonVersion = "0.6.0"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported

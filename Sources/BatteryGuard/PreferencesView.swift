@@ -56,6 +56,10 @@ struct PreferencesView: View {
     }
 
     private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct }
+    private var powerModeRulesOverlap: Bool {
+        let low = configStore.config.lowPowerModeRule, high = configStore.config.highPowerModeRule
+        return (low.appliesOnBattery && high.appliesOnBattery) || (low.appliesOnAdapter && high.appliesOnAdapter)
+    }
 
     var body: some View {
         Form {
@@ -114,8 +118,19 @@ struct PreferencesView: View {
                     Text("Ändert nur die Ladegrenzen, solange ein externer Monitor verbunden ist. Pause, Reise- und Sonderpläne bleiben vorrangig; dein gespeichertes Profil wird nicht überschrieben.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Toggle("Low Power Mode auf Akkubetrieb automatisch aktivieren", isOn: $configStore.config.lowPowerModeOnBattery)
-                Text("Nutzt die öffentliche macOS-Einstellung über pmset: an bei Akkubetrieb, aus am Netzteil. B-Guard schreibt dafür keine privaten SMC-Schlüssel.")
+                Picker("Low Power Mode", selection: $configStore.config.lowPowerModeRule) {
+                    ForEach(BGPowerModeRule.allCases) { Text($0.localizedTitle).tag($0) }
+                }
+                if statusStore.status.highPowerModeSupported == true {
+                    Picker("High Power Mode", selection: $configStore.config.highPowerModeRule) {
+                        ForEach(BGPowerModeRule.allCases) { Text($0.localizedTitle).tag($0) }
+                    }
+                    if powerModeRulesOverlap {
+                        Text("Gelten beide Modi für dieselbe Stromquelle, hat Low Power Mode Vorrang.")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
+                Text("Nutzt die öffentliche macOS-Einstellung über pmset getrennt für Akku und Netzteil; macOS wechselt dann selbst. Die jeweils andere Stromquelle steht auf Automatisch. B-Guard schreibt dafür keine privaten SMC-Schlüssel.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Systemschlaf beim aktiven Entladen bis zu 30 Minuten verhindern", isOn: $configStore.config.preventSleepWhileDischarging)
                 Text("Gilt nur, solange B-Guard den Adapter selbst getrennt hat. Bewusster Schlaf und Deckelschließen bleiben möglich; die Sperre endet spätestens nach 30 Minuten.")

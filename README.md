@@ -14,6 +14,10 @@ Die [Abnahmematrix und das lokale Testjournal](docs/validation/README.md) halten
 
 Version 0.5.0 beantwortet in der Übersicht, was gerade wirklich gilt: gespeichertes Ziel, vom Dienst angewendetes Ziel, macOS-Limit, Steuerungsweg sowie Monitor- und Deckelzustand. Die Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, lesende Mac-Ressourcen und bei aktivierter Aufzeichnung eine Akkugesundheit über bis zu zwölf Monate. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). App und Dienst stehen in Version 0.5.0; der Download oben verweist auf diese Version.
 
+## Arbeitsstand 0.6.0 (unveröffentlicht)
+
+Low Power Mode und High Power Mode lassen sich getrennt für Akku und Netzteil steuern; High Power Mode nur auf Macs, die ihn anbieten. Die Diagnose zeigt zusätzlich Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md). Der Download oben bleibt bis zur Veröffentlichung bei 0.5.0.
+
 ## Was B-Guard ergänzt
 
 macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Alltag:
@@ -35,7 +39,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
 - **Mitteilungen:** Niedriger Akkustand mit eigener Warnschwelle (5–50 %, Standard 20 %), erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Freigabe über den Button in den Einstellungen.
 - **Drei Sprachen:** Oberfläche auf Deutsch, Englisch oder Russisch. Die App folgt automatisch der macOS-Systemsprache.
-- **Automatik (ab 0.5.0, optional):** Monitorprofil bei externem Bildschirm, Low Power Mode auf Akkubetrieb über die öffentliche macOS-Einstellung und ein Schlafassistent, der nur während einer vom Dienst ausgelösten Entladung höchstens 30 Minuten wachhält.
+- **Automatik (ab 0.5.0, optional):** Monitorprofil bei externem Bildschirm, Low Power Mode (ab 0.6.0 auch High Power Mode) je Stromquelle über die öffentliche macOS-Einstellung und ein Schlafassistent, der nur während einer vom Dienst ausgelösten Entladung höchstens 30 Minuten wachhält.
 
 Eigene benannte Profile mit Import/Export und wiederkehrende Zeitpläne sind ab 0.3.7 umgesetzt. Die Regeln laufen im Hintergrunddienst; manuelle Ladeaktionen haben Vorrang. Top Up benötigt separate Ladesteuerung. Einmalentladung, Halten und Kalibrierung bleiben bis zur physischen Hardware-Abnahme gesperrt.
 

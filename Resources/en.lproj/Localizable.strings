@@ -525,7 +525,6 @@
 "Lokale REST API aktivieren" = "Enable local REST API";
 "Lokale Tageswerte bis zu zwölf Monate aufzeichnen" = "Record local daily values for up to twelve months";
 "Lokaler Bearer-Token mit Erneuerung, begrenzte Anfragen und Schutz vor widersprüchlichen offenen Änderungen." = "Local bearer token with renewal, rate-limited requests and protection against conflicting pending changes.";
-"Low Power Mode auf Akkubetrieb automatisch aktivieren" = "Turn on Low Power Mode automatically on battery";
 "Lädt" = "Charging";
 "Lädt (%.1f W)" = "Charging (%.1f W)";
 "Lädt bis 100 % und hält den Ladestand bis zum Abstecken oder Ablauf. Danach gilt wieder dein Basisprofil. Hitzeschutz bleibt aktiv." = "Charges to 100 % and holds the level until unplugged or expiry. Your base profile then applies again. Heat protection stays active.";
@@ -625,7 +624,6 @@
 "Nur auf diesem Mac, mit API-Token und bei laufender App. Status, Einstellungen und Verlauf sind lesbar. Steuerbefehle benötigen eine zusätzliche Freigabe; der Hintergrunddienst prüft weiterhin deine Benutzerrechte." = "Only on this Mac, with an API token and while the app is running. Status, settings and history can be read. Control commands require additional approval; the background service continues to verify your user permissions.";
 "Nur beobachten" = "Observe only";
 "Nur in der installierten App verfügbar" = "Available only in the installed app";
-"Nutzt die öffentliche macOS-Einstellung über pmset: an bei Akkubetrieb, aus am Netzteil. B-Guard schreibt dafür keine privaten SMC-Schlüssel." = "Uses the public macOS setting via pmset: on when on battery, off when connected to power. B-Guard does not write private SMC keys for this.";
 "Nächste Aufgabe" = "Next task";
 "Nächste Aufgabe im Menüfenster" = "Next task in menu window";
 "Nächster Messpunkt" = "Next measurement";
@@ -913,3 +911,34 @@
 "Die geschätzte Akkukapazität liegt bei %lld %% (Grenze %lld %%). Ein Akkutausch oder eine Wartung kann sinnvoll sein. Das ist keine Hardwarediagnose." = "Estimated battery capacity is %lld %% (threshold %lld %%). A battery replacement or service may be advisable. This is not a hardware diagnosis.";
 "Die geschätzte Kapazität stammt aus Design- und Maximalkapazität. Ein Wert unter der Grenze kann auf einen notwendigen Akkutausch oder eine Wartung hindeuten, ist aber keine Diagnose. Unternehmen können den Wert zusätzlich über die lokale API auslesen." = "The estimated capacity comes from design and maximum capacity. A value below the threshold may indicate that a battery replacement or service is needed, but it is not a diagnosis. Organizations can also read the value through the local API.";
 "Wartungshinweis bei niedriger Akkukapazität" = "Service notice for low battery capacity";
+
+/* 0.6.0 Energiemodus, Netzteil und Energiewirkung */
+"Nicht steuern" = "Don't control";
+"Immer" = "Always";
+"Nur auf Akku" = "On battery only";
+"Nur am Netzteil" = "On power adapter only";
+"Low Power Mode" = "Low Power Mode";
+"High Power Mode" = "High Power Mode";
+"Gelten beide Modi für dieselbe Stromquelle, hat Low Power Mode Vorrang." = "If both modes apply to the same power source, Low Power Mode takes precedence.";
+"Nutzt die öffentliche macOS-Einstellung über pmset getrennt für Akku und Netzteil; macOS wechselt dann selbst. Die jeweils andere Stromquelle steht auf Automatisch. B-Guard schreibt dafür keine privaten SMC-Schlüssel." = "Uses the public macOS setting via pmset separately for battery and power adapter; macOS then switches on its own. The other power source is set to Automatic. B-Guard writes no private SMC keys for this.";
+"Netzteil · rein lesend" = "Power adapter · read-only";
+"Hersteller" = "Manufacturer";
+"Nennleistung" = "Rated power";
+"%lld W" = "%lld W";
+"Ausgehandeltes Profil" = "Negotiated profile";
+"%@ V · %@ A" = "%@ V · %@ A";
+"Firmware" = "Firmware";
+"Seriennummer" = "Serial number";
+"Anzeigen" = "Show";
+"Nennwerte beschreiben das ausgehandelte Ladeprofil, nicht den aktuellen Verbrauch. Die Seriennummer bleibt lokal und erscheint in keinem Export." = "Rated values describe the negotiated charging profile, not current consumption. The serial number stays local and appears in no export.";
+"Kein Netzteil gemeldet." = "No power adapter reported.";
+"Hohe Energiewirkung" = "High energy impact";
+"Messung läuft …" = "Measuring …";
+"Keine Prozesse mit nennenswerter Energiewirkung." = "No processes with notable energy impact.";
+"Gemessen um %@" = "Measured at %@";
+"Werte aus der Energiespalte von top über eine Sekunde: Apples relative Energiewirkung, keine Watt. Enthält auch Hintergrunddienste. Prozessnamen erscheinen in keinem Export." = "Values from top's power column over one second: Apple's relative energy impact, not watts. Includes background services. Process names appear in no export.";
+"Energie im Blick" = "Energy at a glance";
+"Low Power Mode und High Power Mode getrennt für Akku und Netzteil: nicht steuern, immer, nur auf Akku oder nur am Netzteil." = "Low Power Mode and High Power Mode separately for battery and power adapter: don't control, always, battery only or power adapter only.";
+"High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang." = "High Power Mode only appears on Macs that offer it; when both overlap, Low Power Mode takes precedence.";
+"Diagnose zeigt Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend und ohne Export von Seriennummer oder Prozessnamen." = "Diagnostics show power adapter details and processes with high energy impact, read-only and without exporting serial number or process names.";
+"Hintergrunddienst 0.6.0 erforderlich. Eine bisherige Low-Power-Automatik wird übernommen." = "Background service 0.6.0 required. An existing Low Power automation is carried over.";

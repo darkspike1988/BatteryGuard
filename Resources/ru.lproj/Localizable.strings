@@ -525,7 +525,6 @@
 "Lokale REST API aktivieren" = "Включить локальный REST API";
 "Lokale Tageswerte bis zu zwölf Monate aufzeichnen" = "Записывать локальные дневные значения до двенадцати месяцев";
 "Lokaler Bearer-Token mit Erneuerung, begrenzte Anfragen und Schutz vor widersprüchlichen offenen Änderungen." = "Локальный bearer-токен с обновлением, ограничение запросов и защита от конфликтующих открытых изменений.";
-"Low Power Mode auf Akkubetrieb automatisch aktivieren" = "Автоматически включать режим энергосбережения при работе от аккумулятора";
 "Lädt" = "Заряжается";
 "Lädt (%.1f W)" = "Заряжается (%.1f Вт)";
 "Lädt bis 100 % und hält den Ladestand bis zum Abstecken oder Ablauf. Danach gilt wieder dein Basisprofil. Hitzeschutz bleibt aktiv." = "Заряжает до 100 % и удерживает уровень до отключения или истечения срока. Затем снова действует твой базовый профиль. Защита от нагрева остаётся активной.";
@@ -625,7 +624,6 @@
 "Nur auf diesem Mac, mit API-Token und bei laufender App. Status, Einstellungen und Verlauf sind lesbar. Steuerbefehle benötigen eine zusätzliche Freigabe; der Hintergrunddienst prüft weiterhin deine Benutzerrechte." = "Только на этом Mac, с API-токеном и при запущенном приложении. Статус, настройки и история доступны для чтения. Команды управления требуют отдельного разрешения; фоновая служба по-прежнему проверяет твои права пользователя.";
 "Nur beobachten" = "Только наблюдение";
 "Nur in der installierten App verfügbar" = "Доступно только в установленном приложении";
-"Nutzt die öffentliche macOS-Einstellung über pmset: an bei Akkubetrieb, aus am Netzteil. B-Guard schreibt dafür keine privaten SMC-Schlüssel." = "Использует общедоступную настройку macOS через pmset: включено от аккумулятора, выключено от сети. B-Guard не записывает для этого закрытые ключи SMC.";
 "Nächste Aufgabe" = "Следующая задача";
 "Nächste Aufgabe im Menüfenster" = "Следующая задача в меню";
 "Nächster Messpunkt" = "Следующее измерение";
@@ -913,3 +911,34 @@
 "Die geschätzte Akkukapazität liegt bei %lld %% (Grenze %lld %%). Ein Akkutausch oder eine Wartung kann sinnvoll sein. Das ist keine Hardwarediagnose." = "Расчётная ёмкость аккумулятора составляет %lld %% (порог %lld %%). Может потребоваться замена аккумулятора или обслуживание. Это не диагностика оборудования.";
 "Die geschätzte Kapazität stammt aus Design- und Maximalkapazität. Ein Wert unter der Grenze kann auf einen notwendigen Akkutausch oder eine Wartung hindeuten, ist aber keine Diagnose. Unternehmen können den Wert zusätzlich über die lokale API auslesen." = "Расчётная ёмкость основана на проектной и максимальной ёмкости. Значение ниже порога может указывать на необходимость замены аккумулятора или обслуживания, но не является диагнозом. Организации могут дополнительно считывать значение через локальный API.";
 "Wartungshinweis bei niedriger Akkukapazität" = "Уведомление об обслуживании при низкой ёмкости аккумулятора";
+
+/* 0.6.0 Energiemodus, Netzteil und Energiewirkung */
+"Nicht steuern" = "Не управлять";
+"Immer" = "Всегда";
+"Nur auf Akku" = "Только от аккумулятора";
+"Nur am Netzteil" = "Только от адаптера питания";
+"Low Power Mode" = "Режим энергосбережения";
+"High Power Mode" = "Режим высокой мощности";
+"Gelten beide Modi für dieselbe Stromquelle, hat Low Power Mode Vorrang." = "Если оба режима относятся к одному источнику питания, приоритет у режима энергосбережения.";
+"Nutzt die öffentliche macOS-Einstellung über pmset getrennt für Akku und Netzteil; macOS wechselt dann selbst. Die jeweils andere Stromquelle steht auf Automatisch. B-Guard schreibt dafür keine privaten SMC-Schlüssel." = "Использует общедоступную настройку macOS через pmset отдельно для аккумулятора и адаптера питания; дальше macOS переключает режим сама. Для другого источника питания задаётся «Автоматически». B-Guard не записывает для этого закрытые ключи SMC.";
+"Netzteil · rein lesend" = "Адаптер питания · только чтение";
+"Hersteller" = "Производитель";
+"Nennleistung" = "Номинальная мощность";
+"%lld W" = "%lld Вт";
+"Ausgehandeltes Profil" = "Согласованный профиль";
+"%@ V · %@ A" = "%@ В · %@ А";
+"Firmware" = "Прошивка";
+"Seriennummer" = "Серийный номер";
+"Anzeigen" = "Показать";
+"Nennwerte beschreiben das ausgehandelte Ladeprofil, nicht den aktuellen Verbrauch. Die Seriennummer bleibt lokal und erscheint in keinem Export." = "Номинальные значения описывают согласованный профиль зарядки, а не текущее потребление. Серийный номер остаётся на устройстве и не попадает ни в один экспорт.";
+"Kein Netzteil gemeldet." = "Адаптер питания не обнаружен.";
+"Hohe Energiewirkung" = "Высокое энергопотребление";
+"Messung läuft …" = "Идёт измерение …";
+"Keine Prozesse mit nennenswerter Energiewirkung." = "Нет процессов с заметным энергопотреблением.";
+"Gemessen um %@" = "Измерено в %@";
+"Werte aus der Energiespalte von top über eine Sekunde: Apples relative Energiewirkung, keine Watt. Enthält auch Hintergrunddienste. Prozessnamen erscheinen in keinem Export." = "Значения из столбца энергопотребления top за одну секунду: относительное энергопотребление по оценке Apple, а не ватты. Включает фоновые службы. Имена процессов не попадают ни в один экспорт.";
+"Energie im Blick" = "Энергия под контролем";
+"Low Power Mode und High Power Mode getrennt für Akku und Netzteil: nicht steuern, immer, nur auf Akku oder nur am Netzteil." = "Режимы энергосбережения и высокой мощности отдельно для аккумулятора и адаптера питания: не управлять, всегда, только от аккумулятора или только от адаптера.";
+"High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang." = "Режим высокой мощности показывается только на Mac, которые его поддерживают; при пересечении приоритет у режима энергосбережения.";
+"Diagnose zeigt Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend und ohne Export von Seriennummer oder Prozessnamen." = "Диагностика показывает данные адаптера питания и процессы с высоким энергопотреблением — только чтение, без экспорта серийного номера и имён процессов.";
+"Hintergrunddienst 0.6.0 erforderlich. Eine bisherige Low-Power-Automatik wird übernommen." = "Требуется фоновая служба 0.6.0. Прежняя автоматика энергосбережения сохраняется.";

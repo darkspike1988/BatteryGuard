@@ -1,8 +1,14 @@
 # B-Guard Roadmap
 
-Stand: 18. Oktober 2026 · Veröffentlicht: App und Dienst 0.5.0
+Stand: 23. Oktober 2026 · Veröffentlicht: App und Dienst 0.5.0 · Arbeitsstand 0.6.0
 
 Diese Roadmap führt die bisherige Umsetzungshistorie fort. Die zwei früher dokumentierten Fehler bei konkurrierenden Änderungen sind seit 0.3.2 korrigiert; der weitere Funktionsausbau bleibt geplant.
+
+## Arbeitsstand 0.6.0: Energiemodus und Energiewirkung
+
+- Low Power Mode und High Power Mode je Stromquelle über `pmset` (nicht steuern, immer, nur Akku, nur Netzteil); High Power Mode nur bei angebotenem `powermode`.
+- Diagnose mit Netzteil-Angaben und Prozessen hoher Energiewirkung, rein lesend.
+- **Offen:** physische Abnahme der Umschaltung mit installiertem Dienst 0.6.0, insbesondere auf einem Mac mit High Power Mode. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md).
 
 ## P0/P1-Ausbau im Arbeitsstand 0.5.0
 
