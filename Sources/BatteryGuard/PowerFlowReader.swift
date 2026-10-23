@@ -12,6 +12,16 @@ enum PowerFlowReader {
 
     /// Takes a single read-only snapshot of the AppleSmartBattery registry properties.
     static func read() -> BGPowerFlowSample? {
+        guard let properties = batteryProperties() else { return nil }
+        return parse(properties: properties, sampledAt: Date())
+    }
+
+    /// Ausgehandelte und angebotene Netzteilleistung für den Ladeketten-Check.
+    static func readAdapter() -> BGAdapterDetails? {
+        batteryProperties().flatMap(BGAdapterDetails.init(properties:))
+    }
+
+    private static func batteryProperties() -> [String: Any]? {
         let service = IOServiceGetMatchingService(mach_port_t(MACH_PORT_NULL), IOServiceMatching("AppleSmartBattery"))
         guard service != 0 else { return nil }
         defer { IOObjectRelease(service) }
@@ -19,10 +29,7 @@ enum PowerFlowReader {
         var unmanaged: Unmanaged<CFMutableDictionary>?
         let result = IORegistryEntryCreateCFProperties(service, &unmanaged, kCFAllocatorDefault, 0)
         guard result == KERN_SUCCESS, let unmanaged else { return nil }
-        let cfProperties = unmanaged.takeRetainedValue()
-        guard let properties = cfProperties as? [String: Any] else { return nil }
-
-        return parse(properties: properties, sampledAt: Date())
+        return unmanaged.takeRetainedValue() as? [String: Any]
     }
 
     static func parse(properties: [String: Any], sampledAt: Date = Date()) -> BGPowerFlowSample {

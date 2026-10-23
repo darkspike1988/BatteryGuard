@@ -973,3 +973,15 @@
 "Der Schlafbericht unten liest das Energieprotokoll von macOS: Ladestand vor und nach dem Schlaf, dunkles Aufwachen und seine Gründe. Darunter steht, was den Mac gerade wach hält." = "Отчёт о сне ниже читает журнал питания macOS: заряд до и после сна, тёмные пробуждения и их причины. Ниже показано, что сейчас не даёт Mac уснуть.";
 "Meldet höchstens alle 30 Tage, wenn die geschätzte Kapazität unter die Grenze fällt. Das ist kein Hardwaretest." = "Сообщает не чаще раза в 30 дней, если оценочная ёмкость падает ниже порога. Это не аппаратный тест.";
 "Seit %lld Wochen wurde keine Vollladung beobachtet. Eine gelegentliche Vollladung kann die Ladestandsschätzung unterstützen. B-Guard startet sie nicht automatisch." = "Полная зарядка не наблюдалась уже %lld недель. Периодическая полная зарядка помогает точности оценки заряда. B-Guard не запускает её автоматически.";
+"%lld W" = "%lld Вт";
+"Ausgehandelt" = "Согласовано";
+"Das Netzteil bietet bis zu %lld W, ausgehandelt sind nur %lld W. Meist begrenzt ein 3-A-Kabel oder ein Dock. Für mehr als 60 W braucht es ein USB-C-Kabel mit 5 A (100 W oder 240 W)." = "Адаптер предлагает до %lld Вт, но согласовано только %lld Вт. Обычно ограничивает кабель на 3 А или док-станция. Для более чем 60 Вт нужен кабель USB-C на 5 А (100 Вт или 240 Вт).";
+"Das Netzteil wurde in der letzten Stunde %lld-mal getrennt und verbunden. Prüfe Stecker, Kabel und Dock auf Wackelkontakt." = "За последний час адаптер отключался и подключался %lld раз. Проверьте разъём, кабель и док-станцию на плохой контакт.";
+"Der Akku entlädt sich trotz Netzteil (%.1f W). Netzteil oder Kabel reichen für die aktuelle Last nicht aus." = "Аккумулятор разряжается несмотря на адаптер (%.1f Вт). Адаптера или кабеля недостаточно для текущей нагрузки.";
+"Dieses Netzteil lieferte früher %lld W, jetzt %lld W. Wahrscheinlich hängt ein anderes Kabel oder Dock dazwischen." = "Этот адаптер раньше давал %lld Вт, сейчас %lld Вт. Вероятно, подключён другой кабель или док-станция.";
+"Kein Netzteil angeschlossen." = "Адаптер питания не подключён.";
+"Keine Auffälligkeiten erkannt." = "Проблем не обнаружено.";
+"Ladekette in Ordnung: %lld W ausgehandelt." = "Цепь зарядки в порядке: согласовано %lld Вт.";
+"Ladekette: Netzteil, Kabel, Dock" = "Цепь зарядки: адаптер, кабель, док";
+"Schwaches Netzteil (%lld W). Laden dauert lange, und unter Last kann der Akku trotz Netzteil sinken." = "Слабый адаптер (%lld Вт). Зарядка идёт долго, а под нагрузкой заряд может падать даже с адаптером.";
+"Vom Netzteil angeboten" = "Предлагает адаптер";
