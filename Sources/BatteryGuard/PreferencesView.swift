@@ -68,12 +68,20 @@ struct PreferencesView: View {
                     Text("Automatisch").tag(BGMode.auto)
                     Text("macOS · nur beobachten").tag(BGMode.native)
                     Text("Pendel · Netzteil umschalten").tag(BGMode.pendulum)
+                    if !(statusStore.status.systemChargeLimits ?? []).isEmpty || configStore.config.mode == .systemLimit {
+                        Text("macOS-Limit · natives Ladelimit setzen").tag(BGMode.systemLimit)
+                    }
                     if configStore.config.mode == .direct { Text("Direkt · nicht verfügbar").tag(BGMode.direct) }
                 }
                 if let limit = statusStore.status.nativeChargeLimit, statusStore.isDaemonActive {
                     LabeledContent("Erkanntes macOS-Limit", value: "\(limit) %")
                 }
                 Text(configStore.config.mode.localizedDescription).font(.caption).foregroundStyle(.secondary)
+                if configStore.config.mode == .auto, !(statusStore.status.systemChargeLimits ?? []).isEmpty,
+                   !statusStore.status.smcKeysDetected.contains(where: { ["CHTE", "CH0B", "CH0C"].contains($0) }) {
+                    Text("Dieser Mac hat keine separate SMC-Ladesperre. „macOS-Limit“ hält dein Profil auch bei externem Monitor und geschlossenem Deckel ein, allerdings nur in den Stufen 80–100 %.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
                 if configStore.config.mode == .native {
                     Button("macOS-Batterieeinstellungen öffnen") {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)

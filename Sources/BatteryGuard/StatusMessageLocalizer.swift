@@ -48,6 +48,22 @@ enum StatusMessageLocalizer {
            let limit = Int(values[0]) {
             return L("Ladelimit von %lld %% gehalten", limit)
         }
+        if let values = captures(message, #"^macOS-Limit von (\d+) % gehalten$"#),
+           let limit = Int(values[0]) {
+            return L("macOS-Limit von %lld %% gehalten", limit)
+        }
+        if let values = captures(message, #"^Laden aktiv bis (\d+) % \(macOS-Limit\)$"#),
+           let limit = Int(values[0]) {
+            return L("Laden aktiv bis %lld %% (macOS-Limit)", limit)
+        }
+        if let values = captures(message, #"^macOS-Limit vorübergehend (\d+) %$"#),
+           let limit = Int(values[0]) {
+            return L("macOS-Limit vorübergehend %lld %%", limit)
+        }
+        if let values = captures(message, #"^Ladestand nicht verfügbar – macOS-Limit bleibt bei (\d+) %$"#),
+           let limit = Int(values[0]) {
+            return L("Ladestand nicht verfügbar – macOS-Limit bleibt bei %lld %%", limit)
+        }
         if let values = captures(message, #"^Laden aktiv bis (\d+) %$"#),
            let limit = Int(values[0]) {
             return L("Laden aktiv bis %lld %%", limit)

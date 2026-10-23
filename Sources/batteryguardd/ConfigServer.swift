@@ -149,11 +149,13 @@ final class ConfigServer: @unchecked Sendable {
         return uid
     }
 
-    static func currentSpecialContext() -> BGSpecialPlanEvaluationContext {
+    /// Im macOS-Limit-Modus blockiert Apples natives Limit das Laden; Top Up setzt es auf 100 %.
+    static func currentSpecialContext(for config: BGConfig) -> BGSpecialPlanEvaluationContext {
         let battery = BatteryReader.read()
+        let systemLimit = config.mode == .systemLimit && SystemChargeLimitClient()?.availableLimits()?.contains(100) == true
         return BGSpecialPlanEvaluationContext(percent: battery.percentAvailable ? battery.percent : nil,
             externalPower: battery.externalPowerAvailable ? (battery.pluggedIn ? .connected : .disconnected) : .unknown,
-            canBlockCharging: SMCClient.shared.hasChargeControl,
+            canBlockCharging: SMCClient.shared.hasChargeControl || systemLimit,
             // Key discovery/readback is not physical certification. Keep P3 discharge gated.
             canDisconnectAdapter: false,
             allowsAdapterDisconnect: DesktopEnvironment.allowsAdapterDisconnect())
@@ -179,7 +181,7 @@ final class ConfigServer: @unchecked Sendable {
             if [.topUp, .holdCharge, .dischargeTo].contains(action.action) {
                 return try BGConfigFile.update(at: configURL) { latest in
                     // Evaluate inside the transaction: the caller cannot choose the "current" hold target.
-                    let context = specialContext?() ?? Self.currentSpecialContext()
+                    let context = specialContext?() ?? Self.currentSpecialContext(for: latest)
                     var validated = action
                     guard context.percent != nil else {
                         throw BGChargingActionError.invalidRequest("Aktueller Ladestand nicht verfügbar.")

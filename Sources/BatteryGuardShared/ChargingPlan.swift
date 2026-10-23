@@ -44,7 +44,7 @@ public enum BGDesktopProfileRule {
 
     public static func resolve(config: BGConfig, externalDisplay: Bool, now: Date = Date()) -> Resolution {
         guard config.desktopProfileEnabled, externalDisplay, config.enabled,
-              config.mode == .auto || config.mode == .pendulum,
+              config.mode == .auto || config.mode == .pendulum || config.mode == .systemLimit,
               !config.isPaused(at: now), !config.isTravelCharging(at: now),
               config.specialChargePlan == nil, !config.chargeToFullOnce,
               !(config.manualOverrideUntil.map { $0 > now } ?? false) else {

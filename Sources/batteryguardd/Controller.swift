@@ -13,6 +13,8 @@ public struct ControllerDecision: Sendable, Equatable {
     public var updatedSpecialPlan: BGSpecialChargePlan? = nil
     public var heatProtectionThresholdCelsius: Int?
     public var heatProtectionActive: Bool
+    /// Natives macOS-Ladelimit, das im macOS-Limit-Modus gesetzt werden soll (nil = nicht anfassen).
+    public var systemChargeLimit: Int? = nil
 
     public init(
         state: BGChargeState,
@@ -87,8 +89,13 @@ public enum ControllerLogic {
         hasDischargeControl: Bool,
         allowsAdapterDisconnect: Bool = true,
         specialHardwareVerified: Bool = false,
+        systemChargeLimits: [Int] = [],
         now: Date = Date()
     ) -> ControllerDecision {
+        if config.mode == .systemLimit {
+            return evaluateSystemLimit(config: config, battery: battery, previousDecision: previousDecision,
+                                       available: systemChargeLimits, now: now)
+        }
         if let plan = config.calibrationPlan {
             let adapterDisabled = previousDecision?.adapterConnected == false
             let power: BGExternalPowerState = !battery.externalPowerAvailable || adapterDisabled
@@ -353,6 +360,70 @@ public enum ControllerLogic {
         }
     }
 
+    /// macOS-Limit-Modus: Die SMC bleibt unberührt; B-Guard wählt nur Apples natives Ladelimit.
+    /// macOS bietet feste Stufen an, daher wird das Ziel auf die nächste Stufe aufgerundet.
+    static func evaluateSystemLimit(config: BGConfig, battery: BatteryInfo, previousDecision: ControllerDecision?,
+                                    available: [Int], now: Date) -> ControllerDecision {
+        guard let maximum = available.max(), let minimum = available.min() else {
+            return ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                message: "macOS-Limit auf diesem Mac nicht verfügbar – Normalbetrieb wiederhergestellt")
+        }
+        func decision(_ state: BGChargeState, limit: Int, message: String?, reset: Bool = false) -> ControllerDecision {
+            var result = ControllerDecision(state: state, chargingEnabled: true, adapterConnected: true,
+                                            resetChargeToFullOnce: reset, message: message)
+            result.systemChargeLimit = limit
+            return result
+        }
+        // Sonderpläne und Kalibrierung brauchen eine eigene Ladesperre; Top Up geht über 100 %.
+        if let plan = config.calibrationPlan {
+            var result = ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                message: "Kalibrierung im macOS-Limit-Modus nicht verfügbar")
+            result.completedCalibrationRequestID = plan.requestID
+            return result
+        }
+        if let plan = config.specialChargePlan {
+            let power: BGExternalPowerSource = battery.externalPowerAvailable ? (battery.pluggedIn ? .connected : .disconnected) : .unknown
+            let outcome = plan.evaluate(context: BGSpecialPlanEvaluationContext(
+                percent: battery.percentAvailable ? battery.percent : nil, externalPower: power,
+                canBlockCharging: true, canDisconnectAdapter: false, allowsAdapterDisconnect: false), at: now)
+            if plan.kind == .topUp && config.enabled && !config.isPaused(at: now) && outcome.isActive {
+                var result = decision(battery.percent < 100 ? .charging : .holding, limit: maximum, message: outcome.reason)
+                result.updatedSpecialPlan = outcome.updatedPlan
+                return result
+            }
+            // Beendete oder hier nicht ausführbare Pläne abschließen; ab dem nächsten Durchlauf gelten die normalen Regeln.
+            var result = ControllerDecision(state: outcome.isComplete ? .disabled : .unsupported,
+                chargingEnabled: true, adapterConnected: true,
+                message: plan.kind == .topUp ? outcome.reason : "Sonderaktion im macOS-Limit-Modus nicht verfügbar")
+            result.completedSpecialRequestID = plan.requestID
+            return result
+        }
+        guard config.enabled, !config.isPaused(at: now) else {
+            return decision(.disabled, limit: maximum, message: config.enabled ? nil : "Batterieschutz deaktiviert",
+                            reset: config.chargeToFullOnce && battery.percent >= 100)
+        }
+        let config = config.effective(at: now)
+        let wanted = config.chargeToFullOnce ? 100 : config.upperLimit
+        let limit = BGSystemChargeLimit.target(for: wanted, available: available) ?? maximum
+        guard battery.percentAvailable else {
+            return decision(.unsupported, limit: limit, message: "Ladestand nicht verfügbar – macOS-Limit bleibt bei \(limit) %")
+        }
+        if needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision) {
+            var result = decision(.holding, limit: minimum,
+                message: heatMessage(battery: battery) + " · macOS-Limit vorübergehend \(minimum) %")
+            result.heatProtectionActive = true
+            result.heatProtectionThresholdCelsius = config.heatProtectionCelsius > 0
+                ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
+            return result
+        }
+        let reset = config.chargeToFullOnce && battery.percent >= 100
+        guard battery.pluggedIn else { return decision(.onBattery, limit: limit, message: nil, reset: reset) }
+        if battery.percent >= limit {
+            return decision(.holding, limit: limit, message: "macOS-Limit von \(limit) % gehalten", reset: reset)
+        }
+        return decision(.charging, limit: limit, message: "Laden aktiv bis \(limit) % (macOS-Limit)")
+    }
+
     /// Hysterese (in Prozentpunkten) des Pendel-Modus: Netzteil geht bei >= upperLimit aus
     /// und erst bei <= upperLimit - pendulumHysteresis wieder an.
     public static let pendulumHysteresis = 5
@@ -430,6 +501,7 @@ public enum ControllerLogic {
 
 public final class BatteryController: @unchecked Sendable {
     public let smc: SMCClient
+    let systemLimit: SystemChargeLimitController
     private var previousDecision: ControllerDecision?
     private var lastAppliedCharging: Bool?
     private var lastAppliedAdapter: Bool?
@@ -437,8 +509,13 @@ public final class BatteryController: @unchecked Sendable {
     private var lastHardwareCheckUptime: TimeInterval?
     private let lock = NSLock()
 
-    public init(smc: SMCClient = .shared) {
+    init(smc: SMCClient = .shared, systemLimit: SystemChargeLimitController = SystemChargeLimitController()) {
         self.smc = smc
+        self.systemLimit = systemLimit
+    }
+
+    public convenience init(smc: SMCClient = .shared) {
+        self.init(smc: smc, systemLimit: SystemChargeLimitController())
     }
 
     public func step(
@@ -477,10 +554,17 @@ public final class BatteryController: @unchecked Sendable {
             previousDecision: previousDecision,
             hasChargeControl: smc.hasChargeControl,
             hasDischargeControl: smc.hasDischargeControl,
-            allowsAdapterDisconnect: (desktop ?? DesktopEnvironment.snapshot()).allowsAdapterDisconnect
+            allowsAdapterDisconnect: (desktop ?? DesktopEnvironment.snapshot()).allowsAdapterDisconnect,
+            systemChargeLimits: config.mode == .systemLimit ? systemLimit.availableLimits() : []
         )
 
         var controlFailed = false
+        if let limit = decision.systemChargeLimit,
+           !systemLimit.apply(limit, dryRun: dryRun, logger: logger) {
+            previousDecision = nil
+            return ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                message: "macOS-Limit konnte nicht gesetzt werden – macOS behält das bisherige Limit")
+        }
 
         // MagSafe LED bestimmen
         let targetLED: SMCClient.MagSafeColor

@@ -16,7 +16,7 @@ Version 0.5.0 beantwortet in der Übersicht, was gerade wirklich gilt: gespeiche
 
 ## Arbeitsstand 0.6.0 (unveröffentlicht)
 
-Low Power Mode und High Power Mode lassen sich getrennt für Akku und Netzteil steuern; High Power Mode nur auf Macs, die ihn anbieten. Die Diagnose zeigt zusätzlich Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md). Der Download oben bleibt bis zur Veröffentlichung bei 0.5.0.
+Neuer Modus **macOS-Limit** für Macs ohne SMC-Ladesperre (macOS 27): B-Guard setzt Apples natives Ladelimit in den von macOS angebotenen Stufen (80–100 %). Low Power Mode und High Power Mode lassen sich getrennt für Akku und Netzteil steuern; High Power Mode nur auf Macs, die ihn anbieten. Die Diagnose zeigt zusätzlich Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md). Der Download oben bleibt bis zur Veröffentlichung bei 0.5.0.
 
 ## Was B-Guard ergänzt
 
@@ -65,7 +65,7 @@ Weitere Vorschauen: [Verlauf](docs/previews/light/history.png), [Menüleiste](do
 
 Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht als verfügbare Option angeboten.
 
-**Ein zusätzliches macOS-Limit kann höhere Ziele und Vollladen verhindern.** B-Guard verändert Apples native Einstellung nicht. Passe sie bei Bedarf in den macOS-Batterieeinstellungen an. Apples Akkumanagement kann weiterhin Einfluss auf den Ladevorgang haben.
+**Ein zusätzliches macOS-Limit kann höhere Ziele und Vollladen verhindern.** Außer im Modus „macOS-Limit“ verändert B-Guard Apples native Einstellung nicht. Passe sie bei Bedarf in den macOS-Batterieeinstellungen an. Apples Akkumanagement kann weiterhin Einfluss auf den Ladevorgang haben.
 
 ## Installation ohne Terminal
 

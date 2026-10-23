@@ -23,6 +23,18 @@ public enum BGMode: String, Codable, CaseIterable, Sendable {
     case pendulum
     /// EXPERIMENTELL: natives Limit direkt im SMC (CHLT) auf den eigenen Wert setzen (nur root).
     case direct
+    /// macOS-Limit: setzt Apples natives Ladelimit (ab macOS 26/27) auf den nächsten erlaubten Wert.
+    /// Für Macs ohne SMC-Ladesperre; ältere Dienste lesen den Wert als `.native`.
+    case systemLimit
+}
+
+/// Abbildung eines B-Guard-Ziels auf die von macOS angebotenen Ladelimits.
+public enum BGSystemChargeLimit {
+    /// Kleinster erlaubter Wert, der das Ziel nicht unterschreitet; sonst der größte erlaubte Wert.
+    public static func target(for percent: Int, available: [Int]) -> Int? {
+        let sorted = available.filter { (1...100).contains($0) }.sorted()
+        return sorted.first { $0 >= percent } ?? sorted.last
+    }
 }
 
 /// Für welche Stromquelle ein macOS-Energiemodus gelten soll. `.off` lässt die Systemeinstellung unberührt.
@@ -193,6 +205,10 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var awakeUntilLimitActive: Bool? = nil
     /// Ob dieser Mac `pmset powermode` (und damit High Power Mode) anbietet.
     public var highPowerModeSupported: Bool? = nil
+    /// Von macOS angebotene native Ladelimits; leer oder nil, wenn der macOS-Limit-Modus nicht verfügbar ist.
+    public var systemChargeLimits: [Int]? = nil
+    /// Zuletzt gelesenes natives macOS-Ladelimit über PowerUI (unabhängig vom SMC-Layout).
+    public var systemChargeLimit: Int? = nil
     public var hasBatteryPercent: Bool { percentAvailable != false }
     public var hasExternalPower: Bool { externalPowerAvailable != false }
     public var pluggedIn: Bool = false

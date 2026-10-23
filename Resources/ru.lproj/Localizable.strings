@@ -942,3 +942,21 @@
 "High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang." = "Режим высокой мощности показывается только на Mac, которые его поддерживают; при пересечении приоритет у режима энергосбережения.";
 "Diagnose zeigt Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend und ohne Export von Seriennummer oder Prozessnamen." = "Диагностика показывает данные адаптера питания и процессы с высоким энергопотреблением — только чтение, без экспорта серийного номера и имён процессов.";
 "Hintergrunddienst 0.6.0 erforderlich. Eine bisherige Low-Power-Automatik wird übernommen." = "Требуется фоновая служба 0.6.0. Прежняя автоматика энергосбережения сохраняется.";
+
+/* 0.6.0 macOS-Limit-Modus */
+"macOS-Limit von %lld %% gehalten" = "Лимит macOS %lld %% удерживается";
+"Laden aktiv bis %lld %% (macOS-Limit)" = "Зарядка до %lld %% (лимит macOS)";
+"macOS-Limit vorübergehend %lld %%" = "Лимит macOS временно %lld %%";
+"Ladestand nicht verfügbar – macOS-Limit bleibt bei %lld %%" = "Уровень заряда недоступен — лимит macOS остаётся %lld %%";
+"macOS-Limit auf diesem Mac nicht verfügbar – Normalbetrieb wiederhergestellt" = "Лимит macOS недоступен на этом Mac — восстановлен обычный режим";
+"Kalibrierung im macOS-Limit-Modus nicht verfügbar" = "Калибровка недоступна в режиме лимита macOS";
+"Sonderaktion im macOS-Limit-Modus nicht verfügbar" = "Специальное действие недоступно в режиме лимита macOS";
+"macOS-Limit konnte nicht gesetzt werden – macOS behält das bisherige Limit" = "Не удалось задать лимит macOS — macOS сохраняет прежний лимит";
+"macOS-Limit: B-Guard setzt Apples natives Ladelimit auf die nächste angebotene Stufe (80–100 %). Für Macs ohne SMC-Ladesperre; das Limit gilt auch im Schlaf." = "Лимит macOS: B-Guard устанавливает встроенный лимит зарядки Apple на ближайшую доступную ступень (80–100 %). Для Mac без блокировки зарядки SMC; лимит действует и во сне.";
+"macOS-Limit · natives Ladelimit setzen" = "Лимит macOS · задать встроенный лимит";
+"Dieser Mac hat keine separate SMC-Ladesperre. „macOS-Limit“ hält dein Profil auch bei externem Monitor und geschlossenem Deckel ein, allerdings nur in den Stufen 80–100 %." = "У этого Mac нет отдельной блокировки зарядки SMC. «Лимит macOS» соблюдает профиль и при внешнем мониторе или закрытой крышке, но только ступенями 80–100 %.";
+"B-Guard setzt Apples natives Ladelimit. macOS bietet nur feste Stufen an, daher gilt %lld %% statt %lld %%." = "B-Guard задаёт встроенный лимит Apple. macOS предлагает только фиксированные ступени, поэтому действует %lld %% вместо %lld %%.";
+"B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch." = "B-Guard задаёт встроенный лимит Apple; macOS соблюдает его сама.";
+"macOS-Ladelimit über B-Guard" = "Лимит зарядки macOS через B-Guard";
+"macOS-Limit %lld %%" = "Лимит macOS %lld %%";
+"B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch, auch wenn die App geschlossen ist." = "B-Guard задаёт встроенный лимит Apple; macOS соблюдает его сама, даже когда приложение закрыто.";

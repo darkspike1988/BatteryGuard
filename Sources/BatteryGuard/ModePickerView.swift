@@ -8,6 +8,7 @@ extension BGMode {
         case .native: return L("Nativ (macOS)")
         case .pendulum: return L("Pendel")
         case .direct: return L("Direkt (Root)")
+        case .systemLimit: return L("macOS-Limit")
         }
     }
     
@@ -17,6 +18,7 @@ extension BGMode {
         case .native: return "apple.logo"
         case .pendulum: return "arrow.left.and.right"
         case .direct: return "cpu"
+        case .systemLimit: return "gauge.with.dots.needle.67percent"
         }
     }
     
@@ -26,6 +28,7 @@ extension BGMode {
         case .native: return "Nativ: Beobachtet nur. Das Ladelimit stellst du selbst in den macOS-Batterieeinstellungen ein."
         case .pendulum: return "Pendel: Trennt das Netzteil am Maximum und verbindet es wieder fünf Prozentpunkte darunter."
         case .direct: return "Direktmodus nicht implementiert. Bitte Auto, Nativ oder Pendel wählen."
+        case .systemLimit: return "macOS-Limit: B-Guard setzt Apples natives Ladelimit auf die nächste angebotene Stufe (80–100 %). Für Macs ohne SMC-Ladesperre; das Limit gilt auch im Schlaf."
         }
     }
     var localizedDescription: String { L(description) }
@@ -53,7 +56,7 @@ struct ModePickerView: View {
             // Glas-Picker Segmentleiste
             HStack(spacing: 3) {
                 // Show standard modes, excluding direct unless already selected
-                ForEach([BGMode.auto, .native, .pendulum] + (mode == .direct ? [.direct] : []), id: \.self) { m in
+                ForEach([BGMode.auto, .native, .pendulum] + (mode == .systemLimit ? [.systemLimit] : []) + (mode == .direct ? [.direct] : []), id: \.self) { m in
                     let isSelected = (m == mode)
                     Button {
                         withAnimation(.spring(response: 0.28, dampingFraction: 0.72)) {

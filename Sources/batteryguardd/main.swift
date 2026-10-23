@@ -126,7 +126,7 @@ final class DaemonRunner: @unchecked Sendable {
                 if ScheduleRunner.needsEvaluation(config: snapshot, now: Date()) {
                     try BGConfigFile.update(at: url) { latest in
                         latest = ScheduleRunner.evaluate(config: latest, now: Date(),
-                            context: ConfigServer.currentSpecialContext())
+                            context: ConfigServer.currentSpecialContext(for: latest))
                     }
                 }
             } catch { logStderr("Zeitplan konnte nicht ausgewertet werden: \(error.localizedDescription)") }
@@ -187,7 +187,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.measurements = battery.measurements
         status.nativeChargeLimit = controller.smc.readNativeChargeLimit()
         status.effectiveLowerLimit = effective.lowerLimit
-        status.effectiveUpperLimit = effective.chargeToFullOnce ? 100 : effective.upperLimit
+        status.effectiveUpperLimit = decision.systemChargeLimit ?? (effective.chargeToFullOnce ? 100 : effective.upperLimit)
         status.externalDisplayConnected = desktop.externalDisplayConnected
         status.lidClosed = desktop.lidClosed
         status.adapterDisconnectAllowed = desktop.allowsAdapterDisconnect
@@ -197,6 +197,9 @@ final class DaemonRunner: @unchecked Sendable {
         status.externalPowerAvailable = battery.externalPowerAvailable
         status.awakeUntilLimitActive = wakeUntilLimit.isActive
         status.highPowerModeSupported = powerMode.highPowerModeSupported
+        let systemLimits = controller.systemLimit.availableLimits()
+        status.systemChargeLimits = systemLimits
+        status.systemChargeLimit = systemLimits.isEmpty ? nil : controller.systemLimit.currentLimit()
         status.pluggedIn = battery.pluggedIn
         status.isChargingHardware = battery.isCharging
         status.state = decision.state
