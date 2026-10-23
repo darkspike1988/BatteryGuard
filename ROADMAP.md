@@ -34,6 +34,8 @@ Abgeleitet aus der [Funktionsrecherche](docs/research/2026-10-23-funktionsrecher
 
 ### 0.8 — Automatisierung und Bedienung (P1/P2)
 
+**Stand:** R11–R18 umgesetzt ([0.8.0](docs/release-notes-0.8.0.md)); Drag-and-drop der Karten bewusst durch Pfeiltasten ersetzt, Kommandozeile über `--run`.
+
 | ID | Paket | Warum | Abnahme |
 |---|---|---|---|
 | R11 | **Zeitplan-Vorlagen** (Montag Top Up, Wochenende voll, monatlich kalibrieren), jährliches Intervall, Verlauf löschen, „Limit zu Spitzenlastzeiten senken“ | AlDente 1.36/1.38; Wunsch #445 | Vorlagen erzeugen gültige Regeln; bestehende Tests erweitert |

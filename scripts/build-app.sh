@@ -79,6 +79,19 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.batteryguard.app</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.batteryguard.app</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>bguard</string>
+            </array>
+        </dict>
+    </array>
+    <key>NSLocationUsageDescription</key>
+    <string>B-Guard liest den Namen des WLANs nur für deine Netzwerkregeln. Der Standort wird nicht gespeichert oder gesendet.</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleLocalizations</key>
@@ -94,9 +107,9 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.7.0</string>
+    <string>0.8.0</string>
     <key>CFBundleVersion</key>
-    <string>0.7.0</string>
+    <string>0.8.0</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>

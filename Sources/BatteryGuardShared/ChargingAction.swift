@@ -17,6 +17,8 @@ public enum BGChargingAction: String, Codable, CaseIterable, Sendable {
     case holdCharge = "hold-charge"
     case cancelSpecial = "cancel-special"
     case powerMode = "power-mode"
+    case clearScheduleHistory = "clear-schedule-history"
+    case magsafeLED = "magsafe-led"
 }
 
 public enum BGChargingActionError: Error, LocalizedError, Equatable, Sendable {
@@ -45,10 +47,11 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
     public var scheduleID: UUID?
     public var lowPowerMode: BGPowerModeRule?
     public var highPowerMode: BGPowerModeRule?
+    public var magsafeLED: BGMagSafeLEDMode?
 
     public init(action: BGChargingAction, profile: String? = nil, enabled: Bool? = nil,
                 minutes: Int? = nil, readyAt: Date? = nil, targetPercent: Int? = nil, savedProfile: BGSavedProfile? = nil, scheduledTask: BGScheduledTask? = nil, scheduleID: UUID? = nil,
-                lowPowerMode: BGPowerModeRule? = nil, highPowerMode: BGPowerModeRule? = nil) {
+                lowPowerMode: BGPowerModeRule? = nil, highPowerMode: BGPowerModeRule? = nil, magsafeLED: BGMagSafeLEDMode? = nil) {
         self.action = action
         self.profile = profile
         self.enabled = enabled
@@ -60,11 +63,12 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         self.scheduleID = scheduleID
         self.lowPowerMode = lowPowerMode
         self.highPowerMode = highPowerMode
+        self.magsafeLED = magsafeLED
     }
 
     private enum CodingKeys: String, CodingKey {
         case action, profile, enabled, minutes, readyAt, targetPercent, savedProfile, scheduledTask, scheduleID
-        case lowPowerMode, highPowerMode
+        case lowPowerMode, highPowerMode, magsafeLED
     }
     private struct AnyKey: CodingKey {
         var stringValue: String
@@ -91,6 +95,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         scheduleID = try container.decodeIfPresent(UUID.self, forKey: .scheduleID)
         lowPowerMode = try container.decodeIfPresent(BGPowerModeRule.self, forKey: .lowPowerMode)
         highPowerMode = try container.decodeIfPresent(BGPowerModeRule.self, forKey: .highPowerMode)
+        magsafeLED = try container.decodeIfPresent(BGMagSafeLEDMode.self, forKey: .magsafeLED)
         try validateParameters()
     }
 
@@ -103,10 +108,11 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         case .protection: return ["action", "enabled"]
         case .pause, .stayAwakeUntilLimit: return ["action", "minutes"]
         case .travel: return ["action", "readyAt"]
-        case .cancelStayAwake, .calibration, .cancelCalibration, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial: return ["action"]
+        case .cancelStayAwake, .calibration, .cancelCalibration, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: return ["action"]
         case .topUp: return ["action", "minutes", "targetPercent"]
         case .dischargeTo, .holdCharge: return ["action", "targetPercent", "minutes"]
         case .powerMode: return ["action", "lowPowerMode", "highPowerMode"]
+        case .magsafeLED: return ["action", "magsafeLED"]
         }
     }
 
@@ -118,7 +124,8 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
                         targetPercent != nil ? "targetPercent" : nil,
                         savedProfile != nil ? "savedProfile" : nil, scheduledTask != nil ? "scheduledTask" : nil,
                         scheduleID != nil ? "scheduleID" : nil,
-                        lowPowerMode != nil ? "lowPowerMode" : nil, highPowerMode != nil ? "highPowerMode" : nil].compactMap { $0 }
+                        lowPowerMode != nil ? "lowPowerMode" : nil, highPowerMode != nil ? "highPowerMode" : nil,
+                        magsafeLED != nil ? "magsafeLED" : nil].compactMap { $0 }
         guard supplied.allSatisfy(Self.allowedFields(for: action).contains) else {
             throw BGChargingActionError.invalidRequest("Für diese Aktion unzulässige Felder.")
         }
@@ -146,7 +153,9 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             guard let readyAt, readyAt.timeIntervalSince1970.isFinite else {
                 throw BGChargingActionError.invalidRequest("Ein gültiger Reisezeitpunkt ist erforderlich.")
             }
-        case .cancelStayAwake, .calibration, .cancelCalibration, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial: break
+        case .cancelStayAwake, .calibration, .cancelCalibration, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: break
+        case .magsafeLED:
+            guard magsafeLED != nil else { throw BGChargingActionError.invalidRequest("LED-Modus fehlt.") }
         case .powerMode:
             guard lowPowerMode != nil || highPowerMode != nil else {
                 throw BGChargingActionError.invalidRequest("Mindestens ein Energiemodus ist erforderlich.")
@@ -189,7 +198,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             throw BGChargingActionError.invalidRequest("Der Reisezeitpunkt muss in der Zukunft und innerhalb von 30 Tagen liegen.")
         }
         var next = config
-        if ![.upsertSchedule, .deleteSchedule, .stayAwakeUntilLimit, .cancelStayAwake, .powerMode].contains(action) {
+        if ![.upsertSchedule, .deleteSchedule, .stayAwakeUntilLimit, .cancelStayAwake, .powerMode, .clearScheduleHistory, .magsafeLED].contains(action) {
             next.manualOverrideUntil = now.addingTimeInterval(2 * 3600)
             next.calibrationPlan = nil
         }
@@ -311,6 +320,10 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             )
         case .cancelSpecial:
             next.specialChargePlan = nil
+        case .clearScheduleHistory:
+            next.scheduleHistory = []
+        case .magsafeLED:
+            if let magsafeLED { next.magsafeLedMode = magsafeLED }
         case .powerMode:
             // Energiemodi sind unabhängig von der Ladesteuerung; sie setzen keinen manuellen Vorrang.
             if let lowPowerMode { next.lowPowerModeRule = lowPowerMode }

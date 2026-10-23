@@ -202,3 +202,39 @@ public struct SetPowerModeIntent: AppIntent {
         return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
     }
 }
+
+/// Setzt ein eigenes Ladelimit als gespeichertes Profil. Ohne untere Grenze gilt Ziel minus fünf.
+public struct SetChargeLimitIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Ladelimit setzen"
+    public static let description = IntentDescription("Setzt ein eigenes Ladeziel zwischen 20 und 100 %. Im macOS-Limit-Modus wird auf die nächste angebotene Stufe aufgerundet.")
+    public static let openAppWhenRun = false
+    @Parameter(title: "Ladeziel in Prozent", inclusiveRange: (20, 100)) public var upperLimit: Int
+    @Parameter(title: "Untere Grenze in Prozent", inclusiveRange: (5, 95)) public var lowerLimit: Int?
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        var components = URLComponents(string: "bguard://limit/\(upperLimit)")!
+        if let lowerLimit { components.queryItems = [URLQueryItem(name: "lower", value: String(lowerLimit))] }
+        let saved = try BatteryWriteIntentExecution.perform(try BGURLCommand.request(for: components.url!))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+public enum BGuardIntentLEDMode: String, AppEnum {
+    case system, indicate, off
+    public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "MagSafe-LED")
+    public static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .system: "macOS steuert", .indicate: "Ladezustand anzeigen", .off: "Aus"
+    ]
+}
+
+public struct SetMagSafeLEDIntent: AppIntent {
+    public static let title: LocalizedStringResource = "MagSafe-LED setzen"
+    public static let openAppWhenRun = false
+    @Parameter(title: "LED") public var mode: BGuardIntentLEDMode
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .magsafeLED,
+            magsafeLED: BGMagSafeLEDMode(rawValue: mode.rawValue) ?? .system))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}

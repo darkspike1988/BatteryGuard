@@ -7,6 +7,7 @@ public enum MenuBarExtraItem: String, CaseIterable, Identifiable, Sendable {
     case chargeLimit
     case socPower
     case lowPowerMode
+    case hardwarePercent
 
     public static let appStorageKey = "bg.menuBarExtras"
     public var id: String { rawValue }
@@ -17,6 +18,7 @@ public enum MenuBarExtraItem: String, CaseIterable, Identifiable, Sendable {
         case .chargeLimit: "Wirksames Ladeziel"
         case .socPower: "SoC-Leistung"
         case .lowPowerMode: "Low-Power-Symbol"
+        case .hardwarePercent: "Hardware-Ladestand"
         }
     }
     public var localizedTitle: String { L(title) }
@@ -41,7 +43,7 @@ public enum MenuBarExtraItem: String, CaseIterable, Identifiable, Sendable {
 public enum MenuBarExtraFormatter {
     /// Textteile für die Menüleiste; fehlende oder veraltete Werte entfallen statt Platzhalter zu zeigen.
     public static func texts(for items: [MenuBarExtraItem], status: BGStatus, isDaemonActive: Bool,
-                             now: Date = Date()) -> [String] {
+                             hardwarePercent: Double? = nil, now: Date = Date()) -> [String] {
         guard isDaemonActive else { return [] }
         return items.compactMap { item in
             switch item {
@@ -56,6 +58,9 @@ public enum MenuBarExtraFormatter {
                 return String(format: "SoC %.1f W", watts)
             case .lowPowerMode:
                 return nil // Symbol, siehe showsLowPowerSymbol
+            case .hardwarePercent:
+                guard let hardwarePercent, hardwarePercent.isFinite, (0...100).contains(hardwarePercent) else { return nil }
+                return String(format: "HW %.0f %%", hardwarePercent)
             }
         }
     }

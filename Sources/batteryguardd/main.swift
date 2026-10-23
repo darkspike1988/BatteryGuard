@@ -228,7 +228,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.7.0"
+        status.daemonVersion = "0.8.0"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported

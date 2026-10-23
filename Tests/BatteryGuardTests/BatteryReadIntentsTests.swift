@@ -266,7 +266,7 @@ final class BatteryReadIntentsTests: XCTestCase {
 
     func testBGuardShortcutsProviderMetadata() {
         let shortcuts = BGuardShortcutsProvider.appShortcuts
-        XCTAssertEqual(shortcuts.count, 4)
+        XCTAssertEqual(shortcuts.count, 5)
     }
 
     func testSetPowerModeIntentMetadata() {

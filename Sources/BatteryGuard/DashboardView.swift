@@ -68,6 +68,13 @@ struct OverviewView: View {
     var updates: UpdateStore? = nil
     @Environment(\.openWindow) private var openWindow
     @State private var readyAt = Date().addingTimeInterval(12 * 3600)
+    @AppStorage("bg.runtimeWindow") private var runtimeWindow = 15
+    private var averagedRuntime: String? {
+        let status = statusStore.status
+        return BGRuntimeEstimate.minutesRemaining(samples: history.samples, windowMinutes: runtimeWindow, now: Date(),
+            percent: status.percent, maxCapacityMah: status.maxCapacityMah, voltageMillivolts: status.voltage)
+            .map { String(format: "%d:%02d h", $0 / 60, $0 % 60) }
+    }
     private var canControl: Bool {
         statusStore.supportsChargingPlans && statusStore.status.state != .unsupported && configStore.config.mode != .native && configStore.config.mode != .direct
     }
@@ -113,6 +120,7 @@ struct OverviewView: View {
                     metric("Kapazitätsquote", value: statusStore.status.capacityRatioText(), symbol: "battery.100")
                         .help("Berechnetes Verhältnis der gemeldeten Maximal- zur Designkapazität. Kein allgemeiner Gesundheitswert und nicht automatisch Apples Maximale Kapazität.")
                     metric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(statusStore.status.watts, isDaemonActive: statusStore.isDaemonActive), symbol: "bolt")
+                    metric(L("Restlaufzeit · Ø %lld min", runtimeWindow), value: averagedRuntime, symbol: "hourglass")
                         .help("Lade-/Entladefluss des Akkus. Der gesamte Mac-Verbrauch ist ein anderer Messwert.")
                 }
                 Text(batteryPowerExplanation)
@@ -157,7 +165,7 @@ struct OverviewView: View {
             return L("Der Akku ist warm. Prüfe Hitzeschutz und Belüftung, bevor du länger lädst.")
         }
         if configStore.config.mode == .pendulum || (!statusStore.status.smcKeysDetected.contains("CHTE") && !statusStore.status.smcKeysDetected.contains("CH0B") && configStore.config.mode == .auto) {
-            return L("Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Dabei läuft er zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku.")
+            return L("Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Je nach Firmware hält er den Ladestand oder läuft zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku.")
         }
         return L("Dein Verlauf bleibt auf diesem Mac. B-Guard zeichnet nur auf, während die App läuft und aktuelle Messwerte verfügbar sind.")
     }

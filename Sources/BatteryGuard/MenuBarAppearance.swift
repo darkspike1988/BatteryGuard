@@ -144,6 +144,8 @@ public enum MenuBarAppearance {
         userDefaults.set(MenuBarIconStyle.ring.rawValue, forKey: MenuBarAppearanceKeys.iconStyle)
         userDefaults.set(MenuBarDisplayMode.percent.rawValue, forKey: MenuBarAppearanceKeys.displayMode)
         userDefaults.removeObject(forKey: MenuBarExtraItem.appStorageKey)
+        userDefaults.removeObject(forKey: "bg.menuBarDisplayOnBattery")
+        userDefaults.set(true, forKey: "bg.showMenuBarIcon")
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showTemperature)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showPower)
         userDefaults.set(false, forKey: MenuBarAppearanceKeys.showHealth)

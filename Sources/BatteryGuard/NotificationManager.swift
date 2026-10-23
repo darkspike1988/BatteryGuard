@@ -23,6 +23,12 @@ final class NotificationManager: Sendable {
     static let weeklyInterval: TimeInterval = 7 * 86400
 
     private init() {}
+
+    /// Einzelne Mitteilung, etwa für fehlgeschlagene URL-Befehle.
+    func notify(title: String, body: String) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        send(title: title, body: body)
+    }
     
     func checkNotifications(status: BGStatus, config: BGConfig) {
         // UNUserNotificationCenter nur verwenden, wenn Bundle-ID vorhanden, sonst still ignorieren

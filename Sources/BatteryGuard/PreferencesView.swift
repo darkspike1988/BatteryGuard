@@ -31,8 +31,14 @@ struct PreferencesView: View {
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
     @AppStorage(MenuBarExtraItem.appStorageKey) private var menuBarExtras = ""
+    @AppStorage("bg.menuBarDisplayOnBattery") private var menuBarDisplayOnBattery = ""
+    @AppStorage("bg.showMenuBarIcon") private var showMenuBarIcon = true
+    @AppStorage(AppearancePreference.appStorageKey) private var appearance: AppearancePreference = .system
+    @AppStorage(AccentPreference.appStorageKey) private var accent: AccentPreference = .system
+    @AppStorage("bg.runtimeWindow") private var runtimeWindow = 15
     @AppStorage(LidLockGuard.appStorageKey) private var lockScreenWhenLidClosed = false
     @State private var chimeMuted = PowerChimeSetting.isMuted
+    @AppStorage(GlobalHotKeys.appStorageKey) private var globalHotKeys = false
 
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
@@ -171,6 +177,20 @@ struct PreferencesView: View {
             } header: { Text("Automatik") }
 
             Section {
+                Toggle("Globale Tastenkürzel", isOn: $globalHotKeys)
+                    .onChange(of: globalHotKeys) { _, enabled in GlobalHotKeys.shared.update(enabled: enabled) }
+                ForEach(GlobalHotKeys.Command.allCases, id: \.rawValue) { command in
+                    Text(command.title).font(.caption).foregroundStyle(.secondary)
+                }
+                Text("Befehle für Skripte und andere Apps: bguard://profile/desk, bguard://limit/60, bguard://pause?minutes=60, bguard://resume, bguard://top-up, bguard://led/off. Im Terminal: B-Guard.app/Contents/MacOS/BatteryGuard --run \"bguard://limit/60\".")
+                    .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            } header: { Text("Tastenkürzel und Befehle") }
+
+            Section {
+                NetworkRulesView()
+            } header: { Text("Regeln nach WLAN") }
+
+            Section {
                 SavedProfilesView(configStore: configStore)
             } header: { Text("Eigene Profile") }
 
@@ -277,7 +297,17 @@ struct PreferencesView: View {
                         Text(mode.localizedTitle).tag(mode)
                     }
                 }
+                Picker("Anzeige auf Akku", selection: $menuBarDisplayOnBattery) {
+                    Text("Wie am Netzteil").tag("")
+                    ForEach(MenuBarDisplayMode.allCases) { mode in Text(mode.localizedTitle).tag(mode.rawValue) }
+                }
                 Text("Wähle das Menüleistensymbol und die Zusatzanzeige. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Menüleistensymbol anzeigen", isOn: $showMenuBarIcon)
+                    .disabled(showMenuBarIcon && !AppPresence.shared.showInDock)
+                Text(AppPresence.shared.showInDock
+                     ? "Ohne Symbol erreichst du B-Guard über das Dock. Erneutes Öffnen aus Programme blendet es wieder ein."
+                     : "Zum Ausblenden zuerst das Dock-Symbol einschalten, damit B-Guard erreichbar bleibt.")
                     .font(.caption).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Weitere Werte in der Menüleiste").font(.subheadline.weight(.medium))
@@ -288,6 +318,22 @@ struct PreferencesView: View {
                     }
                     Text("Werte erscheinen nur, wenn sie aktuell gemeldet werden. Die SoC-Leistung misst der Dienst etwa alle 30 Sekunden.")
                         .font(.caption).foregroundStyle(.secondary)
+                }
+                Menu("Stil für das Menüfenster") {
+                    ForEach(MenuWindowStyle.allCases) { style in
+                        Button(style.title) { style.apply() }
+                    }
+                }
+                .fixedSize()
+                Picker("Darstellung", selection: $appearance) {
+                    ForEach(AppearancePreference.allCases) { Text($0.title).tag($0) }
+                }
+                .onChange(of: appearance) { _, value in value.apply() }
+                Picker("Akzentfarbe", selection: $accent) {
+                    ForEach(AccentPreference.allCases) { Text($0.title).tag($0) }
+                }
+                Picker("Restlaufzeit in der Übersicht", selection: $runtimeWindow) {
+                    ForEach(BGRuntimeEstimate.windows, id: \.self) { Text(L("Durchschnitt der letzten %lld Minuten", $0)).tag($0) }
                 }
                 Toggle("Temperatur im Menüfenster", isOn: $menuShowTemperature)
                 Toggle("Akku-Leistung im Menüfenster", isOn: $menuShowPower)
@@ -331,6 +377,10 @@ struct PreferencesView: View {
                     menuBarIconStyle = .ring
                     menuBarDisplay = .percent
                     menuBarExtras = ""
+                    menuBarDisplayOnBattery = ""
+                    showMenuBarIcon = true
+                    appearance = .system
+                    accent = .system
                     menuShowTemperature = false
                     menuShowPower = false
                     menuShowHealth = false

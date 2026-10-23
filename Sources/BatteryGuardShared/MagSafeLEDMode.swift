@@ -1,7 +1,7 @@
 import Foundation
 
 /// Bedienoberfläche für die beiden gespeicherten LED-Felder `magsafeLed` und `magsafeLedOff`.
-public enum BGMagSafeLEDMode: String, CaseIterable, Identifiable, Sendable {
+public enum BGMagSafeLEDMode: String, Codable, CaseIterable, Identifiable, Sendable {
     case system, indicate, off
     public var id: String { rawValue }
 }

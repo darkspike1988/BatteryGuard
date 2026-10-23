@@ -230,5 +230,14 @@ public struct BGuardShortcutsProvider: AppShortcutsProvider {
                 shortTitle: "Energiemodus",
                 systemImageName: "leaf"
             )
+            AppShortcut(
+                intent: SetChargeLimitIntent(),
+                phrases: [
+                    "\(.applicationName) Ladelimit setzen",
+                    "Ladelimit mit \(.applicationName) setzen"
+                ],
+                shortTitle: "Ladelimit",
+                systemImageName: "battery.75percent"
+            )
     }
 }

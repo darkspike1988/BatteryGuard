@@ -7,6 +7,13 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.8.0", title: "Automatisch und persönlich", changes: [
+            "Zeitplan-Vorlagen: Montag früh voll, Wochenende voll, Spitzenlastzeit; Aufgabenverlauf löschen.",
+            "Befehle über bguard:// und im Terminal, Kurzbefehle für Ladelimit und MagSafe-LED, globale Tastenkürzel.",
+            "Ladeprofile je WLAN, eigene Menüleistenanzeige auf Akku, Symbol ausblendbar, Hardware-Ladestand als Zusatzwert.",
+            "Stile für das Menüfenster, Hell/Dunkel und Akzentfarbe, Profilvorschlag bei der Einrichtung, Restlaufzeit aus dem Durchschnitt.",
+            "Hintergrunddienst 0.8.0 erforderlich."
+        ]),
         .init(version: "0.7.0", title: "Mehr Steuerung auf macOS 27", changes: [
             "macOS-Limit: Ziele unter 80 % optional über den Netzteil-Schalter halten; das macOS-Limit bleibt Sicherheitsnetz.",
             "Einmal entladen auf eine macOS-Stufe: Die Firmware entlädt am Netzteil (experimentell).",
