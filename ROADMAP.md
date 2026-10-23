@@ -49,6 +49,8 @@ Abgeleitet aus der [Funktionsrecherche](docs/research/2026-10-23-funktionsrecher
 
 ### 0.9 — Analyse, IT und Geräte (P2)
 
+**Stand:** R19–R22 umgesetzt ([0.9.0](docs/release-notes-0.9.0.md)); Spannungsverläufe im Bericht fehlen, Kapazitäts-Tageswerte bleiben unverschlüsselt.
+
 | ID | Paket | Warum | Abnahme |
 |---|---|---|---|
 | R19 | Lebensdauer-Analyse: min/max/mittlere Temperatur, Spannung, Laderaten, Zeit je Ladebereich; PDF-Bericht | coconutBattery Plus | Nur gemessene Werte; Lücken sichtbar |

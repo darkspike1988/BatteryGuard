@@ -166,9 +166,13 @@ final class ConfigServer: @unchecked Sendable {
     /// accepts configURL from a request. Tests provide only temporary files.
     static func apply(_ request: BGConfigRequest, peerUID: uid_t, consoleUID: uid_t?,
                       configURL: URL = URL(fileURLWithPath: BGPaths.config),
-                      specialContext: (() -> BGSpecialPlanEvaluationContext)? = nil) throws -> BGConfig {
+                      specialContext: (() -> BGSpecialPlanEvaluationContext)? = nil,
+                      managedPolicy: () -> BGManagedPolicy? = { BGManagedPolicy.load() }) throws -> BGConfig {
         guard BGConfigPeerPolicy.allows(peerUID: peerUID, consoleUID: consoleUID) else {
             throw BGConfigIPCError.unauthorized
+        }
+        if request.queryOnly != true, managedPolicy()?.lockSettings == true, peerUID != 0 {
+            throw BGConfigIPCError.rejected("Die Einstellungen werden von deiner IT verwaltet und sind gesperrt.")
         }
         guard (request.protocolVersion == 1 && request.action == nil)
             || (request.protocolVersion == 2 && request.action != nil && request.queryOnly != true) else {

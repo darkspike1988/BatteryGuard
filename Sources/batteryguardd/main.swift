@@ -136,7 +136,8 @@ final class DaemonRunner: @unchecked Sendable {
                 }
             } catch { logStderr("Zeitplan konnte nicht ausgewertet werden: \(error.localizedDescription)") }
         }
-        let storedConfig = loadConfig()
+        let managedPolicy = BGManagedPolicy.load()
+        let storedConfig = managedPolicy.map { $0.apply(to: loadConfig()) } ?? loadConfig()
         let now = Date()
         let desktop = DesktopEnvironment.snapshot()
         let desktopProfile = BGDesktopProfileRule.resolve(config: storedConfig,
@@ -210,6 +211,7 @@ final class DaemonRunner: @unchecked Sendable {
         if !isOnce && !dryRun { socPower.refreshIfDue() }
         status.socPower = socPower.latest
         status.capabilities = capabilities
+        status.managedPolicy = managedPolicy
         status.capabilityChange = capabilityChange
         status.appleCalibrationActive = currentAppleCalibration()
         let systemLimits = controller.systemLimit.availableLimits()
@@ -228,7 +230,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.8.0"
+        status.daemonVersion = "0.9.0"
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported

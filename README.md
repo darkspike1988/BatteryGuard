@@ -14,6 +14,10 @@ Die [Abnahmematrix und das lokale Testjournal](docs/validation/README.md) halten
 
 Version 0.5.0 beantwortet in der Übersicht, was gerade wirklich gilt: gespeichertes Ziel, vom Dienst angewendetes Ziel, macOS-Limit, Steuerungsweg sowie Monitor- und Deckelzustand. Die Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, lesende Mac-Ressourcen und bei aktivierter Aufzeichnung eine Akkugesundheit über bis zu zwölf Monate. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). App und Dienst stehen in Version 0.5.0; der Download oben verweist auf diese Version.
 
+## Arbeitsstand 0.6.1 bis 0.9.0 (unveröffentlicht)
+
+Erkennung von Apples Akku-Kalibrierung und Firmware-Änderungen, Limits unter 80 % und Einmal-Entladen im macOS-Limit-Modus, Schlafsteuerung mit Sicherheitsabschaltung, Kälteschutz, Zeitplan-Vorlagen, `bguard://`-Befehle und Kommandozeile, globale Tastenkürzel, Regeln nach WLAN, Lebensdauer-Analyse mit PDF-Bericht, Geräteakkus, IT-Vorgaben per Konfigurationsprofil, Sicherung und optional verschlüsselter Verlauf. Details: [0.6.1](docs/release-notes-0.6.1.md), [0.7.0](docs/release-notes-0.7.0.md), [0.8.0](docs/release-notes-0.8.0.md), [0.9.0](docs/release-notes-0.9.0.md). Hardwareabhängige neue Wege sind gekennzeichnet; ihre physische Abnahme steht aus.
+
 ## Arbeitsstand 0.6.0 (unveröffentlicht)
 
 Neuer Modus **macOS-Limit** für Macs ohne SMC-Ladesperre (macOS 27): B-Guard setzt Apples natives Ladelimit in den von macOS angebotenen Stufen (80–100 %). Low Power Mode und High Power Mode lassen sich getrennt für Akku und Netzteil steuern; High Power Mode nur auf Macs, die ihn anbieten. Die Diagnose zeigt zusätzlich Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md). Der Download oben bleibt bis zur Veröffentlichung bei 0.5.0.

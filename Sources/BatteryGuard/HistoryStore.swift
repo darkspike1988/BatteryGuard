@@ -6,8 +6,16 @@ actor HistoryRepository {
     let url: URL
     private var samples: [BGHistorySample]?
     private(set) var recoveryNotice: String?
+    /// Liefert den Schlüssel für das Lesen verschlüsselter und das Schreiben neuer Dateien (nil = Klartext).
+    private let readCipher: @Sendable () -> BGHistoryCipher?
+    private let writeCipher: @Sendable () -> BGHistoryCipher?
 
-    init(url: URL) { self.url = url }
+    init(url: URL, readCipher: @escaping @Sendable () -> BGHistoryCipher? = { nil },
+         writeCipher: @escaping @Sendable () -> BGHistoryCipher? = { nil }) {
+        self.url = url
+        self.readCipher = readCipher
+        self.writeCipher = writeCipher
+    }
 
     func load(now: Date = Date()) throws -> [BGHistorySample] {
         if let samples { return samples }
@@ -16,7 +24,12 @@ actor HistoryRepository {
             return []
         }
         // Lesefehler (z. B. fehlende Rechte) dürfen keine vermeintliche Reparatur auslösen.
-        let data = try Data(contentsOf: url)
+        var data = try Data(contentsOf: url)
+        if BGHistoryCipher.isEncrypted(data) {
+            // Ohne Schlüssel nicht als Beschädigung behandeln: Datei bleibt unangetastet.
+            guard let cipher = readCipher() else { throw CocoaError(.fileReadNoPermission) }
+            data = try cipher.open(data)
+        }
         let loaded: [BGHistorySample]
         do {
             loaded = try BGJSON.decoder().decode([BGHistorySample].self, from: data)
@@ -42,7 +55,8 @@ actor HistoryRepository {
                                                attributes: [.posixPermissions: 0o700])
         let encoder = BGJSON.encoder()
         encoder.outputFormatting = [.sortedKeys]
-        try encoder.encode(next).write(to: url, options: .atomic)
+        let plain = try encoder.encode(next)
+        try (writeCipher().map { try $0.seal(plain) } ?? plain).write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         samples = next
         return next
@@ -71,7 +85,9 @@ final class HistoryStore {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         capacityRepository = CapacityTrendRepository(url: base.appendingPathComponent("BatteryGuard/capacity-days.json"))
         longTermCapacityEnabled = preview ? !emptyPreview : UserDefaults.standard.bool(forKey: "BGuard.longTermCapacityEnabled")
-        repository = HistoryRepository(url: base.appendingPathComponent("BatteryGuard/history.json"))
+        repository = HistoryRepository(url: base.appendingPathComponent("BatteryGuard/history.json"),
+            readCipher: { HistoryKeyStore.cipher() },
+            writeCipher: { HistoryKeyStore.isEnabled ? HistoryKeyStore.cipherCreatingKey() : nil })
         if preview {
             samples = emptyPreview ? [] : Self.previewSamples()
             capacityDays = emptyPreview ? [] : Self.previewCapacityDays()

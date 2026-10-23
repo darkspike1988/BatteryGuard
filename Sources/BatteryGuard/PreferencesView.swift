@@ -36,6 +36,7 @@ struct PreferencesView: View {
     @AppStorage(AppearancePreference.appStorageKey) private var appearance: AppearancePreference = .system
     @AppStorage(AccentPreference.appStorageKey) private var accent: AccentPreference = .system
     @AppStorage("bg.runtimeWindow") private var runtimeWindow = 15
+    @AppStorage(HistoryKeyStore.preferenceKey) private var encryptHistory = false
     @AppStorage(LidLockGuard.appStorageKey) private var lockScreenWhenLidClosed = false
     @State private var chimeMuted = PowerChimeSetting.isMuted
     @AppStorage(GlobalHotKeys.appStorageKey) private var globalHotKeys = false
@@ -65,7 +66,8 @@ struct PreferencesView: View {
         } catch { diagnosticsError = error.localizedDescription }
     }
 
-    private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct }
+    private var isManagedLocked: Bool { statusStore.status.managedPolicy?.lockSettings == true }
+    private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct && !isManagedLocked }
     private var powerModeRulesOverlap: Bool {
         let low = configStore.config.lowPowerModeRule, high = configStore.config.highPowerModeRule
         return (low.appliesOnBattery && high.appliesOnBattery) || (low.appliesOnAdapter && high.appliesOnAdapter)
@@ -73,6 +75,9 @@ struct PreferencesView: View {
 
     var body: some View {
         Form {
+            if let policy = statusStore.status.managedPolicy {
+                Section { ManagedPolicyBanner(policy: policy) }
+            }
             Section {
                 Picker("Ladesteuerung", selection: $configStore.config.mode) {
                     Text("Automatisch").tag(BGMode.auto)
@@ -111,6 +116,7 @@ struct PreferencesView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             } header: { Text("Ladebereich") }
+            .disabled(isManagedLocked)
 
             Section {
                 Toggle("Bei Wärme das Laden pausieren", isOn: Binding(
@@ -189,6 +195,17 @@ struct PreferencesView: View {
             Section {
                 NetworkRulesView()
             } header: { Text("Regeln nach WLAN") }
+
+            Section {
+                Toggle("Minutenverlauf verschlüsselt speichern", isOn: $encryptHistory)
+                Text("AES-256-GCM; der Schlüssel liegt nur im Schlüsselbund dieses Macs. Die nächste Messung wird verschlüsselt gespeichert, beim Ausschalten wieder im Klartext. Ohne Schlüssel (z. B. nach Löschen im Schlüsselbund) bleibt die Datei unlesbar, wird aber nicht gelöscht.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Datenschutz") }
+
+            Section {
+                SettingsBackupView(configStore: configStore)
+            } header: { Text("Sicherung") }
+            .disabled(isManagedLocked)
 
             Section {
                 SavedProfilesView(configStore: configStore)

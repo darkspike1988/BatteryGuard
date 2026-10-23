@@ -233,6 +233,8 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var capabilityChange: BGCapabilityChange? = nil
     /// macOS kalibriert gerade den Akku und ignoriert dafür das Ladelimit.
     public var appleCalibrationActive: Bool? = nil
+    /// Aktive IT-Vorgaben; nil ohne Konfigurationsprofil.
+    public var managedPolicy: BGManagedPolicy? = nil
     public var hasBatteryPercent: Bool { percentAvailable != false }
     public var hasExternalPower: Bool { externalPowerAvailable != false }
     public var pluggedIn: Bool = false

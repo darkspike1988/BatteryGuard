@@ -7,6 +7,13 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.9.0", title: "Auswerten und verwalten", changes: [
+            "Lebensdauer-Analyse mit Temperaturbereich, Ladebereichen, Lade-/Entladeleistung, Kapazitäts- und Zyklustrend; PDF-Bericht.",
+            "Akkustände verbundener Bluetooth-Geräte in der Diagnose.",
+            "Vorgaben und Sperre per Konfigurationsprofil für die IT; Einstellungen sichern und wiederherstellen.",
+            "Minutenverlauf optional verschlüsselt (AES-256-GCM, Schlüssel im Schlüsselbund).",
+            "Hintergrunddienst 0.9.0 erforderlich."
+        ]),
         .init(version: "0.8.0", title: "Automatisch und persönlich", changes: [
             "Zeitplan-Vorlagen: Montag früh voll, Wochenende voll, Spitzenlastzeit; Aufgabenverlauf löschen.",
             "Befehle über bguard:// und im Terminal, Kurzbefehle für Ladelimit und MagSafe-LED, globale Tastenkürzel.",
