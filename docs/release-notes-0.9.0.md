@@ -19,6 +19,13 @@ Die Diagnose zeigt Akkustände verbundener Geräte aus `system_profiler SPBlueto
 
 Optional speichert die App den Minutenverlauf mit AES-256-GCM (CryptoKit). Der Schlüssel liegt im Anmelde-Schlüsselbund (`AfterFirstUnlockThisDeviceOnly`). Verschlüsselte Dateien beginnen mit „BGENC1“ und werden beim Laden automatisch erkannt. Fehlt der Schlüssel, bleibt die Datei unangetastet, statt als beschädigt verschoben zu werden. Die Kapazitäts-Tageswerte bleiben unverschlüsselt.
 
+## Debugging-Runden (23. Oktober 2026)
+
+- **Menüleiste in Endlosschleife (100 % CPU):** `MenuBarExtra(isInserted:)` war direkt an `@AppStorage` gebunden; jede Rückschreibung löste eine neue Aktualisierung aus. Jetzt werden nur echte Änderungen gespeichert.
+- **Thread Sanitizer / Address Sanitizer:** ein Datenrennen im Test des SoC-Monitors behoben; sonst keine Befunde. Low-Power-Meldung wird auf dem Hauptthread verarbeitet, der Ladeton blockiert die Oberfläche nicht mehr.
+- **Laufzeit:** App etwa 0,5 % CPU und konstanter Speicher, Dienst 0 % CPU und 0 Lecks; 19,5 KB Lecks in Apples App-Intents-Framework (nicht B-Guard-Code).
+- **Code-Review:** Netzteil wird wiederhergestellt, wenn das macOS-Limit nicht gesetzt werden kann; Hitze- und Kälteschutz halten im macOS-Limit-Modus aus Sicherheitsgründen auch ohne Opt-in über den Netzteil-Schalter an (Reserve 20 %), im Pendel-Modus mit Reserve an der unteren Grenze; Top Up beachtet Hitzeschutz; `NSError`-Ausgabeparameter korrekt als autoreleasing gebrückt (Absturzgefahr); Apples ursprüngliches Limit wird beim Verlassen des Modus und bei der Deinstallation (`--restore-system-limit`) wiederhergestellt; IT-Vorgaben gelten auch vor dem Schlaf; Kalibrierung gibt vor dem Schlaf frei; WLAN-Regeln brechen keine Kalibrierung oder Sonderaktion ab und versuchen es erneut; Sicherung legt Zeitpläne vor den Einstellungen an; `bguard://`-Befehle von außen erst nach Rückfrage (abschaltbar); beim Ende des Wachhaltens mit geschlossenem Deckel schläft der Mac (nicht mit externem Monitor); die Übersicht zeigt beim Halten unter 80 % das echte Ziel.
+
 ## Prüfstand
 
-287 Tests in 45 Suiten (Swift Testing) bestanden, neu: Lebensdauer-Analyse, Bluetooth-Parser, Konfigurationsprofil und Sperre im Einstellungsdienst, Sicherung und Wiederherstellung, Verschlüsselung samt Umgang mit fehlendem Schlüssel.
+292 Tests in 45 Suiten (Swift Testing) bestanden, auch mit Thread und Address Sanitizer, neu: Lebensdauer-Analyse, Bluetooth-Parser, Konfigurationsprofil und Sperre im Einstellungsdienst, Sicherung und Wiederherstellung, Verschlüsselung samt Umgang mit fehlendem Schlüssel.

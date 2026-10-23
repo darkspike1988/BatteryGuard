@@ -31,6 +31,13 @@ struct SleepLedLockTests {
         #expect(decide(config, battery()) == .release)
     }
 
+    @Test func calibrationAlwaysReleasesBeforeSleep() {
+        var config = BGConfig()
+        config.stopChargingWhenSleeping = true
+        config.calibrationPlan = BGCalibrationPlan.manuallyStarted(at: now)
+        #expect(decide(config, battery()) == .release)
+    }
+
     @Test func fullChargeRequestsAndObservingModesStillRelease() {
         var config = BGConfig()
         config.stopChargingWhenSleeping = true

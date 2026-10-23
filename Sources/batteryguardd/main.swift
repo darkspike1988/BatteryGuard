@@ -193,7 +193,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.measurements = battery.measurements
         status.nativeChargeLimit = controller.smc.readNativeChargeLimit()
         status.effectiveLowerLimit = effective.lowerLimit
-        status.effectiveUpperLimit = decision.systemChargeLimit ?? (effective.chargeToFullOnce ? 100 : effective.upperLimit)
+        status.effectiveUpperLimit = decision.effectiveTargetPercent ?? decision.systemChargeLimit ?? (effective.chargeToFullOnce ? 100 : effective.upperLimit)
         status.externalDisplayConnected = desktop.externalDisplayConnected
         status.lidClosed = desktop.lidClosed
         status.adapterDisconnectAllowed = desktop.allowsAdapterDisconnect
@@ -205,7 +205,8 @@ final class DaemonRunner: @unchecked Sendable {
         if !isOnce {
             clamshellSleep.reconcile(wanted: config.keepAwakeWhenLidClosed && wakeUntilLimit.isActive,
                                      pluggedIn: battery.pluggedIn || decision.adapterConnected == false,
-                                     lidClosed: desktop.lidClosed, dryRun: dryRun, logger: { [weak self] in self?.log($0) })
+                                     lidClosed: desktop.lidClosed, externalDisplay: desktop.externalDisplayConnected,
+                                     dryRun: dryRun, logger: { [weak self] in self?.log($0) })
         }
         status.highPowerModeSupported = powerMode.highPowerModeSupported
         if !isOnce && !dryRun { socPower.refreshIfDue() }
@@ -294,7 +295,7 @@ final class DaemonRunner: @unchecked Sendable {
                 runner.wakeUntilLimit.release()
                 runner.clamshellSleep.release(dryRun: runner.dryRun, logger: { runner.log($0) })
                 runner.dischargeSleep.release()
-                runner.controller.prepareForSleep(config: runner.loadConfig().sanitized(), battery: BatteryReader.read(smcClient: runner.controller.smc),
+                runner.controller.prepareForSleep(config: (BGManagedPolicy.load().map { $0.apply(to: runner.loadConfig()) } ?? runner.loadConfig()).sanitized(), battery: BatteryReader.read(smcClient: runner.controller.smc),
                                                   dryRun: runner.dryRun, logger: { runner.log($0) })
                 IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
             case 0xe0000300 /* kIOMessageSystemHasPoweredOn */:
@@ -436,6 +437,10 @@ if args.contains("--check-config-service") {
         fputs("\(error.localizedDescription)\n", stderr)
         exit(1)
     }
+} else if args.contains("--restore-system-limit") {
+    // Für die Deinstallation: Apples ursprüngliches Ladelimit wiederherstellen.
+    let restored = SystemChargeLimitController().restoreOriginal(dryRun: false, logger: { print($0) })
+    exit(restored ? 0 : 1)
 } else if args.contains("--dump-keys") {
     // Diagnose: alle (oder per Präfix gefilterte) SMC-Keys ausgeben, nur lesend.
     let prefixes = args.drop(while: { $0 != "--dump-keys" }).dropFirst().filter { !$0.hasPrefix("--") }

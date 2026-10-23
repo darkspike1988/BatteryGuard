@@ -40,7 +40,8 @@ final class NetworkRuleMonitor: NSObject, CLLocationManagerDelegate {
     }
 
     /// Aus dem Statustakt aufrufen; liest den WLAN-Namen und wendet bei Wechsel die passende Regel an.
-    func poll(force: Bool = false, apply: (BGProfile) -> Void) {
+    /// `apply` meldet, ob das Profil gespeichert wurde; sonst wird der Wechsel beim nächsten Takt erneut versucht.
+    func poll(force: Bool = false, apply: (BGProfile) -> Bool) {
         // force liest den WLAN-Namen auch ohne Regeln, etwa beim Anlegen der ersten Regel.
         if force { lastPoll = nil }
         let rules = self.rules
@@ -49,10 +50,10 @@ final class NetworkRuleMonitor: NSObject, CLLocationManagerDelegate {
         lastPoll = now
         let ssid = CWWiFiClient.shared().interface()?.ssid()
         currentSSID = ssid
-        defer { previousSSID = ssid }
         if let profile = BGNetworkRules.profileToApply(previousSSID: previousSSID, currentSSID: ssid, rules: rules) {
-            apply(profile)
+            guard apply(profile) else { return }
             lastApplied = ssid
         }
+        previousSSID = ssid
     }
 }

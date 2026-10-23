@@ -40,6 +40,7 @@ struct PreferencesView: View {
     @AppStorage(LidLockGuard.appStorageKey) private var lockScreenWhenLidClosed = false
     @State private var chimeMuted = PowerChimeSetting.isMuted
     @AppStorage(GlobalHotKeys.appStorageKey) private var globalHotKeys = false
+    @AppStorage(AppDelegate.trustURLCommandsKey) private var trustURLCommands = false
 
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
@@ -190,6 +191,9 @@ struct PreferencesView: View {
                 }
                 Text("Befehle für Skripte und andere Apps: bguard://profile/desk, bguard://limit/60, bguard://pause?minutes=60, bguard://resume, bguard://top-up, bguard://led/off. Im Terminal: B-Guard.app/Contents/MacOS/BatteryGuard --run \"bguard://limit/60\".")
                     .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                Toggle("bguard://-Befehle ohne Rückfrage ausführen", isOn: $trustURLCommands)
+                Text("Standardmäßig fragt B-Guard nach, bevor eine App oder Webseite einen Befehl ausführt. Nur einschalten, wenn du Kurzbefehle oder Skripte ohne Rückfrage nutzen willst.")
+                    .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Tastenkürzel und Befehle") }
 
             Section {

@@ -47,10 +47,11 @@ struct SettingsBackupView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let backup = try BGSettingsBackup.decode(Data(contentsOf: url))
-            configStore.config = configStore.config.applyingPortable(from: backup.config)
+            // Erst Zeitpläne über die Aktion anlegen: Bei ausstehender Speicherung lehnt performAPIAction ab.
             for task in backup.config.scheduledTasks {
                 _ = try configStore.performAPIAction(.init(action: .upsertSchedule, scheduledTask: task))
             }
+            configStore.config = configStore.config.applyingPortable(from: backup.config)
             for (key, value) in backup.preferences where Self.isPortablePreference(key) {
                 UserDefaults.standard.set(value.value, forKey: key)
             }

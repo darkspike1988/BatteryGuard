@@ -1,15 +1,17 @@
 import Foundation
 import ObjectiveC
+import BatteryGuardShared
 
 /// Apples natives Ladelimit („Manual Charge Limit“) über die private Klasse
 /// `PowerUISmartChargeClient` aus PowerUI.framework (ab macOS 26/27).
 /// Die Schnittstelle ist undokumentiert: Jeder Aufruf prüft Klasse und Selektor zur Laufzeit,
 /// gesetzt werden nur Werte, die macOS selbst als verfügbar meldet.
 final class SystemChargeLimitClient {
+    // `NSError **` ist autoreleasing; ein UnsafeMutablePointer würde das Fehlerobjekt doppelt freigeben.
     private typealias InitFn = @convention(c) (AnyObject, Selector, NSString) -> AnyObject?
-    private typealias ListFn = @convention(c) (AnyObject, Selector, UnsafeMutablePointer<NSError?>?) -> NSArray?
-    private typealias GetFn = @convention(c) (AnyObject, Selector, UnsafeMutablePointer<NSError?>?) -> UInt8
-    private typealias SetFn = @convention(c) (AnyObject, Selector, UInt8, UnsafeMutablePointer<NSError?>?) -> Bool
+    private typealias ListFn = @convention(c) (AnyObject, Selector, AutoreleasingUnsafeMutablePointer<NSError?>?) -> NSArray?
+    private typealias GetFn = @convention(c) (AnyObject, Selector, AutoreleasingUnsafeMutablePointer<NSError?>?) -> UInt8
+    private typealias SetFn = @convention(c) (AnyObject, Selector, UInt8, AutoreleasingUnsafeMutablePointer<NSError?>?) -> Bool
 
     private let client: AnyObject
 
@@ -79,8 +81,30 @@ final class SystemChargeLimitController {
     private let driver: Driver
     private var cachedLimits: [Int]?
     private var lastLimitsRead: TimeInterval?
+    /// Merkt sich Apples Limit vor B-Guards erstem Eingriff, um es beim Verlassen des Modus wiederherzustellen.
+    private let ownershipPath: String
 
-    init(driver: Driver = .system) { self.driver = driver }
+    static let defaultOwnershipPath = BGPaths.directory + "/system-limit-original.json"
+
+    init(driver: Driver = .system, ownershipPath: String = SystemChargeLimitController.defaultOwnershipPath) {
+        self.driver = driver
+        self.ownershipPath = ownershipPath
+    }
+
+    private var originalLimit: Int? {
+        (FileManager.default.contents(atPath: ownershipPath)).flatMap { try? JSONDecoder().decode(Int.self, from: $0) }
+    }
+
+    /// Stellt Apples ursprüngliches Limit wieder her, falls B-Guard es geändert hat. Gibt true zurück, wenn nichts mehr offen ist.
+    @discardableResult
+    func restoreOriginal(dryRun: Bool, logger: ((String) -> Void)?) -> Bool {
+        guard let original = originalLimit else { return true }
+        if dryRun { logger?("[DRY-RUN] macOS-Limit würde auf \(original) % zurückgesetzt"); return true }
+        let restored = driver.currentLimit() == original || (driver.setLimit(original) && driver.currentLimit() == original)
+        if restored { try? FileManager.default.removeItem(atPath: ownershipPath) }
+        logger?("macOS-Limit auf ursprüngliche \(original) % \(restored ? "zurückgesetzt" : "nicht zurückgesetzt")")
+        return restored
+    }
 
     /// Verfügbare Stufen, höchstens alle zehn Minuten neu gelesen.
     func availableLimits(uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) -> [Int] {
@@ -100,6 +124,10 @@ final class SystemChargeLimitController {
             return false
         }
         if driver.currentLimit() == limit { return true }
+        if !dryRun, originalLimit == nil, let current = driver.currentLimit(),
+           let data = try? JSONEncoder().encode(current) {
+            FileManager.default.createFile(atPath: ownershipPath, contents: data)
+        }
         if dryRun {
             logger?("[DRY-RUN] macOS-Limit würde auf \(limit) % gesetzt")
             return true

@@ -52,7 +52,8 @@ final class ClamshellSleepGuard {
         logger("Schlafsperre aus einem früheren Lauf aufgehoben.")
     }
 
-    func reconcile(wanted: Bool, pluggedIn: Bool, lidClosed: Bool?, dryRun: Bool, logger: (String) -> Void) {
+    func reconcile(wanted: Bool, pluggedIn: Bool, lidClosed: Bool?, externalDisplay: Bool = false,
+                   dryRun: Bool, logger: (String) -> Void) {
         if isActive && !pluggedIn && lidClosed == true {
             release(dryRun: dryRun, logger: logger)
             if !dryRun { driver.sleepNow() }
@@ -71,6 +72,11 @@ final class ClamshellSleepGuard {
             }
         } else if !shouldDisable && isActive {
             release(dryRun: dryRun, logger: logger)
+            // Ziel erreicht bei geschlossenem Deckel ohne externen Monitor: sonst bliebe der Mac zugeklappt wach.
+            if lidClosed == true, !externalDisplay, !dryRun {
+                driver.sleepNow()
+                logger("Wachhalten beendet bei geschlossenem Deckel: Mac schläft.")
+            }
         }
     }
 

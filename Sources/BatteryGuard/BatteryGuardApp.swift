@@ -21,11 +21,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     /// `bguard://`-Adressen aus Kurzbefehlen, Skripten oder anderen Apps.
     func application(_ application: NSApplication, open urls: [URL]) {
-        Self.handle(urls)
+        Self.handle(urls, confirm: !UserDefaults.standard.bool(forKey: Self.trustURLCommandsKey))
     }
 
-    @MainActor static func handle(_ urls: [URL]) {
+    static let trustURLCommandsKey = "bg.trustURLCommands"
+
+    /// Adressen von außen (Browser, andere Apps) erst nach Rückfrage ausführen; Tastenkürzel rufen ohne Rückfrage auf.
+    @MainActor static func handle(_ urls: [URL], confirm: Bool = false) {
         for url in urls {
+            if confirm {
+                let alert = NSAlert()
+                alert.messageText = L("Befehl von außen ausführen?")
+                alert.informativeText = L("Eine App oder Webseite möchte B-Guard steuern: %@", url.absoluteString)
+                alert.addButton(withTitle: L("Ausführen"))
+                alert.addButton(withTitle: L("Abbrechen"))
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                guard alert.runModal() == .alertFirstButtonReturn else { continue }
+            }
             do {
                 _ = try BatteryWriteIntentExecution.perform(try BGURLCommand.request(for: url))
                 configStore?.loadConfig()
@@ -173,7 +185,10 @@ struct BatteryGuardApp: App {
             if !preview { lidLock.observe(fresh, enabled: UserDefaults.standard.bool(forKey: LidLockGuard.appStorageKey)) }
             if !preview {
                 NetworkRuleMonitor.shared.poll { profile in
-                    _ = try? AppDelegate.configStore?.performAPIAction(.init(action: .profile, profile: profile.rawValue))
+                    // Laufende Kalibrierung oder Sonderaktion nicht durch eine Netzwerkregel abbrechen.
+                    guard let store = AppDelegate.configStore, store.config.calibrationPlan == nil,
+                          store.config.specialChargePlan == nil else { return false }
+                    return (try? store.performAPIAction(.init(action: .profile, profile: profile.rawValue))) != nil
                 }
             }
         }

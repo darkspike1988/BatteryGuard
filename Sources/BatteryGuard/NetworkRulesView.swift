@@ -45,7 +45,7 @@ struct NetworkRulesView: View {
     }
 
     private func addCurrent() {
-        monitor.poll(force: true) { _ in }
+        monitor.poll(force: true) { _ in false }
         guard let ssid = monitor.currentSSID, !ssid.isEmpty else { return }
         rules.removeAll { $0.ssid == ssid }
         rules.append(BGNetworkRule(ssid: ssid, profile: newProfile))

@@ -1197,3 +1197,12 @@
 "AES-256-GCM; der Schlüssel liegt nur im Schlüsselbund dieses Macs. Die nächste Messung wird verschlüsselt gespeichert, beim Ausschalten wieder im Klartext. Ohne Schlüssel (z. B. nach Löschen im Schlüsselbund) bleibt die Datei unlesbar, wird aber nicht gelöscht." = "AES-256-GCM; ключ хранится только в связке ключей этого Mac. Следующее измерение сохраняется зашифрованным, при отключении — снова открытым текстом. Без ключа (например, после удаления из связки ключей) файл остаётся нечитаемым, но не удаляется.";
 "Ungültiger Verlaufsschlüssel." = "Неверный ключ истории.";
 "Verlauf konnte nicht verschlüsselt werden." = "Не удалось зашифровать историю.";
+
+/* Debugging-Runde */
+"Laden über den Netzteil-Schalter angehalten" = "Зарядка приостановлена переключателем адаптера";
+"macOS-Limit %lld %%, darunter lädt macOS weiter" = "Лимит macOS %lld %%, ниже него macOS продолжает заряжать";
+"Befehl von außen ausführen?" = "Выполнить внешнюю команду?";
+"Eine App oder Webseite möchte B-Guard steuern: %@" = "Приложение или сайт хочет управлять B-Guard: %@";
+"Ausführen" = "Выполнить";
+"bguard://-Befehle ohne Rückfrage ausführen" = "Выполнять команды bguard:// без подтверждения";
+"Standardmäßig fragt B-Guard nach, bevor eine App oder Webseite einen Befehl ausführt. Nur einschalten, wenn du Kurzbefehle oder Skripte ohne Rückfrage nutzen willst." = "По умолчанию B-Guard спрашивает, прежде чем приложение или сайт выполнит команду. Включайте, только если хотите использовать быстрые команды или скрипты без подтверждения.";

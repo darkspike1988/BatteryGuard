@@ -52,16 +52,61 @@ struct ChargeControl07Tests {
         #expect(aboveMinimum.adapterConnected && aboveMinimum.systemChargeLimit == 90)
     }
 
-    @Test func heatAndColdUseTheSwitchOnlyWithOptIn() {
+    @Test func heatAndColdHoldWithTheSwitchForSafetyAndKeepTheReserve() {
         var config = system(upper: 90, below: false)
         config.heatProtectionCelsius = 40
         let hot = evaluate(config, battery(70, temperature: 45))
-        #expect(hot.heatProtectionActive && hot.adapterConnected && hot.systemChargeLimit == 80)
-        config.allowLimitsBelowSystemMinimum = true
-        #expect(!evaluate(config, battery(70, temperature: 45)).adapterConnected)
+        #expect(hot.heatProtectionActive && !hot.adapterConnected && !hot.chargingEnabled && hot.systemChargeLimit == 80)
+        // Ohne Schalter (Monitor/Deckel) sinkt nur das Limit, die Meldung sagt das ehrlich.
+        let docked = evaluate(config, battery(70, temperature: 45), allowsDisconnect: false)
+        #expect(docked.adapterConnected && docked.message?.contains("darunter lädt macOS weiter") == true)
+        // An der Reserve bleibt das Netzteil verbunden, auch bei anhaltender Hitze.
+        let reserve = evaluate(config, battery(ControllerLogic.temperatureReservePercent, plugged: false, temperature: 45), previous: hot)
+        #expect(reserve.heatProtectionActive && reserve.adapterConnected)
+        #expect(evaluate(config, battery(25, temperature: 45), previous: reserve).adapterConnected)
         config.coldProtectionCelsius = 5
         let cold = evaluate(config, battery(70, temperature: 2))
         #expect(cold.coldProtectionActive && !cold.adapterConnected && cold.systemChargeLimit == 80)
+    }
+
+    @Test func topUpRespectsHeatProtectionInSystemLimitMode() {
+        var config = system(upper: 80, below: false)
+        config.heatProtectionCelsius = 40
+        config.specialChargePlan = BGSpecialChargePlan(kind: .topUp, targetPercent: 100,
+            createdAt: now, expiresAt: now.addingTimeInterval(3600))
+        let hot = evaluate(config, battery(90, temperature: 45))
+        #expect(hot.heatProtectionActive && hot.systemChargeLimit == 80 && hot.completedSpecialRequestID == nil)
+        #expect(evaluate(config, battery(90)).systemChargeLimit == 100)
+    }
+
+    @Test func holdingBelowMinimumReportsTheRealTarget() {
+        let hold = evaluate(system(upper: 60), battery(60))
+        #expect(hold.effectiveTargetPercent == 60 && hold.systemChargeLimit == 80)
+    }
+
+    @Test func pendulumColdProtectionKeepsTheReserve() {
+        var config = BGConfig(); config.mode = .pendulum; config.coldProtectionCelsius = 10
+        config.lowerLimit = 40; config.upperLimit = 80
+        let cold = evaluate(config, battery(60, temperature: 5), chargeLock: false)
+        #expect(cold.coldProtectionActive && !cold.adapterConnected)
+        let reserve = evaluate(config, battery(40, plugged: false, temperature: 5), previous: cold, chargeLock: false)
+        #expect(reserve.coldProtectionActive && reserve.adapterConnected)
+        #expect(evaluate(config, battery(41, temperature: 5), previous: reserve, chargeLock: false).adapterConnected)
+    }
+
+    @Test func originalSystemLimitIsRestoredWhenLeavingTheMode() {
+        final class Fake: @unchecked Sendable { var current = 90 }
+        let fake = Fake()
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("bg-mcl-\(UUID().uuidString).json").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let controller = SystemChargeLimitController(driver: .init(availableLimits: { [80, 85, 90, 95, 100] },
+            currentLimit: { fake.current }, setLimit: { fake.current = $0; return true }), ownershipPath: path)
+        #expect(controller.apply(80, dryRun: false, logger: nil) && fake.current == 80)
+        #expect(controller.apply(85, dryRun: false, logger: nil))
+        #expect(controller.restoreOriginal(dryRun: false, logger: nil) && fake.current == 90)
+        #expect(!FileManager.default.fileExists(atPath: path))
+        fake.current = 95
+        #expect(controller.restoreOriginal(dryRun: false, logger: nil) && fake.current == 95)
     }
 
     @Test func coldProtectionBlocksChargingWithHysteresisOnSMC() {
@@ -99,6 +144,13 @@ struct ChargeControl07Tests {
         #expect(r.settings == [true] && r.marker && guardian.isActive)
         guardian.reconcile(wanted: true, pluggedIn: false, lidClosed: true, dryRun: false, logger: { _ in })
         #expect(r.settings == [true, false] && r.slept == 1 && !r.marker && !guardian.isActive)
+        // Ziel erreicht bei geschlossenem Deckel: schlafen, außer ein externer Monitor ist angeschlossen.
+        guardian.reconcile(wanted: true, pluggedIn: true, lidClosed: true, dryRun: false, logger: { _ in })
+        guardian.reconcile(wanted: false, pluggedIn: true, lidClosed: true, externalDisplay: true, dryRun: false, logger: { _ in })
+        #expect(r.slept == 1)
+        guardian.reconcile(wanted: true, pluggedIn: true, lidClosed: true, dryRun: false, logger: { _ in })
+        guardian.reconcile(wanted: false, pluggedIn: true, lidClosed: true, dryRun: false, logger: { _ in })
+        #expect(r.slept == 2)
         r.marker = true
         guardian.recoverAfterCrash(logger: { _ in })
         #expect(r.settings.last == false && !r.marker)
