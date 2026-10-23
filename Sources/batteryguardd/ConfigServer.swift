@@ -149,11 +149,14 @@ final class ConfigServer: @unchecked Sendable {
         return uid
     }
 
+    /// Vom Dienst gesetzt: Der aktuelle Stand wird über das macOS-Ladelimit durchgesetzt.
+    nonisolated(unsafe) static var nativeLimitControlActive: () -> Bool = { false }
+
     static func currentSpecialContext() -> BGSpecialPlanEvaluationContext {
         let battery = BatteryReader.read()
         return BGSpecialPlanEvaluationContext(percent: battery.percentAvailable ? battery.percent : nil,
             externalPower: battery.externalPowerAvailable ? (battery.pluggedIn ? .connected : .disconnected) : .unknown,
-            canBlockCharging: SMCClient.shared.hasChargeControl,
+            canBlockCharging: SMCClient.shared.hasChargeControl || nativeLimitControlActive(),
             // Key discovery/readback is not physical certification. Keep P3 discharge gated.
             canDisconnectAdapter: false,
             allowsAdapterDisconnect: DesktopEnvironment.allowsAdapterDisconnect())

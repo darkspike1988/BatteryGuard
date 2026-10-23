@@ -1017,3 +1017,12 @@
 "macOS-Ladelimit, von B-Guard gesetzt" = "Лимит зарядки macOS, задан B-Guard";
 "macOS-Ladelimit (B-Guard)" = "Лимит зарядки macOS (B-Guard)";
 "macOS-Ladelimit konnte nicht gesetzt werden – macOS lädt nach seinen eigenen Einstellungen" = "Не удалось задать лимит зарядки macOS – macOS заряжает по собственным настройкам";
+"Dauer: %lld Minuten" = "Длительность: %lld мин";
+"Der Abstand zur unteren Grenze bleibt wie eingestellt." = "Разница с нижней границей остаётся прежней.";
+"Ladelimit setzen" = "Задать лимит зарядки";
+"Ladelimit: %lld %%" = "Лимит зарядки: %lld %%";
+"Ladelimit in Prozent" = "Лимит зарядки в процентах";
+"Schaltet ein, ob B-Guard auf Akkubetrieb den Low Power Mode von macOS aktiviert." = "Включает, активирует ли B-Guard режим энергосбережения macOS при работе от аккумулятора.";
+"Setzt die obere Ladegrenze. Der Abstand zur unteren Grenze bleibt erhalten." = "Задаёт верхний лимит зарядки. Разница с нижней границей сохраняется.";
+"Low Power Mode auf Akku" = "Энергосбережение от аккумулятора";
+"MagSafe-LED an Ladezustand anpassen" = "Индикатор MagSafe по состоянию зарядки";

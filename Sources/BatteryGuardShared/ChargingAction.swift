@@ -14,6 +14,10 @@ public enum BGChargingAction: String, Codable, CaseIterable, Sendable {
     case dischargeTo = "discharge-to"
     case holdCharge = "hold-charge"
     case cancelSpecial = "cancel-special"
+    /// Obere Ladegrenze setzen; der Abstand zur unteren Grenze bleibt erhalten.
+    case setLimit = "set-limit"
+    case lowPowerMode = "low-power-mode"
+    case magsafeLED = "magsafe-led"
 }
 
 public enum BGChargingActionError: Error, LocalizedError, Equatable, Sendable {
@@ -89,7 +93,8 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         case .deleteSchedule: return ["action", "scheduleID"]
         case .savedProfile: return ["action", "savedProfile"]
         case .profile: return ["action", "profile"]
-        case .protection: return ["action", "enabled"]
+        case .protection, .lowPowerMode, .magsafeLED: return ["action", "enabled"]
+        case .setLimit: return ["action", "targetPercent"]
         case .pause, .stayAwakeUntilLimit: return ["action", "minutes"]
         case .travel: return ["action", "readyAt"]
         case .cancelStayAwake, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial: return ["action"]
@@ -121,8 +126,12 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             guard let profile, BGProfile(rawValue: profile) != nil else {
                 throw BGChargingActionError.invalidRequest("Profil muss desk, everyday oder mobile sein.")
             }
-        case .protection:
+        case .protection, .lowPowerMode, .magsafeLED:
             guard enabled != nil else { throw BGChargingActionError.invalidRequest("enabled muss true oder false sein.") }
+        case .setLimit:
+            guard let targetPercent, (20...100).contains(targetPercent) else {
+                throw BGChargingActionError.invalidRequest("Das Ladelimit muss zwischen 20 und 100 liegen.")
+            }
         case .stayAwakeUntilLimit:
             guard let minutes, (1...120).contains(minutes) else { throw BGChargingActionError.invalidRequest("Wachhalten benötigt 1 bis 120 Minuten.") }
         case .pause:
@@ -160,6 +169,9 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
 
     static let returnsToNormal: Set<BGChargingAction> = [.resume, .cancelTravel, .cancelFullCharge,
                                                          .cancelSpecial]
+    /// Ändern nichts an Ladegrenzen und übersteuern deshalb keine Zeitpläne.
+    static let independentOfLimits: Set<BGChargingAction> = [.upsertSchedule, .deleteSchedule, .stayAwakeUntilLimit,
+                                                             .cancelStayAwake, .lowPowerMode, .magsafeLED]
 
     /// „Aktuellen Ladestand halten“ übernimmt den gemessenen Stand, begrenzt auf den
     /// erlaubten Haltebereich (10–95 %), damit Halten bei 96–100 % nicht scheitert.
@@ -181,7 +193,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             throw BGChargingActionError.invalidRequest("Der Reisezeitpunkt muss in der Zukunft und innerhalb von 30 Tagen liegen.")
         }
         var next = config
-        if action != .upsertSchedule && action != .deleteSchedule && action != .stayAwakeUntilLimit && action != .cancelStayAwake {
+        if !Self.independentOfLimits.contains(action) {
             // Nur echte Eingriffe übersteuern Zeitpläne und Monitorprofil für zwei Stunden.
             // Abbrechen und Fortsetzen kehren zum Normalbetrieb zurück.
             if !Self.returnsToNormal.contains(action) {
@@ -189,6 +201,20 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             }
         }
         switch action {
+        case .setLimit:
+            guard let targetPercent else { throw BGChargingActionError.invalidRequest("Ziel fehlt.") }
+            let band = max(1, next.upperLimit - next.lowerLimit)
+            next.upperLimit = targetPercent
+            next.lowerLimit = max(5, targetPercent - band)
+            if next.mode == .native || next.mode == .direct { next.mode = .auto }
+            next.chargeToFullOnce = false
+            next.fullChargeUntil = nil
+        case .lowPowerMode:
+            guard let enabled else { throw BGChargingActionError.invalidRequest("enabled fehlt.") }
+            next.lowPowerModeOnBattery = enabled
+        case .magsafeLED:
+            guard let enabled else { throw BGChargingActionError.invalidRequest("enabled fehlt.") }
+            next.magsafeLed = enabled
         case .stayAwakeUntilLimit:
             guard let minutes else { throw BGChargingActionError.invalidRequest("Dauer fehlt.") }
             next.awakeUntilLimitUntil = now.addingTimeInterval(Double(minutes) * 60)

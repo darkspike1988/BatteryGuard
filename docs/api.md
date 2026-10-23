@@ -146,8 +146,11 @@ Zusätzliche `POST /api/v1/actions`-Aktionen:
 | `delete-schedule` | `scheduleID`: UUID | Zeitplan entfernen. |
 | `stay-awake-until-limit` | `minutes`: 1–120 | Explizite befristete Wachhaltung bis zum Ziel; geeignete Ladesteuerung erforderlich. |
 | `cancel-stay-awake` | keine | Wachhaltung beenden. |
+| `set-limit` | `targetPercent`: 20–100 | Obere Ladegrenze setzen; der Abstand zur unteren Grenze bleibt erhalten. Verlässt den macOS-Modus. |
+| `low-power-mode` | `enabled`: true/false | Low Power Mode auf Akkubetrieb ein- oder ausschalten. Übersteuert keine Zeitpläne. |
+| `magsafe-led` | `enabled`: true/false | MagSafe-LED dem Ladezustand anpassen. Übersteuert keine Zeitpläne. |
 
-Manuelle Ladeaktionen übersteuern Zeitpläne für zwei Stunden; aktive Pause, Volllade-, Reise- und Sonderaufträge haben zusätzlich Vorrang. Zeitpläne speichern Profilparameter als eigenen Stand. Die Wiederholungen `once`, `daily`, `weekdays`, `weekly`, `biweekly`, `monthly` und `yearly` verwenden eine gespeicherte Zeitzone. Fehlende Monatstage werden übersprungen. `catchUp: false` erlaubt das normale 30-Sekunden-Ausführungsfenster; mit `true` wird höchstens der neueste verpasste Termin bis zu sechs Stunden nachgeholt.
+Manuelle Ladeaktionen übersteuern Zeitpläne für zwei Stunden; aktive Pause, Volllade-, Reise- und Sonderaufträge haben zusätzlich Vorrang. Zeitpläne speichern Profilparameter als eigenen Stand. Die Wiederholungen `once`, `daily`, `weekdays`, `weekly`, `biweekly`, `monthly` und `yearly` verwenden eine gespeicherte Zeitzone. Fehlende Monatstage werden übersprungen. Zeitpläne kennen zusätzlich die Aktionen `limit` (`targetPercent` 20–100) und `pause` (`minutes` 1–720); beide brauchen keine Ladesteuerung. `catchUp: false` erlaubt das normale 30-Sekunden-Ausführungsfenster; mit `true` wird höchstens der neueste verpasste Termin bis zu sechs Stunden nachgeholt.
 
 `/capabilities` nennt alle implementierten Aktionen unter `availableActions`. Das ist keine Hardwarefreigabe: `holdChargeHardwareVerified` und `dischargeToHardwareVerified` sind derzeit `false`; Top Up benötigt separate Ladesteuerung. `schedulesRunInDaemon` unterscheidet Zeitpläne von der REST API, für die die App weiterhin laufen muss. Erfolg bedeutet bestätigte Speicherung, keine garantierte Hardwarewirkung.
 

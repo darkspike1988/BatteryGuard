@@ -78,6 +78,8 @@ struct ScheduledTasksView: View {
                 }
                 Picker("Aktion", selection: $kind) {
                     Text("Profil anwenden").tag(BGScheduledAction.Kind.profile)
+                    Text("Ladelimit setzen").tag(BGScheduledAction.Kind.limit)
+                    Text("Schutz pausieren").tag(BGScheduledAction.Kind.pause)
                     Text("Top Up bis Abstecken").tag(BGScheduledAction.Kind.topUp)
                     Text("Ladestand halten · Hardware-Abnahme offen").tag(BGScheduledAction.Kind.hold)
                     Text("Einmal entladen · Hardware-Abnahme offen").tag(BGScheduledAction.Kind.discharge)
@@ -90,6 +92,11 @@ struct ScheduledTasksView: View {
                     }
                     if selectedProfileHasDischarge { Text("Dieses Profil schaltet aktives Entladen ein; das Netzteil kann softwareseitig getrennt werden.").font(.caption).foregroundStyle(.orange) }
                     Text("Die Profilparameter werden als eigener Stand im Zeitplan gespeichert.").font(.caption)
+                } else if kind == .limit {
+                    Stepper(L("Ladelimit: %lld %%", target), value: $target, in: 20...100, step: 5)
+                    Text("Der Abstand zur unteren Grenze bleibt wie eingestellt.").font(.caption)
+                } else if kind == .pause {
+                    Stepper(L("Dauer: %lld Minuten", min(minutes, 720)), value: $minutes, in: 15...720, step: 15)
                 } else {
                     Stepper(L("Maximale Dauer: %lld Minuten", minutes), value: $minutes, in: 1...1440, step: 30)
                     if kind == .discharge { Stepper(L("Ziel: %lld %%", target), value: $target, in: 10...95) }
@@ -137,7 +144,8 @@ struct ScheduledTasksView: View {
                 else { throw BGChargingActionError.invalidRequest(L("Das gewählte Profil ist nicht mehr vorhanden.")) }
             } else { saved = nil }
             let action = BGScheduledAction(kind: kind, profile: saved,
-                minutes: kind == .profile ? nil : minutes, targetPercent: kind == .discharge ? target : nil)
+                minutes: kind == .profile || kind == .limit ? nil : (kind == .pause ? min(minutes, 720) : minutes),
+                targetPercent: kind == .discharge || kind == .limit ? target : nil)
             let task = BGScheduledTask(schedule: schedule, enabled: enabled, catchUp: catchUp,
                 action: action, state: existing?.state ?? .init())
             _ = try configStore.performAPIAction(.init(action: .upsertSchedule, scheduledTask: task))

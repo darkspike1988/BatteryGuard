@@ -30,6 +30,7 @@ final class DaemonRunner: @unchecked Sendable {
         self.dryRun = dryRun
         self.isOnce = isOnce
         controller.smc.allowsWriteProbe = !dryRun
+        ConfigServer.nativeLimitControlActive = { [weak controller] in controller?.nativeLimitControlled != nil }
     }
 
     private let timestampFormatter: ISO8601DateFormatter = {

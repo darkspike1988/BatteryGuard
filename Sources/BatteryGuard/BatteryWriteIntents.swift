@@ -128,6 +128,41 @@ public struct ResumeChargingIntent: AppIntent {
     }
 }
 
+public struct SetChargeLimitIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Ladelimit setzen"
+    public static let description = IntentDescription("Setzt die obere Ladegrenze. Der Abstand zur unteren Grenze bleibt erhalten.")
+    public static let openAppWhenRun = false
+    @Parameter(title: "Ladelimit in Prozent", default: 80, inclusiveRange: (20, 100)) public var percent: Int
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .setLimit, targetPercent: percent))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+public struct SetLowPowerModeOnBatteryIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Low Power Mode auf Akku"
+    public static let description = IntentDescription("Schaltet ein, ob B-Guard auf Akkubetrieb den Low Power Mode von macOS aktiviert.")
+    public static let openAppWhenRun = false
+    @Parameter(title: "Aktiv") public var enabled: Bool
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .lowPowerMode, enabled: enabled))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+public struct SetMagSafeLEDIntent: AppIntent {
+    public static let title: LocalizedStringResource = "MagSafe-LED an Ladezustand anpassen"
+    public static let openAppWhenRun = false
+    @Parameter(title: "Aktiv") public var enabled: Bool
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .magsafeLED, enabled: enabled))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
 public struct SavedChargingProfileEntity: AppEntity {
     public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Gespeichertes Ladeprofil")
     public static let defaultQuery = SavedChargingProfileQuery()

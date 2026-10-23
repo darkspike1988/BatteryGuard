@@ -54,7 +54,8 @@ public enum ScheduleRunner {
                 selected = true
                 do {
                     var request = try task.action.request()
-                    if task.action.kind != .profile {
+                    // Profil, Limit und Pause ändern nur Einstellungen; Sonderaktionen brauchen Steuerung.
+                    if ![.profile, .limit, .pause].contains(task.action.kind) {
                         guard context.canBlockCharging, let percent = context.percent, (0...100).contains(percent) else {
                             throw BGChargingActionError.invalidRequest("Unavailable charge control")
                         }

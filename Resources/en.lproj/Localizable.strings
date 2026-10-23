@@ -1017,3 +1017,12 @@
 "macOS-Ladelimit, von B-Guard gesetzt" = "macOS charge limit, set by B-Guard";
 "macOS-Ladelimit (B-Guard)" = "macOS charge limit (B-Guard)";
 "macOS-Ladelimit konnte nicht gesetzt werden – macOS lädt nach seinen eigenen Einstellungen" = "Could not set the macOS charge limit – macOS charges according to its own settings";
+"Dauer: %lld Minuten" = "Duration: %lld minutes";
+"Der Abstand zur unteren Grenze bleibt wie eingestellt." = "The gap to the lower limit stays as configured.";
+"Ladelimit setzen" = "Set charge limit";
+"Ladelimit: %lld %%" = "Charge limit: %lld %%";
+"Ladelimit in Prozent" = "Charge limit in percent";
+"Schaltet ein, ob B-Guard auf Akkubetrieb den Low Power Mode von macOS aktiviert." = "Turns on whether B-Guard enables macOS Low Power Mode on battery.";
+"Setzt die obere Ladegrenze. Der Abstand zur unteren Grenze bleibt erhalten." = "Sets the upper charge limit. The gap to the lower limit is kept.";
+"Low Power Mode auf Akku" = "Low Power Mode on battery";
+"MagSafe-LED an Ladezustand anpassen" = "Match MagSafe LED to charging state";
