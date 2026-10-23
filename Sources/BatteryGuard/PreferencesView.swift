@@ -328,11 +328,7 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Weitere Werte in der Menüleiste").font(.subheadline.weight(.medium))
-                    ForEach(MenuBarExtraItem.allCases) { item in
-                        Toggle(item.localizedTitle, isOn: Binding(
-                            get: { MenuBarExtraItem.decode(menuBarExtras).contains(item) },
-                            set: { _ in menuBarExtras = MenuBarExtraItem.toggled(item, in: menuBarExtras) }))
-                    }
+                    ForEach(MenuBarExtraItem.allCases) { MenuBarExtraToggle(item: $0) }
                     Text("Werte erscheinen nur, wenn sie aktuell gemeldet werden. Die SoC-Leistung misst der Dienst etwa alle 30 Sekunden.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
