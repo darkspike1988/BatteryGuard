@@ -179,10 +179,6 @@ final class ConfigServer: @unchecked Sendable {
             throw BGConfigIPCError.invalidMessage
         }
         if let action = request.action {
-            if action.action == .calibration {
-                // Read/write key discovery does not certify a complete physical calibration cycle.
-                throw BGChargingActionError.invalidRequest("Kalibrierung ist für diese Hardware noch nicht physisch bestätigt.")
-            }
             if [.topUp, .holdCharge, .dischargeTo].contains(action.action) {
                 return try BGConfigFile.update(at: configURL) { latest in
                     // Evaluate inside the transaction: the caller cannot choose the "current" hold target.
@@ -199,7 +195,7 @@ final class ConfigServer: @unchecked Sendable {
                         guard specialContext != nil else {
                             throw BGChargingActionError.invalidRequest("Halten ist für diese Hardware noch nicht physisch bestätigt.")
                         }
-                        validated.targetPercent = context.percent
+                        validated.targetPercent = context.percent.map(BGChargingActionRequest.holdTarget(forCurrentPercent:))
                     }
                     if action.action == .dischargeTo {
                         guard context.canDisconnectAdapter && context.allowsAdapterDisconnect else {

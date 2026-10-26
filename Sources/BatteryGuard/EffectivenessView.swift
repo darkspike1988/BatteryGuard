@@ -41,7 +41,7 @@ struct EffectivenessView: View {
                         row("Deckel", value: lid ? L("geschlossen") : L("offen"))
                     }
                 }
-                if effectiveness.state == .limitedByNative {
+                if effectiveness.state == .limitedByNative || effectiveness.nativeAdvice?.needsAdjustment == true {
                     Button("Batterieeinstellungen öffnen") {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)
                     }.font(.caption)
@@ -63,6 +63,7 @@ struct EffectivenessView: View {
         case .effective: L("wirksam")
         case .limitedByNative: L("begrenzt")
         case .desktopFallback: L("Monitor-/Deckelschutz")
+        case .handledByMacOS: L("macOS-Limit")
         case .inactive: L("nicht aktiv")
         case .unsupported: L("nicht unterstützt")
         case .daemonInactive: L("Dienst aus")
@@ -74,6 +75,7 @@ struct EffectivenessView: View {
         switch effectiveness.state {
         case .effective: "checkmark.seal"
         case .limitedByNative, .desktopFallback: "exclamationmark.triangle"
+        case .handledByMacOS: effectiveness.nativeAdvice?.needsAdjustment == true ? "exclamationmark.triangle" : "apple.logo"
         case .inactive: "pause.circle"
         case .unsupported: "questionmark.circle"
         case .daemonInactive: "bolt.slash"
@@ -86,6 +88,7 @@ struct EffectivenessView: View {
         case .effective: .green
         case .limitedByNative: .orange
         case .desktopFallback: .secondary
+        case .handledByMacOS: effectiveness.nativeAdvice?.needsAdjustment == true ? .orange : .green
         case .inactive: .secondary
         case .unsupported: .orange
         case .daemonInactive, .daemonOutdated: .orange
@@ -109,6 +112,8 @@ struct EffectivenessView: View {
             return L("macOS begrenzt früher als dein B-Guard-Ziel. Hebe das native Limit in den Batterieeinstellungen an, wenn du höher laden willst. B-Guard ändert diese Systemeinstellung nicht.")
         case .desktopFallback:
             return L("Bei externem Monitor oder geschlossenem Deckel bleibt das Netzteil verbunden. Ohne separate Ladesperre übernimmt macOS das Laden; das B-Guard-Ziel wird nicht erzwungen.")
+        case .handledByMacOS:
+            return nativeAdviceText
         case .inactive:
             return config.enabled ? L("Der Schutz ist gerade pausiert. Nach Ablauf gilt wieder dein gespeichertes Profil.") : L("Der Ladeschutz ist ausgeschaltet. macOS lädt nach seinen eigenen Einstellungen.")
         case .unsupported:
@@ -118,6 +123,23 @@ struct EffectivenessView: View {
         case .daemonOutdated:
             return L("Der Hintergrunddienst ist älter als diese App. Aktualisiere ihn in den Einstellungen, damit die angezeigten Werte belastbar sind.")
         }
+    }
+
+    /// macOS Tahoe 26.4+ hält auf Apple silicon ein Ladelimit von 80 bis 100 % (Apple 102338).
+    private var nativeAdviceText: String {
+        guard let advice = effectiveness.nativeAdvice, let target = effectiveness.targetUpperLimit else {
+            return L("Ohne separate Ladesperre hält macOS das Ladelimit. B-Guard beobachtet und greift nicht ein.")
+        }
+        if effectiveness.nativeChargeLimit == nil {
+            return L("Kein macOS-Ladelimit erkannt. Ab macOS 26.4 lässt es sich unter Systemeinstellungen → Batterie einstellen; auf älteren Versionen hilft „Optimiertes Laden“.")
+        }
+        if advice.targetBelowNativeMinimum {
+            return L("Dein Ziel von %lld %% liegt unter dem macOS-Minimum von 80 %%. Ohne separate Ladesperre hält dieser Mac höchstens bei 80 %%; stelle das macOS-Ladelimit auf 80 %%.", target)
+        }
+        if advice.needsAdjustment {
+            return L("Ohne separate Ladesperre hält macOS das Ladelimit. Stelle es in den Batterieeinstellungen auf %lld %%, passend zu deinem Ziel.", advice.recommendedLimit)
+        }
+        return L("Das macOS-Ladelimit passt zu deinem Ziel. B-Guard beobachtet und greift nicht ein.")
     }
 
     private var controlPathText: String {

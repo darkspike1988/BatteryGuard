@@ -64,14 +64,13 @@ struct BatteryHeaderCardView: View {
     private var mechanismText: String? {
         guard isDaemonActive else { return nil }
         
-        let keys = status.smcKeysDetected
         if config.mode == .systemLimit, let limit = status.systemChargeLimit {
             return L("macOS-Limit %lld %%", limit)
         }
-        if keys.contains("CHTE") || keys.contains("CH0B") {
+        if status.hasChargeInhibit {
             return L("Native SMC-Sperre")
-        } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
-            return L("Pendel-Modus")
+        } else if status.hasAdapterSwitch || status.chargeCapability?.chargeInhibitBlockedByFirmware == true {
+            return L("macOS-Ladelimit")
         }
 
         if let msg = status.message, !msg.isEmpty {
@@ -86,10 +85,10 @@ struct BatteryHeaderCardView: View {
         if config.mode == .systemLimit {
             return L("B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch, auch wenn die App geschlossen ist.")
         }
-        if keys.contains("CHTE") || keys.contains("CH0B") {
+        if status.hasChargeInhibit {
             return L("Hardware-Ladesperre aktiv (%@). Die Batterie wird präzise auf dem Zielwert gehalten.", keys.joined(separator: ", "))
-        } else if keys.contains("CHIE") || keys.contains("CH0J") || keys.contains("CH0I") {
-            return L("Neueres MacBook erkannt! Nutzt den Pendel-Modus (%@): Das Netzteil wird virtuell vom Akku getrennt, bis der Akku unter das Limit fällt.", keys.joined(separator: ", "))
+        } else if status.hasAdapterSwitch || status.chargeCapability?.chargeInhibitBlockedByFirmware == true {
+            return L("Keine separate Ladesperre erkannt (%@). macOS hält das Ladelimit; B-Guard beobachtet und warnt.", keys.joined(separator: ", "))
         }
         return L("Steuert die Ladeelektronik.")
     }

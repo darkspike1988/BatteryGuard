@@ -93,11 +93,11 @@ struct LocalAPITests {
         #expect(response.status == 200)
         let body = try JSONSerialization.jsonObject(with: response.jsonData) as! [String: Any]
         #expect(body["hardwareApplied"] as? Bool == false)
-        #expect((body["savedConfig"] as? [String: Any])?["upperLimit"] as? Int == 60)
-        #expect(f.config.config.upperLimit == 60)
+        #expect((body["savedConfig"] as? [String: Any])?["upperLimit"] as? Int == 50)
+        #expect(f.config.config.upperLimit == 50)
         try FileManager.default.removeItem(at: f.directory.appendingPathComponent("config.json"))
         #expect(f.api.respond(to: action).status == 503)
-        #expect(f.config.config.upperLimit == 60 && !f.config.hasUnsavedChanges)
+        #expect(f.config.config.upperLimit == 50 && !f.config.hasUnsavedChanges)
     }
 
     @Test func invalidActionsStaleDaemonAndNativeModeDoNotMutate() throws {
@@ -145,6 +145,20 @@ struct LocalAPITests {
         #expect(try String(contentsOf: target, encoding: .utf8) == f.token)
     }
 
+    @Test func damagedOrExposedTokenIsRegenerated() throws {
+        let f = try fixture(); defer { f.cleanUp() }
+        try Data("half".utf8).write(to: f.credentials.url)
+        let repaired = try f.credentials.loadOrCreate()
+        #expect(APITokenStore.isValid(repaired) && repaired != f.token)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: f.credentials.url.path)
+        let replaced = try f.credentials.loadOrCreate()
+        #expect(replaced != repaired)
+        let mode = try FileManager.default.attributesOfItem(atPath: f.credentials.url.path)[.posixPermissions] as? NSNumber
+        #expect(mode?.intValue == 0o600)
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: f.directory.path).filter { $0.hasSuffix(".tmp") }
+        #expect(leftovers.isEmpty)
+    }
+
     @Test func realLoopbackHTTPReadAndActionStayInsideTemporaryConfiguration() async throws {
         let f = try fixture(); defer { f.cleanUp() }
         let deadline = Date().addingTimeInterval(3)
@@ -171,7 +185,7 @@ struct LocalAPITests {
         request.httpBody = Data(#"{"action":"profile","profile":"desk"}"#.utf8)
         let (_, saved) = try await session.data(for: request)
         #expect((saved as? HTTPURLResponse)?.statusCode == 200)
-        #expect(try BGConfigFile.read(at: f.directory.appendingPathComponent("config.json")).upperLimit == 60)
+        #expect(try BGConfigFile.read(at: f.directory.appendingPathComponent("config.json")).upperLimit == 50)
     }
 
     @Test func occupiedLoopbackPortReportsFailureAndCanBeRetried() async throws {

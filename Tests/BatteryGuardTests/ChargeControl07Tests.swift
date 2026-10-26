@@ -84,16 +84,6 @@ struct ChargeControl07Tests {
         #expect(hold.effectiveTargetPercent == 60 && hold.systemChargeLimit == 80)
     }
 
-    @Test func pendulumColdProtectionKeepsTheReserve() {
-        var config = BGConfig(); config.mode = .pendulum; config.coldProtectionCelsius = 10
-        config.lowerLimit = 40; config.upperLimit = 80
-        let cold = evaluate(config, battery(60, temperature: 5), chargeLock: false)
-        #expect(cold.coldProtectionActive && !cold.adapterConnected)
-        let reserve = evaluate(config, battery(40, plugged: false, temperature: 5), previous: cold, chargeLock: false)
-        #expect(reserve.coldProtectionActive && reserve.adapterConnected)
-        #expect(evaluate(config, battery(41, temperature: 5), previous: reserve, chargeLock: false).adapterConnected)
-    }
-
     @Test func originalSystemLimitIsRestoredWhenLeavingTheMode() {
         final class Fake: @unchecked Sendable { var current = 90 }
         let fake = Fake()

@@ -21,18 +21,6 @@ enum StatusMessageLocalizer {
         if let values = captures(message, #"^Schutz pausiert bis (.+)$"#) {
             return L("Schutz pausiert bis %@", values[0])
         }
-        if let values = captures(message, #"^Kalibrierung nicht verfügbar: (.+)$"#) {
-            return L("Kalibrierung nicht verfügbar: %@", values[0])
-        }
-        if let values = captures(message, #"^Kalibrierung beendet: (.+)$"#) {
-            return L("Kalibrierung beendet: %@", values[0])
-        }
-        if let values = captures(message, #"^Kalibrierung pausiert: (.+)$"#) {
-            return L("Kalibrierung pausiert: %@", values[0])
-        }
-        if let values = captures(message, #"^Kalibrierung: (.+)$"#) {
-            return L("Kalibrierung: %@", values[0])
-        }
         if let values = captures(message, #"^Einmaliges Vollladen aktiv \((\d+) %\)$"#) {
             return L("Einmaliges Vollladen aktiv (%lld %%)", Int(values[0]) ?? 0)
         }
@@ -81,14 +69,6 @@ enum StatusMessageLocalizer {
         if let values = captures(message, #"^Laden aktiv bis (\d+) %$"#),
            let limit = Int(values[0]) {
             return L("Laden aktiv bis %lld %%", limit)
-        }
-        if let values = captures(message, #"^Pendel-Modus: Akku läuft ab (\d+) % bis (\d+) % vom Akku$"#),
-           let upper = Int(values[0]), let lower = Int(values[1]) {
-            return L("Pendel-Modus: Akku läuft ab %lld %% bis %lld %% vom Akku", upper, lower)
-        }
-        if let values = captures(message, #"^Pendel-Modus: lädt bis (\d+) %$"#),
-           let limit = Int(values[0]) {
-            return L("Pendel-Modus: lädt bis %lld %%", limit)
         }
         return nil
     }

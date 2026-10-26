@@ -27,6 +27,7 @@ struct PreferencesView: View {
     @AppStorage("bg.notifyWeekly") private var notifyWeekly = false
     @AppStorage("bg.notifyHealth") private var notifyHealth = true
     @AppStorage("bg.notifyAnomalies") private var notifyAnomalies = true
+    @AppStorage(SleepReportStore.notifyKey) private var notifySleepDrain = true
     @AppStorage("bg.healthThreshold") private var healthThreshold = 80
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
@@ -83,7 +84,6 @@ struct PreferencesView: View {
                 Picker("Ladesteuerung", selection: $configStore.config.mode) {
                     Text("Automatisch").tag(BGMode.auto)
                     Text("macOS · nur beobachten").tag(BGMode.native)
-                    Text("Pendel · Netzteil umschalten").tag(BGMode.pendulum)
                     if !(statusStore.status.systemChargeLimits ?? []).isEmpty || configStore.config.mode == .systemLimit {
                         Text("macOS-Limit · natives Ladelimit setzen").tag(BGMode.systemLimit)
                     }
@@ -113,7 +113,7 @@ struct PreferencesView: View {
                             in: 5...min(95, configStore.config.upperLimit - 1))
                     Stepper(L("Stoppen bei %lld %%", configStore.config.upperLimit), value: $configStore.config.upperLimit,
                             in: max(20, configStore.config.lowerLimit + 1)...100)
-                    Text("Im Pendelmodus verbindet sich das Netzteil bei Maximum minus 5 % wieder. Die untere Grenze bleibt die Sicherheitsgrenze des Hitzeschutzes.")
+                    Text("Die untere Grenze bestimmt, ab wann wieder geladen wird. Ohne separate Ladesperre hält macOS das Ladelimit.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             } header: { Text("Ladebereich") }
@@ -129,7 +129,7 @@ struct PreferencesView: View {
                             value: $configStore.config.heatProtectionCelsius, in: 30...50)
                 }
                 Toggle("Oberhalb des Limits aktiv entladen", isOn: $configStore.config.activeDischargeAboveUpper)
-                Text("Aktives Entladen trennt das Netzteil softwareseitig. Im Pendelmodus geschieht dies bereits automatisch. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt.")
+                Text("Aktives Entladen trennt das Netzteil softwareseitig, bis das Limit erreicht ist. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt.")
                     .font(.caption).foregroundStyle(.secondary)
                 Picker("MagSafe-LED", selection: $configStore.config.magsafeLedMode) {
                     Text("macOS steuert").tag(BGMagSafeLEDMode.system)
@@ -226,16 +226,9 @@ struct PreferencesView: View {
                     Button("Wachhalten beenden") { configStore.performAction(.init(action: .cancelStayAwake)) }
                 } else {
                     Button("Bis zum Ladelimit wachhalten · höchstens 2 Stunden") { configStore.performAction(.init(action: .stayAwakeUntilLimit, minutes: 120)) }
-                        .disabled(!statusStore.supportsChargingPlans || !statusStore.status.smcKeysDetected.contains(where: { $0 == "CHTE" || $0 == "CH0B" }))
+                        .disabled(!statusStore.supportsChargingPlans || !statusStore.status.hasChargeInhibit)
                 }
                 Text("Verhindert nur automatischen Ruhezustand am Netzteil. Display und bewusst ausgelöster Schlaf bleiben möglich. Bei Abstecken, fehlenden Sensoren, erreichtem Ziel, Frist oder Fehler wird Wachhalten gelöst.").font(.caption).foregroundStyle(.secondary)
-                Text("Kalibrierung: 100 % laden → bis 10 % entladen → erneut 100 % laden → eine Stunde halten. Der Assistent bleibt bis zur physischen Hardware-Abnahme gesperrt. Er kann die Ladestandsschätzung verbessern; eine längere Akkulebensdauer wird nicht zugesagt.").font(.caption).foregroundStyle(.secondary)
-                if configStore.config.calibrationPlan != nil {
-                    Button("Kalibrierung abbrechen") {
-                        do { _ = try configStore.performAPIAction(.init(action: .cancelCalibration)) }
-                        catch { diagnosticsError = error.localizedDescription }
-                    }
-                }
             } header: { Text("Sonderaktionen") }
 
             Section {
@@ -283,6 +276,8 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Sechs Wochen ohne Vollladung", isOn: $notifyCalibration)
                     .help("Erinnert höchstens alle zwei Wochen. Eine gelegentliche Vollladung kann die Ladestandsschätzung unterstützen; sie ist kein Gesundheitstest und wird nicht automatisch gestartet.")
+                Toggle("Ungewöhnlicher Verbrauch im Schlaf", isOn: $notifySleepDrain)
+                    .help("Vergleicht nach dem Aufwachen den Verbrauch der letzten Schlafphase mit den vorherigen. Grundlage ist das Energieprotokoll von macOS.")
                 Toggle("Wochenbericht", isOn: $notifyWeekly)
                     .help("Ein lokaler Hinweis pro Woche mit aufgezeichneter Zeit, Ladung über 90 % und Temperatur über 40 °C. Es werden keine Daten gesendet.")
                 LabeledContent("macOS-Freigabe", value: notificationPermissionDescription)
@@ -423,6 +418,11 @@ struct PreferencesView: View {
                 if statusStore.isDaemonActive {
                     LabeledContent("Ladezyklen", value: statusStore.status.cycleCount.map(String.init) ?? "—")
                     LabeledContent("SMC-Unterstützung", value: statusStore.status.smcKeysDetected.joined(separator: ", "))
+                    if let capability = statusStore.status.chargeCapability {
+                        LabeledContent("Ladesperre", value: L(capability.chargeInhibitAvailable ? "verfügbar"
+                            : capability.chargeInhibitBlockedByFirmware ? "von der Firmware gesperrt" : "nicht vorhanden"))
+                        LabeledContent("Netzteil-Schalter", value: L(capability.adapterSwitchAvailable ? "verfügbar" : "nicht verfügbar"))
+                    }
                 }
                 HStack {
                     Button(L(statusStore.isDaemonActive ? "Dienst aktualisieren" : "Dienst installieren")) { services.install() }

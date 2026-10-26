@@ -29,8 +29,8 @@ struct AppActionsTests {
         store.scheduleTravel(readyAt: ready)
         store.flushPendingSave()
         let persisted = try BGJSON.decoder().decode(BGConfig.self, from: Data(contentsOf: directory.appendingPathComponent("config.json")))
-        #expect(persisted.upperLimit == 60)
-        #expect(persisted.lowerLimit == 55)
+        #expect(persisted.upperLimit == 50)
+        #expect(persisted.lowerLimit == 45)
         #expect(abs(persisted.travelReadyAt!.timeIntervalSince(ready)) < 1)
         #expect(!store.hasWriteError)
     }
@@ -71,6 +71,27 @@ struct AppActionsTests {
         #expect(try BGJSON.decoder().decode(BGConfig.self, from: Data(contentsOf: url)).upperLimit == 90)
     }
 
+    @Test func repeatedSaveFailuresGiveUpInsteadOfBlockingForever() throws {
+        let (store, directory) = try fixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("config.json")
+        store.config.upperLimit = 90
+        try FileManager.default.removeItem(at: url)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+        for _ in 0..<ConfigStore.maximumSaveAttempts { store.flushPendingSave() }
+        #expect(!store.hasUnsavedChanges)
+        #expect(store.hasWriteError)
+        try FileManager.default.removeItem(at: url)
+        var external = BGConfig(); external.upperLimit = 70
+        try BGJSON.encoder().encode(external).write(to: url)
+        store.loadConfig()
+        // Daemon changes are visible again and the failure stays reported.
+        #expect(store.config.upperLimit == 70)
+        #expect(store.hasWriteError)
+        #expect(ConfigStore.retryDelay(afterFailedAttempts: 1) == .seconds(2))
+        #expect(ConfigStore.retryDelay(afterFailedAttempts: 9) == .seconds(16))
+    }
+
     @Test func menuActionsActivateProfilesAndToggleProtection() throws {
         let (store, directory) = try fixture()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -78,7 +99,7 @@ struct AppActionsTests {
         store.startFullCharge()
         store.activateProfile(.desk)
         #expect(store.config.mode == .auto)
-        #expect(store.config.upperLimit == 60)
+        #expect(store.config.upperLimit == 50)
         #expect(!store.config.chargeToFullOnce)
         store.pause(for: 3600)
         store.setProtectionEnabled(true)
@@ -148,12 +169,14 @@ struct AppActionsTests {
         var status = BGStatus()
         status.state = .disabled
         status.message = "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit."
-        #expect(status.usesNativeDesktopFallback)
+        #expect(status.usesNativeChargeLimit)
         status.state = .unsupported
-        #expect(!status.usesNativeDesktopFallback)
+        #expect(!status.usesNativeChargeLimit)
         status.state = .disabled
         status.message = "Batterieschutz deaktiviert"
-        #expect(!status.usesNativeDesktopFallback)
+        #expect(!status.usesNativeChargeLimit)
+        status.message = "Keine separate Ladesperre – macOS-Ladelimit übernimmt (Systemeinstellungen → Batterie)"
+        #expect(status.usesNativeChargeLimit)
     }
 
     @Test func previewActionsNeverWrite() throws {

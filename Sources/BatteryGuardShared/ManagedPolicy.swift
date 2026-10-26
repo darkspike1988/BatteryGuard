@@ -4,7 +4,7 @@ import Foundation
 /// macOS legt sie unter `/Library/Managed Preferences/com.batteryguard.app.plist` ab.
 ///
 /// Schlüssel: `LockSettings` (Bool, alle Änderungen sperren), `UpperLimit`, `LowerLimit` (Int),
-/// `Mode` (`auto`, `native`, `pendulum`, `systemLimit`), `ProtectionEnabled` (Bool).
+/// `Mode` (`auto`, `native`, `systemLimit`), `ProtectionEnabled` (Bool).
 public struct BGManagedPolicy: Codable, Equatable, Sendable {
     public var lockSettings: Bool
     public var upperLimit: Int?
@@ -35,7 +35,7 @@ public struct BGManagedPolicy: Codable, Equatable, Sendable {
         func bool(_ key: String) -> Bool? { (plist[key] as? NSNumber).flatMap { CFGetTypeID($0) == CFBooleanGetTypeID() ? $0.boolValue : nil } }
         let policy = BGManagedPolicy(lockSettings: bool("LockSettings") ?? false, upperLimit: int("UpperLimit"),
                                      lowerLimit: int("LowerLimit"),
-                                     mode: (plist["Mode"] as? String).flatMap(BGMode.init(rawValue:)).flatMap { $0 == .direct ? nil : $0 },
+                                     mode: (plist["Mode"] as? String).map { $0 == "pendulum" ? "auto" : $0 }.flatMap(BGMode.init(rawValue:)).flatMap { $0 == .direct ? nil : $0 },
                                      protectionEnabled: bool("ProtectionEnabled"))
         return policy == BGManagedPolicy() ? nil : policy
     }

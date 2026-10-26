@@ -103,7 +103,7 @@ final class SavedProfileTests: XCTestCase {
         original.heatProtectionCelsius = 0
         original.activeDischargeAboveUpper = false
         original.magsafeLed = false // Should be preserved
-        original.mode = .pendulum   // Should be preserved
+        original.mode = .auto       // Should be preserved
 
         let now = Date()
         let travelDate = now.addingTimeInterval(3600 * 24)
@@ -125,7 +125,7 @@ final class SavedProfileTests: XCTestCase {
         XCTAssertTrue(applied.activeDischargeAboveUpper)
 
         // Mode preservation
-        XCTAssertEqual(applied.mode, .pendulum)
+        XCTAssertEqual(applied.mode, .auto)
 
         // Unrelated settings preserved
         XCTAssertFalse(applied.magsafeLed)

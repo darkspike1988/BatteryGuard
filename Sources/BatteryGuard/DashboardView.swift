@@ -57,7 +57,8 @@ struct DashboardView: View {
             .navigationTitle(L(page?.rawValue ?? "B-Guard"))
         }
         .frame(minWidth: 780, minHeight: 600)
-        .onDisappear { configStore.flushPendingSave() }
+        .onAppear { statusStore.beginForeground() }
+        .onDisappear { statusStore.endForeground(); configStore.flushPendingSave() }
     }
 }
 
@@ -88,10 +89,10 @@ struct OverviewView: View {
                         BatteryHeroView(status: statusStore.status, config: configStore.config, active: statusStore.isDaemonActive)
                         Spacer(minLength: 0)
                         VStack(alignment: .trailing, spacing: 9) {
-                            Text(L(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? "MACOS-LIMIT" : "LADEZIEL")).font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(.secondary)
-                            Text(configStore.config.mode == .native || (statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback) ? statusStore.status.nativeChargeLimit.map { L("%lld %%", $0) } ?? L("macOS") : L("%lld %%", configStore.config.upperLimit))
+                            Text(L(statusStore.isDaemonActive && statusStore.status.usesNativeChargeLimit ? "MACOS-LIMIT" : "LADEZIEL")).font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(.secondary)
+                            Text(configStore.config.mode == .native || (statusStore.isDaemonActive && statusStore.status.usesNativeChargeLimit) ? statusStore.status.nativeChargeLimit.map { L("%lld %%", $0) } ?? L("macOS") : L("%lld %%", configStore.config.upperLimit))
                                 .font(.system(size: 28, weight: .light)).monospacedDigit()
-                            Text(statusStore.isDaemonActive && statusStore.status.usesNativeDesktopFallback ? L("Profilziel: %lld %%", configStore.config.upperLimit) : profileName).font(.caption).foregroundStyle(.secondary)
+                            Text(statusStore.isDaemonActive && statusStore.status.usesNativeChargeLimit ? L("Profilziel: %lld %%", configStore.config.upperLimit) : profileName).font(.caption).foregroundStyle(.secondary)
                         }.frame(minWidth: 86)
                     }
                 }
@@ -115,6 +116,7 @@ struct OverviewView: View {
                         .font(.callout).foregroundStyle(.orange)
                 }
                 EffectivenessView(statusStore: statusStore, config: configStore.config)
+                WhyChargingView(statusStore: statusStore, config: configStore.config)
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
                     metric("Kapazitätsquote", value: statusStore.status.capacityRatioText(), symbol: "battery.100")
@@ -158,14 +160,14 @@ struct OverviewView: View {
     }
 
     private var insight: String {
-        if statusStore.status.usesNativeDesktopFallback {
+        if statusStore.status.usesNativeChargeLimit {
             return L("Bei externem Monitor oder geschlossenem Deckel bleibt das Netzteil verbunden. macOS steuert das Laden; das B-Guard-Profilziel wird dabei nicht erzwungen.")
         }
         if let t = statusStore.status.temperatureCelsius, t >= 40 {
             return L("Der Akku ist warm. Prüfe Hitzeschutz und Belüftung, bevor du länger lädst.")
         }
-        if configStore.config.mode == .pendulum || (!statusStore.status.smcKeysDetected.contains("CHTE") && !statusStore.status.smcKeysDetected.contains("CH0B") && configStore.config.mode == .auto) {
-            return L("Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Je nach Firmware hält er den Ladestand oder läuft zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku.")
+        if !statusStore.status.hasChargeInhibit && configStore.config.mode == .auto {
+            return L("Dieser Mac hat keine separate Ladesperre. macOS hält das Ladelimit – stelle es in den Batterieeinstellungen passend zu deinem Profil ein.")
         }
         return L("Dein Verlauf bleibt auf diesem Mac. B-Guard zeichnet nur auf, während die App läuft und aktuelle Messwerte verfügbar sind.")
     }

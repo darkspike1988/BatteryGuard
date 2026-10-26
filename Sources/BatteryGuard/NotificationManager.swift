@@ -10,6 +10,8 @@ final class NotificationManager: Sendable {
     private var didNotifyUpperLimit: Bool = false
     private var didNotifyHeat: Bool = false
     private var notifiedAnomalies: Set<String> = []
+    private var didNotifyThermal: Bool = false
+    private var coldCharging = BGColdChargingPolicy()
 
     private enum Key {
         static let lastFullCharge = "bg.lastFullChargeAt"
@@ -17,6 +19,7 @@ final class NotificationManager: Sendable {
         static let lastWeeklyReport = "bg.lastWeeklyReportAt"
         static let lastHealthAlert = "bg.lastHealthAlertAt"
         static let lastCapabilityChange = "bg.lastCapabilityChangeAt"
+        static let appleCareReminderFor = "bg.appleCareReminderFor"
     }
     static let calibrationInterval: TimeInterval = 42 * 86400
     static let calibrationRepeat: TimeInterval = 14 * 86400
@@ -46,6 +49,23 @@ final class NotificationManager: Sendable {
                 didNotifyHeat = true
                 send(title: L("Akku ist warm"), body: L("Aktuell %.1f °C. Prüfe Belüftung und Hitzeschutz.", temperature))
             } else if temperature < threshold - 2 { didNotifyHeat = false }
+        }
+        if heatEnabled, coldCharging.shouldWarn(temperatureCelsius: status.temperatureCelsius,
+                                                charging: status.pluggedIn && status.isChargingHardware),
+           let temperature = status.temperatureCelsius {
+            send(title: L("Akku ist kalt"),
+                 body: L("Aktuell %.1f °C. Laden unter 10 °C belastet den Akku stärker. Lass den Mac nach Möglichkeit erst warm werden.", temperature))
+        }
+        // Öffentliche Systemthermik (ProcessInfo.thermalState) ergänzt die Akkutemperatur.
+        switch ProcessInfo.processInfo.thermalState {
+        case .serious, .critical:
+            if heatEnabled, status.pluggedIn, !didNotifyThermal {
+                didNotifyThermal = true
+                send(title: L("Mac ist stark erwärmt"),
+                     body: L("macOS meldet hohe Systemwärme. Laden erzeugt zusätzliche Wärme im Akku; sorge für Belüftung oder aktiviere den Hitzeschutz."))
+            }
+        case .nominal: didNotifyThermal = false
+        default: break
         }
 
         let calibrationEnabled = preferences.object(forKey: "bg.notifyCalibration") as? Bool ?? true
@@ -142,7 +162,8 @@ final class NotificationManager: Sendable {
             return
         }
         if status.percent >= 99, status.pluggedIn {
-            preferences.set(now, forKey: Key.lastFullCharge)
+            // Minutengenau reicht: nicht bei jeder Statusabfrage in UserDefaults schreiben.
+            if now.timeIntervalSince(lastFull) >= 60 { preferences.set(now, forKey: Key.lastFullCharge) }
             return
         }
         guard enabled, now.timeIntervalSince(lastFull) >= Self.calibrationInterval else { return }
@@ -157,7 +178,9 @@ final class NotificationManager: Sendable {
         guard let health = status.healthPercent else { return }
         let threshold = BatteryHealthAlertPolicy.threshold(from: preferences)
         if health >= threshold {
-            preferences.removeObject(forKey: Key.lastHealthAlert)
+            if preferences.object(forKey: Key.lastHealthAlert) != nil {
+                preferences.removeObject(forKey: Key.lastHealthAlert)
+            }
             return
         }
         guard enabled else { return }
@@ -197,6 +220,32 @@ final class NotificationManager: Sendable {
     func requestAuthorization() {
         guard Bundle.main.bundleIdentifier != nil else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    /// Einmal je eingetragenem Enddatum, wenn der Akku vor Ablauf von AppleCare+ unter 80 % fallen dürfte.
+    func checkAppleCare(days: [BGCapacityDay], status: BGStatus) {
+        guard Bundle.main.bundleIdentifier != nil,
+              let end = ReplacementForecastView.appleCareEndDate() else { return }
+        let defaults = UserDefaults.standard
+        guard defaults.double(forKey: Key.appleCareReminderFor) != end.timeIntervalSince1970 else { return }
+        let forecast = BGReplacementForecast.evaluate(days: days, currentCycles: status.cycleCount, cycleLimit: nil,
+                                                      appleCareEnd: end, limitChange: LimitChangeStore.current())
+        guard forecast.appleCareReminderDue else { return }
+        defaults.set(end.timeIntervalSince1970, forKey: Key.appleCareReminderFor)
+        send(title: L("AppleCare endet bald"),
+             body: L("Der Schutz endet am %@, und die Akkukapazität liegt nahe an 80 %%. Lass den Akku vorher prüfen.",
+                     end.formatted(date: .abbreviated, time: .omitted)))
+    }
+
+    func notifySleepDrain(_ report: BGSleepReport) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        let session = report.session
+        var body = L("Im Schlaf %lld Prozentpunkte in %@ verloren (%.1f %%/h).", session.drainPoints,
+                     SleepReportView.durationText(session.duration), session.drainPerHour)
+        if let top = session.darkWakeReasons.first {
+            body += " " + L("Häufigster Aufweckgrund: %@.", SleepReportView.reasonText(top.reason))
+        }
+        send(title: L("Ungewöhnlicher Verbrauch im Schlaf"), body: body)
     }
 
     private func send(title: String, body: String) {

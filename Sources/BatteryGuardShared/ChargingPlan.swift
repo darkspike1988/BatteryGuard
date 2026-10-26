@@ -18,8 +18,10 @@ public enum BGProfile: String, Codable, CaseIterable, Identifiable, Sendable {
         case .mobile: "bag"
         }
     }
-    public var lower: Int { switch self { case .desk: 55; case .everyday: 75; case .mobile: 85 } }
-    public var upper: Int { switch self { case .desk: 60; case .everyday: 80; case .mobile: 90 } }
+    /// Schreibtisch 45–50 %: Lagerungsalterung steigt bei Graphitanoden ab etwa 55–60 %
+    /// Ladung stufenartig an (Keil et al. 2016); Apple empfiehlt zum Lagern etwa 50 %.
+    public var lower: Int { switch self { case .desk: 45; case .everyday: 75; case .mobile: 85 } }
+    public var upper: Int { switch self { case .desk: 50; case .everyday: 80; case .mobile: 90 } }
     public func applying(to config: BGConfig) -> BGConfig {
         var c = config
         c.enabled = true
@@ -44,7 +46,7 @@ public enum BGDesktopProfileRule {
 
     public static func resolve(config: BGConfig, externalDisplay: Bool, now: Date = Date()) -> Resolution {
         guard config.desktopProfileEnabled, externalDisplay, config.enabled,
-              config.mode == .auto || config.mode == .pendulum || config.mode == .systemLimit,
+              config.mode == .auto || config.mode == .systemLimit,
               !config.isPaused(at: now), !config.isTravelCharging(at: now),
               config.specialChargePlan == nil, !config.chargeToFullOnce,
               !(config.manualOverrideUntil.map { $0 > now } ?? false) else {

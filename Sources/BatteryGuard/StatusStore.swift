@@ -1,5 +1,8 @@
 import Foundation
 import Observation
+#if canImport(notify)
+import notify
+#endif
 import BatteryGuardShared
 
 @Observable
@@ -31,22 +34,63 @@ final class StatusStore: Sendable {
     func endDiagnostics() { diagnosticsVisible = false; systemReader.reset(); if !isPreview { systemDiagnostics = nil } }
     private let reader: @MainActor () -> BGPowerFlowSample?
     private var pollingTask: Task<Void, Never>?
-    
+    private var statusNotifyToken: Int32 = 0
+    /// Sichtbare Fenster (Menü, Übersicht) brauchen schnelle Werte; sonst genügen die
+    /// Benachrichtigungen des Dienstes plus eine seltene Sicherheitsabfrage.
+    private var foregroundClients = 0
+    static let foregroundInterval: Duration = .seconds(2)
+    static let backgroundInterval: Duration = .seconds(60)
+    var pollingInterval: Duration { foregroundClients > 0 ? Self.foregroundInterval : Self.backgroundInterval }
+    var isForeground: Bool { foregroundClients > 0 }
+
     init(startImmediately: Bool = true, reader: @escaping @MainActor () -> BGPowerFlowSample? = { PowerFlowReader.read() }) {
         self.reader = reader
         refreshStatus()
         if startImmediately {
             startPolling()
+            observeDaemonNotifications()
         }
+    }
+
+    func beginForeground() {
+        foregroundClients += 1
+        guard foregroundClients == 1, pollingTask != nil else { return }
+        refreshStatus()
+        startPolling()
+    }
+
+    func endForeground() {
+        foregroundClients = max(0, foregroundClients - 1)
+        guard foregroundClients == 0, pollingTask != nil else { return }
+        startPolling()
+    }
+
+    /// Der Dienst meldet jede neue status.json per Darwin-Benachrichtigung (notify(3)).
+    private func observeDaemonNotifications() {
+        #if canImport(notify)
+        guard statusNotifyToken == 0 else { return }
+        var token: Int32 = 0
+        let result = notify_register_dispatch(BGPaths.statusNotification, &token, .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshStatus() }
+        }
+        if result == UInt32(NOTIFY_STATUS_OK) { statusNotifyToken = token }
+        #endif
+    }
+
+    /// Für die API: frischen Energiefluss lesen, auch wenn kein Fenster sichtbar ist.
+    func refreshPowerFlow() {
+        powerFlow = reader()
     }
     
     func startPolling() {
         pollingTask?.cancel()
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled else { break }
-                self?.refreshStatus()
+                guard let interval = self?.pollingInterval else { break }
+                // Toleranz erlaubt macOS, Timer zu bündeln (Energieeffizienz).
+                try? await Task.sleep(for: interval, tolerance: interval / 4)
+                guard !Task.isCancelled, let self else { break }
+                self.refreshStatus()
             }
         }
     }
@@ -59,12 +103,13 @@ final class StatusStore: Sendable {
     func refreshStatus() {
         if diagnosticsVisible && !isPreview { systemDiagnostics = systemReader.read() }
         configRefresh?()
-        self.powerFlow = reader()
+        // Der Energiefluss liest die IORegistry; nur für sichtbare Ansichten laufend erneuern.
+        if isForeground || powerFlow == nil { self.powerFlow = reader() }
         let statusPath = BGPaths.status
         let fileManager = FileManager.default
         
         guard fileManager.fileExists(atPath: statusPath) else {
-            self.isDaemonActive = false
+            if isDaemonActive { self.isDaemonActive = false }
             return
         }
         
@@ -74,16 +119,17 @@ final class StatusStore: Sendable {
             if self.status != decoded { self.status = decoded }
             
             let age = Date().timeIntervalSince(decoded.updatedAt)
-            self.isDaemonActive = (age >= -5.0 && age <= 60.0)
+            let active = age >= -5.0 && age <= 60.0
+            if isDaemonActive != active { self.isDaemonActive = active }
             
-            if isDaemonActive { onFreshStatus?(decoded) }
+            if active { onFreshStatus?(decoded) }
 
-            if isDaemonActive, let config = configProvider?() {
+            if active, let config = configProvider?() {
                 NotificationManager.shared.checkNotifications(status: decoded, config: config)
                 NotificationManager.shared.checkAnomalies(status: decoded, config: config, powerFlow: powerFlow)
             }
         } catch {
-            self.isDaemonActive = false
+            if isDaemonActive { self.isDaemonActive = false }
         }
     }
     

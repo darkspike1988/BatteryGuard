@@ -11,7 +11,7 @@ struct PlanAndHistoryTests {
         c.pauseUntil = now.addingTimeInterval(3600)
         #expect(!c.effective(at: now).enabled)
         #expect(c.effective(at: now.addingTimeInterval(3600)).enabled)
-        #expect(c.effective(at: now.addingTimeInterval(3600)).upperLimit == 60)
+        #expect(c.effective(at: now.addingTimeInterval(3600)).upperLimit == 50)
         #expect(c.removingExpiredPlans(at: now.addingTimeInterval(3600)).pauseUntil == nil)
     }
 
@@ -54,12 +54,12 @@ struct PlanAndHistoryTests {
 
     @Test func profilePreservesOtherChoices() {
         var c = BGConfig()
-        c.mode = .pendulum
+        c.mode = .auto
         c.heatProtectionCelsius = 38
         c.travelReadyAt = now.addingTimeInterval(3600)
         let next = BGProfile.mobile.applying(to: c)
         #expect(next.lowerLimit == 85 && next.upperLimit == 90)
-        #expect(next.mode == .pendulum)
+        #expect(next.mode == .auto)
         #expect(next.heatProtectionCelsius == 38)
         #expect(next.travelReadyAt == c.travelReadyAt)
     }
@@ -119,6 +119,97 @@ struct PlanAndHistoryTests {
         let encoded = try BGJSON.encoder().encode(status)
         let decoded = try BGJSON.decoder().decode(BGStatus.self, from: encoded)
         #expect(decoded.nativeChargeLimit == nil)
+    }
+
+    @Test func agingExposureWeightsTimeByTemperatureAndChargeBand() {
+        #expect(abs(BGAgingExposure.temperatureFactor(celsius: 25) - 1) < 1e-9)
+        #expect(abs(BGAgingExposure.temperatureFactor(celsius: 35) - 2.14) < 0.02)
+        #expect(abs(BGAgingExposure.temperatureFactor(celsius: 45) - 4.35) < 0.05)
+        #expect(BGAgingExposure.Band.of(percent: 50) == .low)
+        #expect(BGAgingExposure.Band.of(percent: 60) == .middle)
+        #expect(BGAgingExposure.Band.of(percent: 80) == .high)
+        #expect(BGAgingExposure.Band.of(percent: 100) == .full)
+
+        var s = BGStatus()
+        func sample(_ offset: Double, percent: Int, temperature: Double?) -> BGHistorySample {
+            s.updatedAt = now.addingTimeInterval(offset); s.percent = percent; s.temperatureCelsius = temperature
+            return BGHistorySample(status: s)
+        }
+        let samples = [
+            sample(0, percent: 50, temperature: 25),
+            sample(60, percent: 85, temperature: 35),
+            sample(120, percent: 85, temperature: nil),
+            sample(180, percent: 85, temperature: 35),
+            sample(3600, percent: 85, temperature: 35), // gap: not bridged
+            sample(3660, percent: 85, temperature: 35),
+        ]
+        let exposure = BGAgingExposure.evaluate(samples)
+        #expect(exposure.observedSeconds == 240)
+        #expect(exposure.seconds[.low] == 60 && exposure.seconds[.high] == 180)
+        #expect(exposure.secondsWithoutTemperature == 60)
+        let hot = BGAgingExposure.temperatureFactor(celsius: 35)
+        #expect(abs((exposure.weightedSeconds[.high] ?? 0) - (120 * hot + 60)) < 1e-6)
+        #expect(abs((exposure.highChargeShare ?? 0) - 0.75) < 1e-9)
+        #expect(BGAgingExposure.evaluate([]).averageTemperatureFactor == nil)
+    }
+
+    @Test func coldChargingWarnsOncePerEpisode() {
+        var policy = BGColdChargingPolicy()
+        let steps: [(Double?, Bool, Bool)] = [
+            (8, false, false), (8, true, true), (7, true, false), (11, true, false),
+            (9, true, false), (12, true, false), (9, true, true), (nil, true, false),
+        ]
+        for (temperature, charging, expected) in steps {
+            let warned = policy.shouldWarn(temperatureCelsius: temperature, charging: charging)
+            #expect(warned == expected)
+        }
+    }
+
+    @Test func significantLimitChangesStartASettlingPeriod() {
+        var change = BGLimitChange(upperLimit: 80)
+        #expect(!change.isSettling(at: now))
+        change = change.observing(upperLimit: 75, at: now)
+        #expect(change.changedAt == nil && change.upperLimit == 80)
+        change = change.observing(upperLimit: 70, at: now)
+        #expect(change.changedAt == now && change.upperLimit == 70)
+        #expect(change.isSettling(at: now.addingTimeInterval(27 * 86400)))
+        #expect(!change.isSettling(at: now.addingTimeInterval(29 * 86400)))
+        let decoded = try? BGJSON.decoder().decode(BGLimitChange.self, from: BGJSON.encoder().encode(change))
+        #expect(decoded == change)
+    }
+
+    @Test func historyLinesRoundTripAndSkipDamagedLines() throws {
+        var s = BGStatus(); s.percent = 70
+        let samples = [0.0, 60, 120].map { offset -> BGHistorySample in
+            s.updatedAt = now.addingTimeInterval(offset); return BGHistorySample(status: s)
+        }
+        var data = try BGHistory.encodeLines(samples)
+        let clean = BGHistory.decodeLines(data)
+        #expect(clean.samples == samples && clean.lineCount == 3 && clean.invalidLines == 0 && clean.endsCleanly)
+        data.append(Data("{\"timestamp\":".utf8))
+        let damaged = BGHistory.decodeLines(data)
+        #expect(damaged.samples == samples && damaged.invalidLines == 1 && !damaged.endsCleanly)
+        #expect(BGHistory.isAppend(samples, to: Array(samples.dropLast())))
+        #expect(BGHistory.isAppend(Array(samples.dropFirst()), to: Array(samples.dropLast())))
+        #expect(!BGHistory.isAppend(samples, to: samples))
+        #expect(!BGHistory.isAppend(Array(samples.prefix(2)), to: [samples[0], samples[2]]))
+    }
+
+    @Test func statusFromNewerDaemonStaysReadable() throws {
+        var status = BGStatus(); status.percent = 64; status.state = .holding
+        var json = try JSONSerialization.jsonObject(with: BGJSON.encoder().encode(status)) as! [String: Any]
+        json["state"] = "futureState"
+        json["measurements"] = ["schemaVersion": 2, "values": []]
+        json["newField"] = 1
+        json.removeValue(forKey: "smcKeysDetected")
+        let decoded = try BGJSON.decoder().decode(BGStatus.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded.percent == 64)
+        #expect(decoded.state == .unsupported)
+        #expect(decoded.measurements == nil)
+        #expect(decoded.smcKeysDetected.isEmpty)
+        #expect(abs(decoded.updatedAt.timeIntervalSince(status.updatedAt)) < 1)
+        let empty = try BGJSON.decoder().decode(BGStatus.self, from: Data("{}".utf8))
+        #expect(empty.updatedAt == .distantPast)
     }
 
     @Test func summaryDoesNotBridgeSleepGaps() {

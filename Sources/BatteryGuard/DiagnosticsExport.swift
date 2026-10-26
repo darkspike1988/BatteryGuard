@@ -53,7 +53,7 @@ enum DiagnosticsExport {
             daemonActive: daemonActive, statusFresh: age.isFinite && age >= -5 && age <= 60,
             state: status.state,
             smcKeysDetected: Array(Set(status.smcKeysDetected).intersection(allowedSMCKeys)).sorted(),
-            usesNativeDesktopFallback: status.usesNativeDesktopFallback,
+            usesNativeDesktopFallback: status.usesNativeChargeLimit,
             enabled: config.enabled, mode: config.mode, heatEnabled: config.heatProtectionCelsius > 0,
             apiEnabled: apiEnabled, controlAllowed: controlAllowed,
             hasPause: config.pauseUntil != nil, hasSpecialPlan: config.specialChargePlan != nil,

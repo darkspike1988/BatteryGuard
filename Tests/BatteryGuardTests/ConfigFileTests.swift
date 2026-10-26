@@ -22,6 +22,22 @@ struct ConfigFileTests {
         #expect(try BGConfigFile.read(at: url).upperLimit == 48)
     }
 
+    @Test func updateReplacesAtomicallyAndLeavesNoTemporaryFiles() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("config.json")
+        try BGJSON.encoder().encode(BGConfig()).write(to: url)
+        let before = try FileManager.default.attributesOfItem(atPath: url.path)[.systemFileNumber] as? NSNumber
+        try BGConfigFile.update(at: url) { $0.upperLimit = 70 }
+        let after = try FileManager.default.attributesOfItem(atPath: url.path)
+        #expect(after[.systemFileNumber] as? NSNumber != before)
+        #expect((after[.posixPermissions] as? NSNumber)?.intValue == 0o644)
+        #expect(try BGConfigFile.read(at: url).upperLimit == 70)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
+            == ["config.json", "config.json.lock"])
+    }
+
     @Test func invalidConfigAndSymlinkAreNeverOverwritten() throws {
         let url = try fixture()
         let link = url.appendingPathExtension("link")

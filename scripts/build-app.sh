@@ -33,6 +33,44 @@ chmod 755 "$RESOURCES_DIR/batteryguardd"
 echo "==> Kopiere Hilfsskripte in App-Ressourcen..."
 cp "$SCRIPT_DIR/install-daemon.sh" "$RESOURCES_DIR/install-daemon.sh"
 chmod 755 "$RESOURCES_DIR/install-daemon.sh"
+# Developer-ID-Builds binden die Team-ID ein; der Installer akzeptiert dann nur so signierte Dienste.
+# Zusätzlich enthält das Bundle die Plist für SMAppService.daemon (macOS 13+): launchd startet den
+# Dienst dann aus dem signierten Bundle und prüft die Signatur selbst.
+if [[ -n "${BGUARD_TEAM_ID:-}" ]]; then
+    if [[ ! "$BGUARD_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+        echo "Fehler: BGUARD_TEAM_ID muss eine zehnstellige Apple-Team-ID sein." >&2
+        exit 1
+    fi
+    sed -i '' "s/^EXPECTED_TEAM_ID=\"\"$/EXPECTED_TEAM_ID=\"$BGUARD_TEAM_ID\"/" "$RESOURCES_DIR/install-daemon.sh"
+    grep -q "^EXPECTED_TEAM_ID=\"$BGUARD_TEAM_ID\"$" "$RESOURCES_DIR/install-daemon.sh"
+    DAEMONS_DIR="$CONTENTS_DIR/Library/LaunchDaemons"
+    mkdir -p "$DAEMONS_DIR"
+    cat << 'PLIST' > "$DAEMONS_DIR/com.batteryguard.daemon.plist"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.batteryguard.daemon</string>
+    <key>BundleProgram</key>
+    <string>Contents/Resources/batteryguardd</string>
+    <key>AssociatedBundleIdentifiers</key>
+    <array>
+        <string>com.batteryguard.app</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/batteryguard.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/batteryguard.log</string>
+</dict>
+</plist>
+PLIST
+    plutil -lint "$DAEMONS_DIR/com.batteryguard.daemon.plist"
+fi
 
 cp "$SCRIPT_DIR/uninstall-daemon.sh" "$RESOURCES_DIR/uninstall-daemon.sh"
 chmod 755 "$RESOURCES_DIR/uninstall-daemon.sh"
@@ -62,9 +100,14 @@ if [[ -d "$PROJECT_DIR/Resources" ]]; then
     done
 fi
 
-# Info.plist generieren
-echo "==> Schreibe Info.plist..."
-cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
+# Info.plist generieren; die Version stammt aus BGVersion.current.
+VERSION="$(sed -n 's/^    public static let current = "\([0-9][0-9.]*\)"$/\1/p' "$PROJECT_DIR/Sources/BatteryGuardShared/Shared.swift" | head -n 1)"
+if [[ -z "$VERSION" ]]; then
+    echo "Fehler: BGVersion.current wurde nicht gefunden." >&2
+    exit 1
+fi
+echo "==> Schreibe Info.plist (Version $VERSION)..."
+cat << EOF > "$CONTENTS_DIR/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -107,9 +150,9 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.9.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>0.9.0</string>
+    <string>${VERSION}</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>

@@ -5,8 +5,6 @@ public enum BGChargingAction: String, Codable, CaseIterable, Sendable {
     case savedProfile = "saved-profile"
     case upsertSchedule = "upsert-schedule"
     case deleteSchedule = "delete-schedule"
-    case calibration = "calibration"
-    case cancelCalibration = "cancel-calibration"
     case stayAwakeUntilLimit = "stay-awake-until-limit"
     case cancelStayAwake = "cancel-stay-awake"
     case fullCharge = "full-charge"
@@ -108,7 +106,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         case .protection: return ["action", "enabled"]
         case .pause, .stayAwakeUntilLimit: return ["action", "minutes"]
         case .travel: return ["action", "readyAt"]
-        case .cancelStayAwake, .calibration, .cancelCalibration, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: return ["action"]
+        case .cancelStayAwake, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: return ["action"]
         case .topUp: return ["action", "minutes", "targetPercent"]
         case .dischargeTo, .holdCharge: return ["action", "targetPercent", "minutes"]
         case .powerMode: return ["action", "lowPowerMode", "highPowerMode"]
@@ -153,7 +151,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             guard let readyAt, readyAt.timeIntervalSince1970.isFinite else {
                 throw BGChargingActionError.invalidRequest("Ein gültiger Reisezeitpunkt ist erforderlich.")
             }
-        case .cancelStayAwake, .calibration, .cancelCalibration, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: break
+        case .cancelStayAwake, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: break
         case .magsafeLED:
             guard magsafeLED != nil else { throw BGChargingActionError.invalidRequest("LED-Modus fehlt.") }
         case .powerMode:
@@ -184,6 +182,15 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         }
     }
 
+    static let returnsToNormal: Set<BGChargingAction> = [.resume, .cancelTravel, .cancelFullCharge,
+                                                         .cancelSpecial]
+
+    /// „Aktuellen Ladestand halten“ übernimmt den gemessenen Stand, begrenzt auf den
+    /// erlaubten Haltebereich (10–95 %), damit Halten bei 96–100 % nicht scheitert.
+    public static func holdTarget(forCurrentPercent percent: Int) -> Int {
+        min(max(percent, 10), 95)
+    }
+
     public func applying(to config: BGConfig, at now: Date = Date()) throws -> BGConfig {
         try validateParameters()
         guard now.timeIntervalSince1970.isFinite else {
@@ -199,8 +206,11 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         }
         var next = config
         if ![.upsertSchedule, .deleteSchedule, .stayAwakeUntilLimit, .cancelStayAwake, .powerMode, .clearScheduleHistory, .magsafeLED].contains(action) {
-            next.manualOverrideUntil = now.addingTimeInterval(2 * 3600)
-            next.calibrationPlan = nil
+            // Nur echte Eingriffe übersteuern Zeitpläne und Monitorprofil für zwei Stunden.
+            // Abbrechen und Fortsetzen kehren zum Normalbetrieb zurück.
+            if !Self.returnsToNormal.contains(action) {
+                next.manualOverrideUntil = now.addingTimeInterval(2 * 3600)
+            }
         }
         switch action {
         case .stayAwakeUntilLimit:
@@ -208,16 +218,6 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             next.awakeUntilLimitUntil = now.addingTimeInterval(Double(minutes) * 60)
         case .cancelStayAwake:
             next.awakeUntilLimitUntil = nil
-        case .calibration:
-            next.enabled = true
-            next.pauseUntil = nil
-            next.specialChargePlan = nil
-            next.chargeToFullOnce = false
-            next.fullChargeUntil = nil
-            if next.isTravelCharging(at: now) { next.travelReadyAt = nil }
-            next.calibrationPlan = BGCalibrationPlan.manuallyStarted(at: now)
-        case .cancelCalibration:
-            next.calibrationPlan = nil
         case .upsertSchedule:
             guard var task = scheduledTask else { throw BGChargingActionError.invalidRequest("Zeitplan fehlt.") }
             task = try task.validated()

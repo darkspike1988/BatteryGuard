@@ -55,7 +55,7 @@ struct PopoverContentView: View {
                 HStack {
                     Text("Ladeprofil").font(.callout.weight(.medium))
                     Spacer()
-                    Text(L(configStore.config.mode == .native || statusStore.status.usesNativeDesktopFallback ? "macOS" : "%lld %% Limit", configStore.config.upperLimit))
+                    Text(L(configStore.config.mode == .native || statusStore.status.usesNativeChargeLimit ? "macOS" : "%lld %% Limit", configStore.config.upperLimit))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Menu {
@@ -152,7 +152,8 @@ struct PopoverContentView: View {
         }.frame(width: 370).frame(maxHeight: 700)
         .fixedSize(horizontal: false, vertical: true)
         .background(Color(nsColor: .windowBackgroundColor))
-        .onDisappear { configStore.flushPendingSave() }
+        .onAppear { statusStore.beginForeground() }
+        .onDisappear { statusStore.endForeground(); configStore.flushPendingSave() }
     }
 
     @ViewBuilder

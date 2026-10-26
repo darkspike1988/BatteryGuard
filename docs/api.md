@@ -131,7 +131,7 @@ Ist die App geschlossen oder die API ausgeschaltet, ist der HTTP-Server nicht er
 
 ## Erweiterungen ab 0.3.7
 
-Dienst 0.3.7 erforderlich. `GET /api/v1/profiles` liefert eigene gespeicherte Profile. `GET /api/v1/config` enthält auch `specialChargePlan`, `calibrationPlan`, `scheduledTasks`, `scheduleHistory` (maximal 100 Einträge) `awakeUntilLimitUntil` und `manualOverrideUntil`.
+Dienst 0.3.7 erforderlich. `GET /api/v1/profiles` liefert eigene gespeicherte Profile. `GET /api/v1/config` enthält auch `specialChargePlan`, `scheduledTasks`, `scheduleHistory` (maximal 100 Einträge) `awakeUntilLimitUntil` und `manualOverrideUntil`.
 
 Zusätzliche `POST /api/v1/actions`-Aktionen:
 
@@ -147,14 +147,12 @@ Zusätzliche `POST /api/v1/actions`-Aktionen:
 | `clear-schedule-history` | keine | Aufgabenverlauf der Zeitpläne leeren (ab 0.8.0). |
 | `upsert-schedule` | `scheduledTask`: validiertes Aufgabenobjekt | Zeitplan hinzufügen/ersetzen, gespeicherten Ausführungsstand bewahren. |
 | `delete-schedule` | `scheduleID`: UUID | Zeitplan entfernen. |
-| `calibration` | keine | Vorbereitet; ohne physisch bestätigte Hardware abgelehnt. |
-| `cancel-calibration` | keine | Kalibrierungsauftrag beenden. |
 | `stay-awake-until-limit` | `minutes`: 1–120 | Explizite befristete Wachhaltung bis zum Ziel; geeignete Ladesteuerung erforderlich. |
 | `cancel-stay-awake` | keine | Wachhaltung beenden. |
 
-Manuelle Ladeaktionen übersteuern Zeitpläne für zwei Stunden; aktive Pause, Volllade-, Reise-, Sonder- und Kalibrierungsaufträge haben zusätzlich Vorrang. Zeitpläne speichern Profilparameter als eigenen Stand. Die Wiederholungen `once`, `daily`, `weekdays`, `weekly`, `biweekly`, `monthly` und `yearly` verwenden eine gespeicherte Zeitzone. Fehlende Monatstage werden übersprungen. `catchUp: false` erlaubt das normale 30-Sekunden-Ausführungsfenster; mit `true` wird höchstens der neueste verpasste Termin bis zu sechs Stunden nachgeholt.
+Manuelle Ladeaktionen übersteuern Zeitpläne für zwei Stunden; aktive Pause, Volllade-, Reise- und Sonderaufträge haben zusätzlich Vorrang. Zeitpläne speichern Profilparameter als eigenen Stand. Die Wiederholungen `once`, `daily`, `weekdays`, `weekly`, `biweekly`, `monthly` und `yearly` verwenden eine gespeicherte Zeitzone. Fehlende Monatstage werden übersprungen. `catchUp: false` erlaubt das normale 30-Sekunden-Ausführungsfenster; mit `true` wird höchstens der neueste verpasste Termin bis zu sechs Stunden nachgeholt.
 
-`/capabilities` nennt alle implementierten Aktionen unter `availableActions`. Das ist keine Hardwarefreigabe: `holdChargeHardwareVerified`, `dischargeToHardwareVerified` und `calibrationHardwareVerified` sind derzeit `false`; Top Up benötigt separate Ladesteuerung. `schedulesRunInDaemon` unterscheidet Zeitpläne von der REST API, für die die App weiterhin laufen muss. Erfolg bedeutet bestätigte Speicherung, keine garantierte Hardwarewirkung.
+`/capabilities` nennt alle implementierten Aktionen unter `availableActions`. Das ist keine Hardwarefreigabe: `holdChargeHardwareVerified` und `dischargeToHardwareVerified` sind derzeit `false`; Top Up benötigt separate Ladesteuerung. `schedulesRunInDaemon` unterscheidet Zeitpläne von der REST API, für die die App weiterhin laufen muss. Erfolg bedeutet bestätigte Speicherung, keine garantierte Hardwarewirkung.
 
 ### Eigenes Profil anwenden
 

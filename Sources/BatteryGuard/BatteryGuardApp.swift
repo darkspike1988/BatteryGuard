@@ -141,7 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         GlobalHotKeys.shared.update(enabled: UserDefaults.standard.bool(forKey: GlobalHotKeys.appStorageKey))
         AppearancePreference.applyStored()
         guard AppPresence.isRunningFromBundle,
-              !FileManager.default.fileExists(atPath: BGPaths.daemonBinary) else { return }
+              !ServiceManager.isDaemonInstalled else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = L("B-Guard einrichten")
@@ -167,7 +167,10 @@ struct BatteryGuardApp: App {
     
     init() {
         let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates") || ProcessInfo.processInfo.arguments.contains("--read-power-flow") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-status") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-power") || ProcessInfo.processInfo.arguments.contains("--run")
-        if !preview { BGuardShortcutsProvider.updateAppShortcutParameters() }
+        if !preview {
+            BGuardShortcutsProvider.updateAppShortcutParameters()
+            SleepReportStore.shared.start()
+        }
         let config = preview ? ConfigStore.preview : ConfigStore()
         let status = preview ? StatusStore.preview : StatusStore()
         let history = HistoryStore(preview: preview)
@@ -185,9 +188,8 @@ struct BatteryGuardApp: App {
             if !preview { lidLock.observe(fresh, enabled: UserDefaults.standard.bool(forKey: LidLockGuard.appStorageKey)) }
             if !preview {
                 NetworkRuleMonitor.shared.poll { profile in
-                    // Laufende Kalibrierung oder Sonderaktion nicht durch eine Netzwerkregel abbrechen.
-                    guard let store = AppDelegate.configStore, store.config.calibrationPlan == nil,
-                          store.config.specialChargePlan == nil else { return false }
+                    // Eine laufende Sonderaktion nicht durch eine Netzwerkregel abbrechen.
+                    guard let store = AppDelegate.configStore, store.config.specialChargePlan == nil else { return false }
                     return (try? store.performAPIAction(.init(action: .profile, profile: profile.rawValue))) != nil
                 }
             }

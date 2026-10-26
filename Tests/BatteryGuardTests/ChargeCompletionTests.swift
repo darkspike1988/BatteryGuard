@@ -11,8 +11,53 @@ struct ChargeCompletionTests {
         var latest = snapshot; latest.upperLimit = 90; latest.heatProtectionCelsius = 42
         let result = BGChargeCompletion.applying(snapshot: snapshot, to: latest, at: now)
         #expect(!result.chargeToFullOnce && result.fullChargeUntil == nil && result.fullChargeRequestID == nil)
-        #expect(result.travelReadyAt == nil && result.travelRequestID == nil)
+        // Reaching 100 % before departure keeps the travel plan holding the battery full.
+        #expect(result.travelReadyAt == snapshot.travelReadyAt && result.travelRequestID == snapshot.travelRequestID)
         #expect(result.upperLimit == 90 && result.heatProtectionCelsius == 42)
+        let afterDeparture = BGChargeCompletion.applying(snapshot: snapshot, to: latest, at: now.addingTimeInterval(3601))
+        #expect(afterDeparture.travelReadyAt == nil && afterDeparture.travelRequestID == nil)
+    }
+
+    @Test func cancellingReturnsToNormalWithoutOverridingSchedules() throws {
+        var config = try BGChargingActionRequest(action: .fullCharge).applying(to: BGConfig(), at: now)
+        #expect(config.manualOverrideUntil != nil)
+        config.manualOverrideUntil = nil
+        for action in [BGChargingAction.cancelFullCharge, .cancelTravel, .cancelSpecial, .resume] {
+            #expect(try BGChargingActionRequest(action: action).applying(to: config, at: now).manualOverrideUntil == nil)
+        }
+    }
+
+    @Test func legacyMergeCannotCreateUnboundedRequests() {
+        let baseline = BGConfig()
+        var desired = baseline
+        desired.chargeToFullOnce = true // no deadline
+        desired.pauseUntil = now.addingTimeInterval(48 * 3600)
+        desired.travelReadyAt = now.addingTimeInterval(90 * 86400)
+        let merged = desired.mergingEdits(since: baseline, into: baseline, now: now)
+        #expect(!merged.chargeToFullOnce && merged.pauseUntil == nil && merged.travelReadyAt == nil)
+        desired.chargeToFullOnce = true; desired.fullChargeUntil = now.addingTimeInterval(3600)
+        desired.pauseUntil = now.addingTimeInterval(3600)
+        #expect(desired.mergingEdits(since: baseline, into: baseline, now: now).chargeToFullOnce)
+        #expect(desired.mergingEdits(since: baseline, into: baseline, now: now).pauseUntil != nil)
+    }
+
+    @Test func holdTargetIsClampedToAllowedRange() {
+        #expect(BGChargingActionRequest.holdTarget(forCurrentPercent: 100) == 95)
+        #expect(BGChargingActionRequest.holdTarget(forCurrentPercent: 5) == 10)
+        #expect(BGChargingActionRequest.holdTarget(forCurrentPercent: 63) == 63)
+    }
+
+    @Test func fullChargeDaysUseTheLocalCalendar() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        var s = BGStatus(); s.percent = 100; s.state = .holding; s.pluggedIn = true
+        // 16:30 and 17:30 local time on one day straddle UTC midnight in summer.
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 1, hour: 16, minute: 30)))
+        let samples = [0.0, 3600].map { offset -> BGHistorySample in
+            s.updatedAt = start.addingTimeInterval(offset); return BGHistorySample(status: s)
+        }
+        let report = BGHistory.weeklyReport(samples, now: start.addingTimeInterval(7200), calendar: calendar)
+        #expect(report.fullChargeDays == 1)
     }
 
     @Test func renewedRequestsAtIdenticalDatesSurviveJSONAndOldCompletion() throws {
@@ -49,7 +94,7 @@ struct ChargeCompletionTests {
         var legacy = BGConfig(); legacy.chargeToFullOnce = true
         #expect(!BGChargeCompletion.applying(snapshot: legacy, to: legacy, at: now).chargeToFullOnce)
         let renewed = try BGChargingActionRequest(action: .fullCharge).applying(to: legacy, at: now)
-        let merged = renewed.mergingEdits(since: legacy, into: BGConfig())
+        let merged = renewed.mergingEdits(since: legacy, into: BGConfig(), now: now)
         #expect(merged.fullChargeRequestID == renewed.fullChargeRequestID && merged.chargeToFullOnce)
         let cleaned = renewed.removingExpiredPlans(at: now.addingTimeInterval(9 * 3600))
         #expect(cleaned.fullChargeRequestID == nil)

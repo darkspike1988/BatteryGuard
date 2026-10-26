@@ -53,6 +53,17 @@ echo "--> Beende und entlade LaunchDaemon $SERVICE_LABEL..."
 launchctl bootout "system/${SERVICE_LABEL}" 2>/dev/null || launchctl bootout system "$PLIST_PATH" 2>/dev/null || true
 if [[ -S "$TARGET_DIR/config.sock" ]]; then rm -f "$TARGET_DIR/config.sock"; fi
 
+# Von B-Guard geänderten Low Power Mode für Akkubetrieb auf den vorherigen Wert zurücksetzen.
+LPM_STATE="$TARGET_DIR/lowpowermode-before.txt"
+if [[ -f "$LPM_STATE" && ! -L "$LPM_STATE" ]]; then
+    PREVIOUS_LPM="$(tr -cd '01' < "$LPM_STATE" | head -c 1)"
+    if [[ "$PREVIOUS_LPM" == "0" || "$PREVIOUS_LPM" == "1" ]]; then
+        echo "--> Setze Low Power Mode auf Akkubetrieb auf den vorherigen Wert ($PREVIOUS_LPM) zurück..."
+        /usr/bin/pmset -b lowpowermode "$PREVIOUS_LPM" || echo "Hinweis: Low Power Mode konnte nicht zurückgesetzt werden." >&2
+    fi
+    rm -f "$LPM_STATE"
+fi
+
 # 4. LaunchDaemon-Plist entfernen
 if [[ -f "$PLIST_PATH" ]]; then
     echo "--> Entferne $PLIST_PATH..."

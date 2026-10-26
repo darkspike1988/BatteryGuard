@@ -64,7 +64,6 @@ public extension BGConfig {
         c.fullChargeUntil = nil
         c.fullChargeRequestID = nil
         c.specialChargePlan = nil
-        c.calibrationPlan = nil
         c.awakeUntilLimitUntil = nil
         c.manualOverrideUntil = nil
         c.scheduleHistory = []

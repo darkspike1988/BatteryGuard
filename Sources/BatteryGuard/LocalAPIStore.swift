@@ -73,8 +73,12 @@ final class LocalAPIStore {
 
     func copyToken() {
         guard enabled, let token else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(token, forType: .string)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        // Konvention von nspasteboard.org: Zwischenablage-Manager speichern den Token nicht.
+        pasteboard.declareTypes([.string, NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")], owner: nil)
+        pasteboard.setString(token, forType: .string)
+        pasteboard.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
         message = L("API-Token kopiert. Behandle ihn wie ein Passwort.")
     }
 
@@ -207,15 +211,19 @@ final class LocalAPIStore {
                     "controlAllowed": allowsControl, "controlReady": daemonActive && !status.daemonNeedsUpdate,
                     "availableProfiles": BGProfile.allCases.map(\.rawValue), "historyRetentionHours": 168,
                     "smcKeysDetected": status.status.smcKeysDetected,
-                    "usesNativeDesktopFallback": status.status.usesNativeDesktopFallback,
+                    // Alter Schlüssel bleibt für bestehende Skripte erhalten.
+                    "usesNativeDesktopFallback": status.status.usesNativeChargeLimit,
+                    "usesNativeChargeLimit": status.status.usesNativeChargeLimit,
                     "availableActions": BGChargingAction.allCases.map(\.rawValue),
                     "topUpRequiresSeparateChargeControl": true,
                     "holdChargeHardwareVerified": false, "dischargeToHardwareVerified": false,
-                    "calibrationHardwareVerified": false, "schedulesRunInDaemon": true]
+                    "schedulesRunInDaemon": true]
                 return LocalHTTPResponse(status: 200, jsonData: try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]))
             case "/api/v1/power-flow":
                 // Freshness represents collection freshness (when the sample was gathered by B-Guard),
                 // not sensor freshness (the underlying hardware sensor update interval).
+                // Ohne sichtbares Fenster wird der Energiefluss nicht laufend gelesen.
+                if !(status.powerFlow?.isFresh(at: now) ?? false) { status.refreshPowerFlow() }
                 let sample = status.powerFlow
                 let isFresh = sample?.isFresh(at: now) ?? false
                 let hasBatteryOrInput = (sample?.batteryWatts != nil) || (sample?.inputWatts != nil)

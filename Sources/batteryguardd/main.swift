@@ -3,6 +3,9 @@ import BatteryGuardShared
 import IOKit.ps
 import IOKit.pwr_mgt
 import CoreGraphics
+#if canImport(notify)
+import notify
+#endif
 
 final class DaemonRunner: @unchecked Sendable {
     private let controller: BatteryController
@@ -23,17 +26,24 @@ final class DaemonRunner: @unchecked Sendable {
     private let socPower = SoCPowerMonitor()
     private let dischargeSleep = DischargeSleepGuard()
     private var configurationNotice: String?
+    private var adapterFlaps = BGAdapterFlapCounter()
+    private var lastDecisionAdapterConnected = true
 
     public init(controller: BatteryController = BatteryController(), dryRun: Bool = false, isOnce: Bool = false) {
         self.controller = controller
         self.dryRun = dryRun
         self.isOnce = isOnce
+        controller.smc.allowsWriteProbe = !dryRun
     }
 
-    private func timestamp() -> String {
+    private let timestampFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        return formatter.string(from: Date())
+        return formatter
+    }()
+
+    private func timestamp() -> String {
+        timestampFormatter.string(from: Date())
     }
 
     private func log(_ message: String) {
@@ -81,7 +91,7 @@ final class DaemonRunner: @unchecked Sendable {
 
     func loadConfig() -> BGConfig {
         do { return try BGConfigFile.read(at: URL(fileURLWithPath: BGPaths.config)) }
-        catch is DecodingError {
+        catch where BGConfigRecovery.isContentError(error) {
             if !dryRun {
                 do {
                     let recovery = try BGConfigRecovery.prepare()
@@ -102,6 +112,10 @@ final class DaemonRunner: @unchecked Sendable {
         do {
             try data.write(to: URL(fileURLWithPath: BGPaths.status), options: .atomic)
             chmod(BGPaths.status, 0o644)
+            #if canImport(notify)
+            // Die App liest den Status sofort statt in kurzen Abständen nachzufragen.
+            _ = notify_post(BGPaths.statusNotification)
+            #endif
         } catch {
             if !isOnce {
                 logStderr("Hinweis: Konnte status.json nicht schreiben: \(error.localizedDescription)")
@@ -166,15 +180,6 @@ final class DaemonRunner: @unchecked Sendable {
                                 logger: { [weak self] msg in self?.log(msg) })
         }
 
-        if !dryRun, let snapshot = storedConfig.calibrationPlan,
-           decision.completedCalibrationRequestID != nil || (decision.updatedCalibrationPlan != nil && decision.updatedCalibrationPlan != snapshot) {
-            do {
-                try BGConfigFile.update(at: URL(fileURLWithPath: BGPaths.config)) { latest in
-                    CalibrationControllerPersistence.apply(snapshot: snapshot, decision: decision, to: &latest)
-                }
-            } catch { logStderr("Kalibrierung konnte nicht aktualisiert werden: \(error.localizedDescription)") }
-        }
-
         if !dryRun, let snapshot = storedConfig.specialChargePlan,
            decision.completedSpecialRequestID != nil || decision.updatedSpecialPlan != nil {
             do {
@@ -187,6 +192,11 @@ final class DaemonRunner: @unchecked Sendable {
         if decision.resetChargeToFullOnce {
             resetChargeToFullOnceInConfig(snapshot: storedConfig, at: now)
         }
+
+        // Selbst ausgelöste Trennungen (aktives Entladen) sind keine Wackelkontakte.
+        let selfInitiated = !decision.adapterConnected || !lastDecisionAdapterConnected
+        lastDecisionAdapterConnected = decision.adapterConnected
+        let reconnects = adapterFlaps.observe(pluggedIn: battery.pluggedIn, selfInitiated: selfInitiated, at: now)
 
         let effective = config.effective(at: now)
         var status = BGStatus()
@@ -231,7 +241,9 @@ final class DaemonRunner: @unchecked Sendable {
         status.maxCapacityMah = battery.maxCapacityMah
         status.designCapacityMah = battery.designCapacityMah
         status.smcKeysDetected = detectedSMCKeys
-        status.daemonVersion = "0.9.0"
+        status.chargeCapability = controller.smc.chargeCapability()
+        status.adapterReconnectsLastHour = reconnects
+        status.daemonVersion = BGVersion.current
         status.updatedAt = Date()
         status.configurationNotice = configurationNotice
         status.message = storedConfig.isPaused(at: now) && decision.state != .unsupported
@@ -359,9 +371,15 @@ final class DaemonRunner: @unchecked Sendable {
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
         refreshCapabilities()
         if !dryRun { clamshellSleep.recoverAfterCrash(logger: { [weak self] in self?.log($0) }) }
+        let capability = controller.smc.chargeCapability()
+        log("Fähigkeitstest: " + capability.keys.sorted { $0.key < $1.key }
+            .filter { $0.value != .absent }.map { "\($0.key)=\($0.value.rawValue)" }.joined(separator: ", "))
+        if capability.chargeInhibitBlockedByFirmware {
+            log("Ladesperre von der Firmware gesperrt (ab macOS 27) – macOS-Ladelimit übernimmt.")
+        }
         if !controller.smc.hasChargeControl {
             log(controller.smc.hasDischargeControl
-                ? "SMC-Ladesperre nicht vorhanden – Pendelsteuerung verfügbar."
+                ? "SMC-Ladesperre nicht vorhanden – macOS hält das Ladelimit; Netzteil-Schalter nur für Sonderaktionen."
                 : "WARNUNG: Keine unterstützte Ladesteuerung vorhanden.")
         }
 
@@ -402,6 +420,9 @@ final class DaemonRunner: @unchecked Sendable {
         let timer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        // Toleranz lässt macOS Aufwachvorgänge bündeln; Netzteil- und Schlafereignisse
+        // lösen ohnehin sofort einen Durchlauf aus.
+        timer.tolerance = 5
         RunLoop.current.add(timer, forMode: .default)
 
         // Sofortige Reaktion auf Netzteil-/Akku-Änderung via IOPSNotificationCreateRunLoopSource

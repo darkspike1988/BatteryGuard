@@ -20,21 +20,21 @@ struct SleepLedLockTests {
                                  systemChargeLimits: limits, now: now)
     }
 
-    @Test func sleepReleasesByDefaultAndInhibitsOnlyWhenOptedIn() {
+    @Test func sleepKeepsTheReachedLimitByDefaultAndStopsChargingWhenOptedIn() {
         var config = BGConfig()
+        // Standard: Im Band 20–80 % bleibt die Ladesperre im Schlaf gesperrt …
+        #expect(decide(config, battery()) == .inhibitCharging)
+        // … unter der unteren Grenze darf der Mac weiterladen.
+        #expect(decide(config, battery(15)) == .release)
+        config.upperLimit = 100
         #expect(decide(config, battery()) == .release)
+        config = BGConfig()
+        #expect(decide(config, battery(), lock: false) == .release)
         config.stopChargingWhenSleeping = true
         #expect(decide(config, battery()) == .inhibitCharging)
         #expect(decide(config, battery(), lock: false) == .release)
         #expect(decide(config, battery(plugged: false)) == .release)
         config.pauseUntil = now.addingTimeInterval(60)
-        #expect(decide(config, battery()) == .release)
-    }
-
-    @Test func calibrationAlwaysReleasesBeforeSleep() {
-        var config = BGConfig()
-        config.stopChargingWhenSleeping = true
-        config.calibrationPlan = BGCalibrationPlan.manuallyStarted(at: now)
         #expect(decide(config, battery()) == .release)
     }
 

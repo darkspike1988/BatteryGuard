@@ -7,13 +7,13 @@ struct ChargingActionTests {
     let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     @Test func profileActivatesControlAndPreservesFutureTravel() throws {
-        for mode in [BGMode.native, .direct, .auto, .pendulum] {
+        for mode in [BGMode.native, .direct, .auto] {
             var config = BGConfig(); config.mode = mode
             config.chargeToFullOnce = true; config.fullChargeUntil = now.addingTimeInterval(100)
             config.travelReadyAt = now.addingTimeInterval(12 * 3600)
             let applied = try BGChargingActionRequest(action: .profile, profile: "desk").applying(to: config, at: now)
-            #expect(applied.mode == (mode == .pendulum ? .pendulum : .auto))
-            #expect(applied.enabled && applied.lowerLimit == 55 && applied.upperLimit == 60)
+            #expect(applied.mode == .auto)
+            #expect(applied.enabled && applied.lowerLimit == 45 && applied.upperLimit == 50)
             #expect(!applied.chargeToFullOnce && applied.fullChargeUntil == nil)
             #expect(applied.travelReadyAt == config.travelReadyAt)
             config.travelReadyAt = now.addingTimeInterval(3600)

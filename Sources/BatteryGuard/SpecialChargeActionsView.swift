@@ -7,9 +7,8 @@ struct SpecialChargeActionsView: View {
     @State private var duration = 480
     @State private var error: String?
     private var canTopUp: Bool {
-        statusStore.supportsChargingPlans && statusStore.status.hasBatteryPercent && statusStore.status.hasExternalPower && (statusStore.status.smcKeysDetected.contains(where: {
-            $0 == "CHTE" || $0 == "CH0B"
-        }) || (configStore.config.mode == .systemLimit && (statusStore.status.systemChargeLimits ?? []).contains(100)))
+        statusStore.supportsChargingPlans && statusStore.status.hasBatteryPercent && statusStore.status.hasExternalPower && (statusStore.status.hasChargeInhibit
+            || (configStore.config.mode == .systemLimit && (statusStore.status.systemChargeLimits ?? []).contains(100)))
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

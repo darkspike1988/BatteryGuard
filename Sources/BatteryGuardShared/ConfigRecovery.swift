@@ -19,6 +19,12 @@ public enum BGConfigRecovery {
         }
     }
 
+    /// Inhaltliche Fehler (JSON, Validierung) erlauben eine Wiederherstellung;
+    /// Datei-, Rechte- und Sperrfehler nie.
+    public static func isContentError(_ error: any Error) -> Bool {
+        !(error is POSIXError) && !(error is CocoaError)
+    }
+
     /// Call with the valid *previous* configuration while holding the configuration lock.
     public static func backup(config: BGConfig) throws {
         guard geteuid() == 0 else { throw POSIXError(.EPERM) }
@@ -38,28 +44,29 @@ public enum BGConfigRecovery {
         guard configURL.standardizedFileURL != backupURL.standardizedFileURL else { throw POSIXError(.EINVAL) }
         try validateDirectory(configURL.deletingLastPathComponent(), requireRoot: requireRoot)
         try validateDirectory(backupURL.deletingLastPathComponent(), requireRoot: requireRoot)
-        let fd = open(configURL.path, O_RDWR | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        return try BGConfigFile.withWriterLock(for: configURL) {
+            try recoverLocked(configURL: configURL, backupURL: backupURL, requireRoot: requireRoot)
+        }
+    }
+
+    private static func recoverLocked(configURL: URL, backupURL: URL, requireRoot: Bool) throws -> Result {
+        let fd = open(configURL.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
         guard fd >= 0 else { throw posixError() }
         let file = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         defer { try? file.close() }
         try validateFile(fd, requireRoot: requireRoot)
-        var acquired = false
-        for _ in 0..<20 {
-            if flock(fd, LOCK_EX | LOCK_NB) == 0 { acquired = true; break }
-            guard errno == EWOULDBLOCK || errno == EINTR else { throw posixError() }
-            usleep(10_000)
-        }
-        guard acquired else { throw POSIXError(.EBUSY) }
-        defer { _ = flock(fd, LOCK_UN) }
-        try validateFile(fd, requireRoot: requireRoot)
         let original = try file.read(upToCount: 262_145) ?? Data()
         guard original.count <= 262_144 else { throw POSIXError(.EFBIG) }
+        let current: BGConfig?
         do {
-            let config = try BGJSON.decoder().decode(BGConfig.self, from: original).sanitized()
-            try writeBackup(config: config, at: backupURL, requireRoot: requireRoot)
+            current = try BGJSON.decoder().decode(BGConfig.self, from: original).sanitized()
+        } catch where isContentError(error) {
+            // Only content failures (JSON or validation) authorize recovery.
+            current = nil
+        }
+        if let current {
+            try writeBackup(config: current, at: backupURL, requireRoot: requireRoot)
             return Result(recovered: false, usedBackup: false, quarantinePath: nil)
-        } catch is DecodingError {
-            // Only typed JSON decoding failure authorizes recovery.
         }
 
         var restored = BGConfig()
@@ -69,7 +76,7 @@ public enum BGConfigRecovery {
             usedBackup = true
         } catch let error as POSIXError where error.code == .ENOENT {
             // No backup yet: explicitly disabled defaults are the safe starting point.
-        } catch is DecodingError {
+        } catch where isContentError(error) {
             // A corrupt regular backup also cannot authorize active charging control.
         }
         restored.enabled = false
@@ -88,12 +95,8 @@ public enum BGConfigRecovery {
         try quarantined.write(contentsOf: original)
         try quarantined.synchronize()
         guard fchmod(quarantineFD, 0o644) == 0 else { throw posixError() }
-        // Preserve the inode and its held lock so already-open cooperative writers cannot
-        // modify an orphan file after recovery. Original bytes are durable before this write.
-        try file.seek(toOffset: 0)
-        try file.write(contentsOf: replacement)
-        try file.truncate(atOffset: UInt64(replacement.count))
-        try file.synchronize()
+        // Original bytes are durable in quarantine before the atomic replacement.
+        try BGConfigFile.replaceAtomically(replacement, at: configURL)
         return Result(recovered: true, usedBackup: usedBackup, quarantinePath: quarantine.path)
     }
 
@@ -106,8 +109,7 @@ public enum BGConfigRecovery {
             try validateFile(existing, requireRoot: requireRoot, backup: true)
         } else if errno != ENOENT { throw posixError() }
         let data = try BGJSON.encoder().encode(config.sanitized())
-        try data.write(to: url, options: .atomic)
-        guard chmod(url.path, 0o644) == 0 else { throw posixError() }
+        try BGConfigFile.replaceAtomically(data, at: url)
     }
 
     private static func readBackup(at url: URL, requireRoot: Bool) throws -> BGConfig {

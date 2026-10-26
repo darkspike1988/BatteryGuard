@@ -7,8 +7,6 @@ public struct ControllerDecision: Sendable, Equatable {
     public var adapterConnected: Bool
     public var resetChargeToFullOnce: Bool
     public var message: String?
-    public var completedCalibrationRequestID: UUID? = nil
-    public var updatedCalibrationPlan: BGCalibrationPlan? = nil
     public var completedSpecialRequestID: UUID? = nil
     public var updatedSpecialPlan: BGSpecialChargePlan? = nil
     public var heatProtectionThresholdCelsius: Int?
@@ -117,56 +115,6 @@ public enum ControllerLogic {
                                        available: systemChargeLimits, canHoldWithAdapterSwitch: hasDischargeControl && allowsAdapterDisconnect,
                                        now: now)
         }
-        if let plan = config.calibrationPlan {
-            let adapterDisabled = previousDecision?.adapterConnected == false
-            let power: BGExternalPowerState = !battery.externalPowerAvailable || adapterDisabled
-                ? .unknown : (battery.pluggedIn ? .connected : .disconnected)
-            var heatConfig = config
-            heatConfig.heatProtectionCelsius = config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : 40
-            let heatActive = needsHeatProtection(config: heatConfig, battery: battery, previousDecision: previousDecision)
-                || (battery.temperatureCelsius.map { $0.isFinite && $0 >= Double(heatConfig.heatProtectionCelsius) } ?? false)
-            let verified = specialHardwareVerified && hasChargeControl && hasDischargeControl
-                && allowsAdapterDisconnect && config.enabled && !config.isPaused(at: now)
-                && config.mode != .native && config.mode != .direct
-            let context = BGCalibrationContext(
-                percent: battery.percentAvailable && (0...100).contains(battery.percent) ? battery.percent : nil,
-                externalPower: power,
-                temperatureCelsius: battery.temperatureCelsius.flatMap { $0.isFinite ? $0 : nil },
-                heatThreshold: heatConfig.heatProtectionCelsius, heatActive: heatActive,
-                hardwareVerified: verified, adapterDisabledByUs: adapterDisabled)
-            var decision: ControllerDecision
-            switch plan.evaluate(context: context, at: now) {
-            case .unavailable(let reason):
-                decision = ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
-                    message: "Kalibrierung nicht verfügbar: " + reason)
-                decision.completedCalibrationRequestID = plan.requestID
-            case .complete(let reason):
-                decision = ControllerDecision(state: .disabled, chargingEnabled: true, adapterConnected: true,
-                    message: "Kalibrierung beendet: " + reason)
-                decision.completedCalibrationRequestID = plan.requestID
-            case .paused(let updated, let reason):
-                decision = ControllerDecision(state: heatActive ? .holding : .disabled,
-                    chargingEnabled: !heatActive, adapterConnected: true,
-                    message: heatActive ? heatMessage(battery: battery) : "Kalibrierung pausiert: " + reason,
-                    heatProtectionActive: heatActive)
-                decision.updatedCalibrationPlan = updated
-            case .active(let updated, let command):
-                switch command {
-                case .charge:
-                    decision = ControllerDecision(state: .charging, chargingEnabled: true, adapterConnected: true,
-                        message: "Kalibrierung: " + updated.phase.rawValue)
-                case .hold:
-                    decision = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: true,
-                        message: "Kalibrierung: 100 % eine Stunde halten")
-                case .discharge:
-                    decision = ControllerDecision(state: .discharging, chargingEnabled: false, adapterConnected: false,
-                        message: "Kalibrierung: auf 10 % entladen")
-                }
-                decision.updatedCalibrationPlan = updated
-            }
-            return preservingHeat(decision, config: heatConfig, battery: battery,
-                previousDecision: previousDecision, hasChargeControl: hasChargeControl, now: now)
-        }
         if let plan = config.specialChargePlan {
             var decision: ControllerDecision
             let adapterDisabled = previousDecision?.adapterConnected == false
@@ -241,31 +189,19 @@ public enum ControllerLogic {
         if config.mode == .direct {
             return ControllerDecision(state: .unsupported, chargingEnabled: true,
                                       adapterConnected: true,
-                                      message: "Direktmodus nicht implementiert – bitte Auto, Nativ oder Pendel wählen")
+                                      message: "Direktmodus nicht implementiert – bitte Auto oder Nativ wählen")
         }
 
-        // 1. Hardware/SMC-Unterstützung prüfen
-        guard hasChargeControl && config.mode != .pendulum else {
-            // macOS 26.4+/27: CHTE/CH0B (Ladesperre) existieren nicht mehr.
-            // Fallback "Pendel-Modus": nur über den Netzteil-Schalter (CHIE/CH0J/CH0I) arbeiten.
-            guard hasDischargeControl else {
-                return ControllerDecision(
-                    state: .unsupported,
-                    chargingEnabled: true,
-                    adapterConnected: true,
-                    resetChargeToFullOnce: false,
-                    message: "Keine unterstützten SMC-Schlüssel für Ladesteuerung gefunden (weder CHTE/CH0B noch CHIE/CH0J/CH0I)."
-                )
-            }
-            if config.enabled && effectivelyPlugged && !allowsAdapterDisconnect {
-                return ControllerDecision(state: .disabled, chargingEnabled: true, adapterConnected: true,
-                    message: "Monitor-/Deckelschutz: Netzteil bleibt verbunden. Ohne separate Ladesperre übernimmt macOS das Ladelimit.")
-            }
-            return evaluatePendulum(
-                config: config,
-                battery: battery,
-                previousDecision: previousDecision,
-                effectivelyPlugged: effectivelyPlugged
+        // 1. Ohne separate SMC-Ladesperre setzt macOS das Limit durch (Systemeinstellungen →
+        //    Batterie → Ladelimit, ab macOS 26.4). B-Guard trennt das Netzteil nie, um ein
+        //    Limit zu halten: Das erzeugt nur zusätzliche Teilzyklen ohne belegten Nutzen.
+        guard hasChargeControl else {
+            return ControllerDecision(
+                state: .disabled,
+                chargingEnabled: true,
+                adapterConnected: true,
+                resetChargeToFullOnce: config.chargeToFullOnce && battery.percent >= 100,
+                message: config.enabled ? Self.nativeLimitMessage : "Batterieschutz deaktiviert"
             )
         }
 
@@ -407,12 +343,6 @@ public enum ControllerLogic {
         // Ein selbst gehaltenes Netzteil meldet sich als „nicht angesteckt“.
         let plugged = battery.pluggedIn || previousDecision?.adapterConnected == false
         let canHold = canHoldWithAdapterSwitch && config.allowLimitsBelowSystemMinimum
-        if let plan = config.calibrationPlan {
-            var result = ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
-                message: "Kalibrierung im macOS-Limit-Modus nicht verfügbar")
-            result.completedCalibrationRequestID = plan.requestID
-            return result
-        }
         if let plan = config.specialChargePlan {
             let power: BGExternalPowerSource = battery.externalPowerAvailable ? (plugged ? .connected : .disconnected) : .unknown
             let outcome = plan.evaluate(context: BGSpecialPlanEvaluationContext(
@@ -503,88 +433,8 @@ public enum ControllerLogic {
         return result
     }
 
-    /// Hysterese (in Prozentpunkten) des Pendel-Modus: Netzteil geht bei >= upperLimit aus
-    /// und erst bei <= upperLimit - pendulumHysteresis wieder an.
-    public static let pendulumHysteresis = 5
-
-    /// Fallback ohne Ladesperre-Key: Das Limit wird nur über das Ein-/Ausschalten des Netzteils
-    /// (CHIE/CH0J/CH0I) erzwungen. Der Akku pendelt dadurch zwischen (upper - 5) und upper.
-    static func evaluatePendulum(
-        config: BGConfig,
-        battery: BatteryInfo,
-        previousDecision: ControllerDecision?,
-        effectivelyPlugged: Bool
-    ) -> ControllerDecision {
-        let normal = { (state: BGChargeState, msg: String?, reset: Bool) in
-            ControllerDecision(state: state, chargingEnabled: true, adapterConnected: true,
-                               resetChargeToFullOnce: reset, message: msg)
-        }
-
-        guard effectivelyPlugged else {
-            return normal(.onBattery, nil, config.chargeToFullOnce && battery.percent >= 100)
-        }
-        guard config.enabled else {
-            return normal(.disabled, "Batterieschutz deaktiviert", config.chargeToFullOnce && battery.percent >= 100)
-        }
-        // Hitzeschutz: lieber vom Akku laufen als heiß weiter laden
-        if needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision) {
-            // Once the reserve is reached, keep AC connected until cooling. Otherwise
-            // charging one percent would immediately disconnect it again while still hot.
-            let reserveReached = battery.percent <= config.lowerLimit
-                || (previousDecision?.heatProtectionActive == true && previousDecision?.adapterConnected == true)
-            if reserveReached {
-                return ControllerDecision(
-                    state: .charging, chargingEnabled: true, adapterConnected: true,
-                    message: "Akkureserve erreicht: Netzteil bleibt bis zur Abkühlung verbunden. Ohne separate Ladesperre kann Hitzeschutz das Laden nicht stoppen.",
-                    heatProtectionActive: true,
-                    heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
-                )
-            }
-            return ControllerDecision(
-                state: .discharging, chargingEnabled: false, adapterConnected: false,
-                message: heatMessage(battery: battery),
-                heatProtectionActive: true,
-                    heatProtectionThresholdCelsius: config.heatProtectionCelsius > 0 ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
-            )
-        }
-
-        if needsColdProtection(config: config, battery: battery, previousDecision: previousDecision) {
-            // Wie beim Hitzeschutz: an der Reserve verbunden bleiben, sonst entlädt der Mac bis 0 %.
-            let reserveReached = battery.percent <= config.lowerLimit
-                || (previousDecision?.coldProtectionActive == true && previousDecision?.adapterConnected == true)
-            var cold = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: reserveReached,
-                                          message: coldMessage(config: config, battery: battery))
-            cold.coldProtectionActive = true
-            return cold
-        }
-
-        if config.chargeToFullOnce {
-            if battery.percent >= 100 {
-                return normal(.holding, "Einmaliges Vollladen abgeschlossen (100 %)", true)
-            }
-            return normal(.charging, "Einmaliges Vollladen aktiv (\(battery.percent) %)", false)
-        }
-
-        let resumeLevel = max(config.upperLimit - pendulumHysteresis, config.lowerLimit)
-        var adapterOff = previousDecision?.adapterConnected == false
-
-        if battery.percent >= config.upperLimit {
-            adapterOff = true
-        } else if battery.percent <= resumeLevel {
-            adapterOff = false
-        }
-
-        if adapterOff {
-            return ControllerDecision(
-                state: .discharging, chargingEnabled: false, adapterConnected: false,
-                message: "Pendel-Modus: Akku läuft ab \(config.upperLimit) % bis \(resumeLevel) % vom Akku"
-            )
-        }
-        return ControllerDecision(
-            state: .charging, chargingEnabled: true, adapterConnected: true,
-            message: "Pendel-Modus: lädt bis \(config.upperLimit) %"
-        )
-    }
+    /// Stabile Meldung; die App erkennt daran, dass macOS das Ladelimit hält.
+    public static let nativeLimitMessage = "Keine separate Ladesperre – macOS-Ladelimit übernimmt (Systemeinstellungen → Batterie)"
 }
 
 
@@ -598,16 +448,23 @@ public enum SleepChargePolicy: Equatable, Sendable {
 
     public static func decide(config: BGConfig, battery: BatteryInfo, hasChargeControl: Bool,
                               systemChargeLimits: [Int], now: Date = Date()) -> SleepChargePolicy {
-        guard config.stopChargingWhenSleeping, config.enabled, !config.isPaused(at: now),
+        guard config.enabled, !config.isPaused(at: now),
               config.mode != .native, config.mode != .direct, battery.pluggedIn, battery.percentAvailable else { return .release }
         let effective = config.effective(at: now)
         // Vollladen, Reise und Top Up haben Vorrang: dann wie bisher freigeben.
-        guard !effective.chargeToFullOnce, effective.specialChargePlan == nil, effective.calibrationPlan == nil else { return .release }
+        guard !effective.chargeToFullOnce, effective.specialChargePlan == nil else { return .release }
         if config.mode == .systemLimit {
-            guard let limit = BGSystemChargeLimit.target(for: max(battery.percent, 1), available: systemChargeLimits) else { return .release }
+            // Ohne Opt-in bleibt das gesetzte macOS-Limit im Schlaf ohnehin in der Firmware aktiv.
+            guard config.stopChargingWhenSleeping,
+                  let limit = BGSystemChargeLimit.target(for: max(battery.percent, 1), available: systemChargeLimits) else { return .release }
             return .systemLimit(limit)
         }
-        return hasChargeControl ? .inhibitCharging : .release
+        guard hasChargeControl else { return .release }
+        if config.stopChargingWhenSleeping { return .inhibitCharging }
+        // Standard: Ein erreichtes Limit bleibt gesperrt, sonst lädt der Mac im Schlaf bis 100 %.
+        // Unter der unteren Grenze darf er weiterladen: lieber über dem Ziel als leer aufwachen.
+        return config.mode == .auto && effective.upperLimit < 100 && battery.percent >= effective.lowerLimit
+            ? .inhibitCharging : .release
     }
 }
 
@@ -798,6 +655,14 @@ public final class BatteryController: @unchecked Sendable {
         lastHardwareCheckUptime = nil
     }
 
+    private func invalidateLocked() {
+        previousDecision = nil
+        lastAppliedCharging = nil
+        lastAppliedAdapter = nil
+        lastAppliedMagSafeLED = nil
+        lastHardwareCheckUptime = nil
+    }
+
     public func restoreNormal(logger: ((String) -> Void)? = nil) {
         lock.lock()
         defer { lock.unlock() }
@@ -829,17 +694,6 @@ public enum SpecialControllerPersistence {
             latest.specialChargePlan = nil
         } else if let updated = decision.updatedSpecialPlan, updated.requestID == snapshot.requestID {
             latest.specialChargePlan = updated
-        }
-    }
-}
-
-public enum CalibrationControllerPersistence {
-    public static func apply(snapshot: BGCalibrationPlan, decision: ControllerDecision, to latest: inout BGConfig) {
-        guard latest.calibrationPlan?.requestID == snapshot.requestID else { return }
-        if decision.completedCalibrationRequestID == snapshot.requestID {
-            latest.calibrationPlan = nil
-        } else if let updated = decision.updatedCalibrationPlan, updated.requestID == snapshot.requestID {
-            latest.calibrationPlan = updated
         }
     }
 }
