@@ -154,9 +154,21 @@ public extension BGConfig {
         if activeDischargeAboveUpper != baseline.activeDischargeAboveUpper { result.activeDischargeAboveUpper = activeDischargeAboveUpper }
         if heatProtectionCelsius != baseline.heatProtectionCelsius { result.heatProtectionCelsius = heatProtectionCelsius }
         if magsafeLed != baseline.magsafeLed { result.magsafeLed = magsafeLed }
+        if magsafeLedOff != baseline.magsafeLedOff { result.magsafeLedOff = magsafeLedOff }
+        if stopChargingWhenSleeping != baseline.stopChargingWhenSleeping { result.stopChargingWhenSleeping = stopChargingWhenSleeping }
+        if allowLimitsBelowSystemMinimum != baseline.allowLimitsBelowSystemMinimum { result.allowLimitsBelowSystemMinimum = allowLimitsBelowSystemMinimum }
+        if coldProtectionCelsius != baseline.coldProtectionCelsius { result.coldProtectionCelsius = coldProtectionCelsius }
+        if keepAwakeWhenLidClosed != baseline.keepAwakeWhenLidClosed { result.keepAwakeWhenLidClosed = keepAwakeWhenLidClosed }
         if desktopProfileEnabled != baseline.desktopProfileEnabled { result.desktopProfileEnabled = desktopProfileEnabled }
         if desktopProfile != baseline.desktopProfile { result.desktopProfile = desktopProfile }
-        if lowPowerModeOnBattery != baseline.lowPowerModeOnBattery { result.lowPowerModeOnBattery = lowPowerModeOnBattery }
+        if lowPowerModeRule != baseline.lowPowerModeRule {
+            result.lowPowerModeRule = lowPowerModeRule
+        } else if lowPowerModeOnBattery != baseline.lowPowerModeOnBattery {
+            // Edits through the legacy field keep their former meaning.
+            result.lowPowerModeRule = lowPowerModeOnBattery ? .onBattery : .off
+        }
+        result.lowPowerModeOnBattery = result.lowPowerModeRule == .onBattery
+        if highPowerModeRule != baseline.highPowerModeRule { result.highPowerModeRule = highPowerModeRule }
         if preventSleepWhileDischarging != baseline.preventSleepWhileDischarging { result.preventSleepWhileDischarging = preventSleepWhileDischarging }
         if mode != baseline.mode { result.mode = mode }
         // Legacy edits get the same bounds as typed actions: pause ≤ 12 h,

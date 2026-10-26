@@ -178,7 +178,7 @@ public struct BGSavedProfile: Codable, Equatable, Identifiable, Sendable {
     /// Semantics:
     /// - `enabled` is set to `true`.
     /// - Updates `lowerLimit`, `upperLimit`, `heatProtectionCelsius`, and `activeDischargeAboveUpper`.
-    /// - Preserves `.auto` mode. If mode is `.native` or `.direct`, switches to `.auto`
+    /// - Preserves `.auto` or `.systemLimit` mode. If mode is `.native` or `.direct`, switches to `.auto`
     ///   so that custom thresholds can be properly managed.
     /// - Preserves unrelated settings such as `magsafeLed`.
     /// - Clears temporary pauses (`pauseUntil`) and existing full-charge requests (`chargeToFullOnce`,
@@ -199,7 +199,7 @@ public struct BGSavedProfile: Codable, Equatable, Identifiable, Sendable {
         switch c.mode {
         case .native, .direct:
             c.mode = .auto
-        case .auto:
+        case .auto, .systemLimit:
             break
         }
 

@@ -14,6 +14,9 @@ public enum BGChargingAction: String, Codable, CaseIterable, Sendable {
     case dischargeTo = "discharge-to"
     case holdCharge = "hold-charge"
     case cancelSpecial = "cancel-special"
+    case powerMode = "power-mode"
+    case clearScheduleHistory = "clear-schedule-history"
+    case magsafeLED = "magsafe-led"
 }
 
 public enum BGChargingActionError: Error, LocalizedError, Equatable, Sendable {
@@ -40,9 +43,13 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
     public var savedProfile: BGSavedProfile?
     public var scheduledTask: BGScheduledTask?
     public var scheduleID: UUID?
+    public var lowPowerMode: BGPowerModeRule?
+    public var highPowerMode: BGPowerModeRule?
+    public var magsafeLED: BGMagSafeLEDMode?
 
     public init(action: BGChargingAction, profile: String? = nil, enabled: Bool? = nil,
-                minutes: Int? = nil, readyAt: Date? = nil, targetPercent: Int? = nil, savedProfile: BGSavedProfile? = nil, scheduledTask: BGScheduledTask? = nil, scheduleID: UUID? = nil) {
+                minutes: Int? = nil, readyAt: Date? = nil, targetPercent: Int? = nil, savedProfile: BGSavedProfile? = nil, scheduledTask: BGScheduledTask? = nil, scheduleID: UUID? = nil,
+                lowPowerMode: BGPowerModeRule? = nil, highPowerMode: BGPowerModeRule? = nil, magsafeLED: BGMagSafeLEDMode? = nil) {
         self.action = action
         self.profile = profile
         self.enabled = enabled
@@ -52,10 +59,14 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         self.savedProfile = savedProfile
         self.scheduledTask = scheduledTask
         self.scheduleID = scheduleID
+        self.lowPowerMode = lowPowerMode
+        self.highPowerMode = highPowerMode
+        self.magsafeLED = magsafeLED
     }
 
     private enum CodingKeys: String, CodingKey {
         case action, profile, enabled, minutes, readyAt, targetPercent, savedProfile, scheduledTask, scheduleID
+        case lowPowerMode, highPowerMode, magsafeLED
     }
     private struct AnyKey: CodingKey {
         var stringValue: String
@@ -80,6 +91,9 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         savedProfile = try container.decodeIfPresent(BGSavedProfile.self, forKey: .savedProfile)
         scheduledTask = try container.decodeIfPresent(BGScheduledTask.self, forKey: .scheduledTask)
         scheduleID = try container.decodeIfPresent(UUID.self, forKey: .scheduleID)
+        lowPowerMode = try container.decodeIfPresent(BGPowerModeRule.self, forKey: .lowPowerMode)
+        highPowerMode = try container.decodeIfPresent(BGPowerModeRule.self, forKey: .highPowerMode)
+        magsafeLED = try container.decodeIfPresent(BGMagSafeLEDMode.self, forKey: .magsafeLED)
         try validateParameters()
     }
 
@@ -92,9 +106,11 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
         case .protection: return ["action", "enabled"]
         case .pause, .stayAwakeUntilLimit: return ["action", "minutes"]
         case .travel: return ["action", "readyAt"]
-        case .cancelStayAwake, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial: return ["action"]
+        case .cancelStayAwake, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: return ["action"]
         case .topUp: return ["action", "minutes", "targetPercent"]
         case .dischargeTo, .holdCharge: return ["action", "targetPercent", "minutes"]
+        case .powerMode: return ["action", "lowPowerMode", "highPowerMode"]
+        case .magsafeLED: return ["action", "magsafeLED"]
         }
     }
 
@@ -105,7 +121,9 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
                         readyAt != nil ? "readyAt" : nil,
                         targetPercent != nil ? "targetPercent" : nil,
                         savedProfile != nil ? "savedProfile" : nil, scheduledTask != nil ? "scheduledTask" : nil,
-                        scheduleID != nil ? "scheduleID" : nil].compactMap { $0 }
+                        scheduleID != nil ? "scheduleID" : nil,
+                        lowPowerMode != nil ? "lowPowerMode" : nil, highPowerMode != nil ? "highPowerMode" : nil,
+                        magsafeLED != nil ? "magsafeLED" : nil].compactMap { $0 }
         guard supplied.allSatisfy(Self.allowedFields(for: action).contains) else {
             throw BGChargingActionError.invalidRequest("Für diese Aktion unzulässige Felder.")
         }
@@ -133,7 +151,13 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             guard let readyAt, readyAt.timeIntervalSince1970.isFinite else {
                 throw BGChargingActionError.invalidRequest("Ein gültiger Reisezeitpunkt ist erforderlich.")
             }
-        case .cancelStayAwake, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial: break
+        case .cancelStayAwake, .resume, .fullCharge, .cancelFullCharge, .cancelTravel, .cancelSpecial, .clearScheduleHistory: break
+        case .magsafeLED:
+            guard magsafeLED != nil else { throw BGChargingActionError.invalidRequest("LED-Modus fehlt.") }
+        case .powerMode:
+            guard lowPowerMode != nil || highPowerMode != nil else {
+                throw BGChargingActionError.invalidRequest("Mindestens ein Energiemodus ist erforderlich.")
+            }
         case .topUp:
             if let targetPercent, targetPercent != 100 {
                 throw BGChargingActionError.invalidRequest("Top-Up lädt immer auf 100 %.")
@@ -181,7 +205,7 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             throw BGChargingActionError.invalidRequest("Der Reisezeitpunkt muss in der Zukunft und innerhalb von 30 Tagen liegen.")
         }
         var next = config
-        if action != .upsertSchedule && action != .deleteSchedule && action != .stayAwakeUntilLimit && action != .cancelStayAwake {
+        if ![.upsertSchedule, .deleteSchedule, .stayAwakeUntilLimit, .cancelStayAwake, .powerMode, .clearScheduleHistory, .magsafeLED].contains(action) {
             // Nur echte Eingriffe übersteuern Zeitpläne und Monitorprofil für zwei Stunden.
             // Abbrechen und Fortsetzen kehren zum Normalbetrieb zurück.
             if !Self.returnsToNormal.contains(action) {
@@ -296,6 +320,14 @@ public struct BGChargingActionRequest: Codable, Equatable, Sendable {
             )
         case .cancelSpecial:
             next.specialChargePlan = nil
+        case .clearScheduleHistory:
+            next.scheduleHistory = []
+        case .magsafeLED:
+            if let magsafeLED { next.magsafeLedMode = magsafeLED }
+        case .powerMode:
+            // Energiemodi sind unabhängig von der Ladesteuerung; sie setzen keinen manuellen Vorrang.
+            if let lowPowerMode { next.lowPowerModeRule = lowPowerMode }
+            if let highPowerMode { next.highPowerModeRule = highPowerMode }
         }
         return next.sanitized()
     }

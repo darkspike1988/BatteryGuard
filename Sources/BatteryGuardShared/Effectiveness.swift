@@ -7,9 +7,12 @@ public enum BGControlPath: String, Codable, Sendable {
     /// Nur noch für ältere Dienste (Pendelbetrieb); B-Guard begrenzt so nicht mehr.
     case adapterSwitch
     case macOS
+    /// B-Guard setzt Apples natives Ladelimit (macOS-Limit-Modus).
+    case systemLimit
 
-    public init(smcKeys: [String], mode: BGMode) {
+    public init(smcKeys: [String], mode: BGMode, systemLimitAvailable: Bool = false) {
         if mode == .native { self = .macOS; return }
+        if mode == .systemLimit { self = systemLimitAvailable ? .systemLimit : .none; return }
         if smcKeys.contains(where: { ["CHTE", "CH0B", "CH0C"].contains($0) }) {
             self = .chargeLock
         } else if smcKeys.contains(where: { ["CHIE", "CH0J", "CH0I"].contains($0) }) {
@@ -22,6 +25,10 @@ public enum BGControlPath: String, Codable, Sendable {
 
     /// Bevorzugt das Ergebnis des Fähigkeitstests; ältere Dienste melden nur vorhandene Schlüssel.
     public init(status: BGStatus, mode: BGMode) {
+        if mode == .systemLimit {
+            self = (status.systemChargeLimits ?? []).isEmpty ? .none : .systemLimit
+            return
+        }
         guard mode != .native, let capability = status.chargeCapability else {
             self.init(smcKeys: status.smcKeysDetected, mode: mode)
             return
@@ -139,7 +146,8 @@ public struct BGEffectiveness: Equatable, Sendable {
            status.externalDisplayConnected == true || status.lidClosed == true {
             return result(.desktopFallback)
         }
-        if let native, let target, native < target { return result(.limitedByNative) }
+        // Im macOS-Limit-Modus ist das native Limit der angewendete Wert, keine fremde Begrenzung.
+        if config.mode != .systemLimit, let native, let target, native < target { return result(.limitedByNative) }
         return result(.effective)
     }
 }

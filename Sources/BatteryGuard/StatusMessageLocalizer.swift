@@ -36,6 +36,39 @@ enum StatusMessageLocalizer {
            let limit = Int(values[0]) {
             return L("Ladelimit von %lld %% gehalten", limit)
         }
+        if let values = captures(message, #"^Kälteschutz aktiv: ([0-9.,]+)°C – Laden ab (\d+)°C$"#),
+           let temperature = Double(values[0].replacingOccurrences(of: ",", with: ".")), let resume = Int(values[1]) {
+            return L("Kälteschutz aktiv: %.1f°C – Laden ab %lld°C", temperature, resume)
+        }
+        if let values = captures(message, #"^Ladelimit von (\d+) % gehalten \(Netzteil-Schalter, macOS-Limit (\d+) %\)$"#),
+           let limit = Int(values[0]), let system = Int(values[1]) {
+            return L("Ladelimit von %lld %% gehalten (Netzteil-Schalter, macOS-Limit %lld %%)", limit, system)
+        }
+        if let values = captures(message, #"^Laden aktiv bis (\d+) % \(Netzteil-Schalter\)$"#), let limit = Int(values[0]) {
+            return L("Laden aktiv bis %lld %% (Netzteil-Schalter)", limit)
+        }
+        if let values = captures(message, #"^macOS-Limit von (\d+) % gehalten$"#),
+           let limit = Int(values[0]) {
+            return L("macOS-Limit von %lld %% gehalten", limit)
+        }
+        if let values = captures(message, #"^Laden aktiv bis (\d+) % \(macOS-Limit\)$"#),
+           let limit = Int(values[0]) {
+            return L("Laden aktiv bis %lld %% (macOS-Limit)", limit)
+        }
+        if let values = captures(message, #"^macOS-Limit hält (\d+) %$"#), let limit = Int(values[0]) {
+            return L("macOS-Limit hält %lld %%", limit)
+        }
+        if let values = captures(message, #"^macOS-Limit (\d+) %, darunter lädt macOS weiter$"#), let limit = Int(values[0]) {
+            return L("macOS-Limit %lld %%, darunter lädt macOS weiter", limit)
+        }
+        if let values = captures(message, #"^macOS-Limit vorübergehend (\d+) %$"#),
+           let limit = Int(values[0]) {
+            return L("macOS-Limit vorübergehend %lld %%", limit)
+        }
+        if let values = captures(message, #"^Ladestand nicht verfügbar – macOS-Limit bleibt bei (\d+) %$"#),
+           let limit = Int(values[0]) {
+            return L("Ladestand nicht verfügbar – macOS-Limit bleibt bei %lld %%", limit)
+        }
         if let values = captures(message, #"^Laden aktiv bis (\d+) %$"#),
            let limit = Int(values[0]) {
             return L("Laden aktiv bis %lld %%", limit)

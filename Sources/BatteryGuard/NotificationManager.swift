@@ -9,6 +9,7 @@ final class NotificationManager: Sendable {
     private var lowBatteryPolicy = LowBatteryWarningPolicy()
     private var didNotifyUpperLimit: Bool = false
     private var didNotifyHeat: Bool = false
+    private var notifiedAnomalies: Set<String> = []
     private var didNotifyThermal: Bool = false
     private var coldCharging = BGColdChargingPolicy()
 
@@ -17,6 +18,7 @@ final class NotificationManager: Sendable {
         static let lastCalibrationReminder = "bg.lastCalibrationReminderAt"
         static let lastWeeklyReport = "bg.lastWeeklyReportAt"
         static let lastHealthAlert = "bg.lastHealthAlertAt"
+        static let lastCapabilityChange = "bg.lastCapabilityChangeAt"
         static let appleCareReminderFor = "bg.appleCareReminderFor"
     }
     static let calibrationInterval: TimeInterval = 42 * 86400
@@ -24,6 +26,12 @@ final class NotificationManager: Sendable {
     static let weeklyInterval: TimeInterval = 7 * 86400
 
     private init() {}
+
+    /// Einzelne Mitteilung, etwa für fehlgeschlagene URL-Befehle.
+    func notify(title: String, body: String) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        send(title: title, body: body)
+    }
     
     func checkNotifications(status: BGStatus, config: BGConfig) {
         // UNUserNotificationCenter nur verwenden, wenn Bundle-ID vorhanden, sonst still ignorieren
@@ -68,6 +76,7 @@ final class NotificationManager: Sendable {
         let healthEnabled = preferences.object(forKey: "bg.notifyHealth") as? Bool ?? true
         checkBatteryHealth(status: status, enabled: healthEnabled, preferences: preferences)
 
+        checkCapabilityChange(status: status, preferences: preferences)
         guard status.hasBatteryPercent && status.hasExternalPower else { return }
         let onBattery = !status.pluggedIn || status.state == .onBattery
         
@@ -104,6 +113,48 @@ final class NotificationManager: Sendable {
         }
     }
     
+    /// Jede Auffälligkeit höchstens einmal melden, bis sie verschwindet.
+    func checkAnomalies(status: BGStatus, config: BGConfig, powerFlow: BGPowerFlowSample?) {
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        guard UserDefaults.standard.object(forKey: "bg.notifyAnomalies") as? Bool ?? true else { return }
+        let fresh = powerFlow.flatMap { $0.isFresh() ? $0 : nil }
+        let anomalies = BGChargeAnomaly.evaluate(status: status, config: config,
+                                                 inputWatts: fresh?.inputWatts, batteryWatts: fresh?.batteryWatts)
+        let keys = Set(anomalies.map(Self.key))
+        for anomaly in anomalies where !notifiedAnomalies.contains(Self.key(anomaly)) {
+            switch anomaly {
+            case .overLimit(let percent, let limit):
+                send(title: L("Über das Limit geladen"),
+                     body: L("Der Akku steht bei %lld %%, das Ziel bei %lld %%. Das kann nach dem Ausschalten, im Schlaf ohne Dienst oder durch macOS passieren. B-Guard regelt wieder auf das Ziel.", percent, limit))
+            case .appleCalibration:
+                send(title: L("macOS kalibriert den Akku"),
+                     body: L("macOS setzt das Ladelimit vorübergehend aus und lädt auf 100 %, um den Ladestand neu zu schätzen. Das ist kein Fehler; danach gilt wieder dein Ziel."))
+            case .externalPowerMissing:
+                send(title: L("Netzteil liefert keinen Strom"),
+                     body: L("Ein Netzteil ist gemeldet, der Mac läuft aber vom Akku. Manche USB-C-Monitore und Docks liefern zeitweise keine Leistung. Monitor oder Kabel kurz trennen und neu verbinden."))
+            }
+        }
+        notifiedAnomalies = keys
+    }
+
+    private static func key(_ anomaly: BGChargeAnomaly) -> String {
+        switch anomaly {
+        case .overLimit: "overLimit"
+        case .appleCalibration: "appleCalibration"
+        case .externalPowerMissing: "externalPowerMissing"
+        }
+    }
+
+    private func checkCapabilityChange(status: BGStatus, preferences: UserDefaults) {
+        guard let change = status.capabilityChange else { return }
+        let last = preferences.object(forKey: Key.lastCapabilityChange) as? Date
+        guard last.map({ change.detectedAt > $0 }) ?? true else { return }
+        preferences.set(change.detectedAt, forKey: Key.lastCapabilityChange)
+        send(title: L("Ladesteuerung hat sich geändert"),
+             body: L("Nach einem Update erkennt B-Guard: %@. Prüfe in der Übersicht, welcher Steuerungsweg jetzt gilt.",
+                     change.changes.map { StatusMessageLocalizer.localized($0) }.joined(separator: "; ")))
+    }
+
     private func checkCalibration(status: BGStatus, enabled: Bool, preferences: UserDefaults) {
         let now = Date()
         guard let lastFull = preferences.object(forKey: Key.lastFullCharge) as? Date else {

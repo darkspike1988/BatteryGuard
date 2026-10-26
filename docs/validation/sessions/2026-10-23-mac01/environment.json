@@ -1,0 +1,16 @@
+{
+  "sessionID": "mac01-0.6.0-20261023",
+  "deviceID": "mac01",
+  "model": "MacBookPro18,3",
+  "chip": "Apple M1 Pro",
+  "macOSVersion": "27.0",
+  "macOSBuild": "26A428",
+  "firmware": "20457.1.29",
+  "appVersion": "0.6.0",
+  "daemonVersion": "0.6.0",
+  "commit": "ef25c790d6e8d6d6a7ab0d8b3f68f958811c7173",
+  "adapter": "67W USB-C Power Adapter (65 W)",
+  "connection": "USB-C",
+  "externalDisplay": "unknown",
+  "lid": "open"
+}

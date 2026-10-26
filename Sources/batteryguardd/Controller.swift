@@ -11,6 +11,11 @@ public struct ControllerDecision: Sendable, Equatable {
     public var updatedSpecialPlan: BGSpecialChargePlan? = nil
     public var heatProtectionThresholdCelsius: Int?
     public var heatProtectionActive: Bool
+    /// Natives macOS-Ladelimit, das im macOS-Limit-Modus gesetzt werden soll (nil = nicht anfassen).
+    public var systemChargeLimit: Int? = nil
+    public var coldProtectionActive: Bool = false
+    /// Tatsächlich angestrebter Ladestand im macOS-Limit-Modus (beim Halten unter der Mindeststufe das Profilziel).
+    public var effectiveTargetPercent: Int? = nil
 
     public init(
         state: BGChargeState,
@@ -33,6 +38,23 @@ public struct ControllerDecision: Sendable, Equatable {
 
 public enum ControllerLogic {
     public static let heatRecoveryMarginCelsius = 2.0
+    public static let coldRecoveryMarginCelsius = 2.0
+
+    /// Laden unter der Kälteschwelle sperren; Freigabe erst zwei Grad darüber.
+    static func needsColdProtection(config: BGConfig, battery: BatteryInfo, previousDecision: ControllerDecision?) -> Bool {
+        let wasActive = previousDecision?.coldProtectionActive == true
+        guard config.coldProtectionCelsius > 0 else { return false }
+        guard let temperature = battery.temperatureCelsius, temperature.isFinite else { return wasActive }
+        let threshold = Double(config.coldProtectionCelsius)
+        return wasActive ? temperature < threshold + coldRecoveryMarginCelsius : temperature < threshold
+    }
+
+    static func coldMessage(config: BGConfig, battery: BatteryInfo) -> String {
+        guard let temperature = battery.temperatureCelsius, temperature.isFinite else {
+            return "Kälteschutz bleibt aktiv – Temperatur momentan nicht verfügbar"
+        }
+        return "Kälteschutz aktiv: \(String(format: "%.1f", temperature))°C – Laden ab \(config.coldProtectionCelsius + Int(coldRecoveryMarginCelsius))°C"
+    }
 
     private static func needsHeatProtection(config: BGConfig, battery: BatteryInfo,
                                             previousDecision: ControllerDecision?) -> Bool {
@@ -85,8 +107,14 @@ public enum ControllerLogic {
         hasDischargeControl: Bool,
         allowsAdapterDisconnect: Bool = true,
         specialHardwareVerified: Bool = false,
+        systemChargeLimits: [Int] = [],
         now: Date = Date()
     ) -> ControllerDecision {
+        if config.mode == .systemLimit {
+            return evaluateSystemLimit(config: config, battery: battery, previousDecision: previousDecision,
+                                       available: systemChargeLimits, canHoldWithAdapterSwitch: hasDischargeControl && allowsAdapterDisconnect,
+                                       now: now)
+        }
         if let plan = config.specialChargePlan {
             var decision: ControllerDecision
             let adapterDisabled = previousDecision?.adapterConnected == false
@@ -213,6 +241,13 @@ public enum ControllerLogic {
             )
         }
 
+        if needsColdProtection(config: config, battery: battery, previousDecision: previousDecision) {
+            var cold = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: true,
+                                          message: coldMessage(config: config, battery: battery))
+            cold.coldProtectionActive = true
+            return cold
+        }
+
         // 4. Einmalig voll laden (chargeToFullOnce): bis 100% laden
         if config.chargeToFullOnce {
             if battery.percent >= 100 {
@@ -289,18 +324,134 @@ public enum ControllerLogic {
         }
     }
 
-    /// Ladezustand für den Systemschlaf. Aktives Entladen endet vor dem Schlaf immer.
-    /// Eine erreichte Ladegrenze bleibt über die SMC-Ladesperre gesperrt, sonst lädt der
-    /// Mac im Schlaf bis 100 %. Unter der unteren Grenze darf er weiter laden: lieber über
-    /// das Ziel als mit leerem Akku aufwachen. Alle Sonderfälle bleiben beim Normalbetrieb.
-    public static func chargingEnabledDuringSleep(config: BGConfig, battery: BatteryInfo,
-                                                  hasChargeControl: Bool, now: Date = Date()) -> Bool {
-        guard hasChargeControl, config.mode == .auto,
-              battery.percentAvailable, (0...100).contains(battery.percent) else { return true }
-        let effective = config.effective(at: now)
-        guard effective.enabled, !effective.chargeToFullOnce, effective.specialChargePlan == nil,
-              effective.upperLimit < 100 else { return true }
-        return battery.percent < effective.lowerLimit
+    /// macOS-Limit-Modus: B-Guard wählt Apples natives Ladelimit; macOS bietet feste Stufen an, daher wird
+    /// das Ziel auf die nächste Stufe aufgerundet. Mit `allowLimitsBelowSystemMinimum` setzt B-Guard Werte darunter
+    /// direkt als macOS-Limit; die Firmware hält sie wie jede Stufe, auch im Schlaf, ohne das Netzteil umzuschalten.
+    static func evaluateSystemLimit(config: BGConfig, battery: BatteryInfo, previousDecision: ControllerDecision?,
+                                    available: [Int], canHoldWithAdapterSwitch: Bool = false, now: Date) -> ControllerDecision {
+        guard let maximum = available.max(), let minimum = available.min() else {
+            return ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                message: "macOS-Limit auf diesem Mac nicht verfügbar – Normalbetrieb wiederhergestellt")
+        }
+        func decision(_ state: BGChargeState, limit: Int, message: String?, reset: Bool = false,
+                      adapterConnected: Bool = true) -> ControllerDecision {
+            var result = ControllerDecision(state: state, chargingEnabled: true, adapterConnected: adapterConnected,
+                                            resetChargeToFullOnce: reset, message: message)
+            result.systemChargeLimit = limit
+            return result
+        }
+        // Ein selbst gehaltenes Netzteil meldet sich als „nicht angesteckt“.
+        let plugged = battery.pluggedIn || previousDecision?.adapterConnected == false
+        let direct = config.allowLimitsBelowSystemMinimum
+        if let plan = config.specialChargePlan {
+            let power: BGExternalPowerSource = battery.externalPowerAvailable ? (plugged ? .connected : .disconnected) : .unknown
+            let outcome = plan.evaluate(context: BGSpecialPlanEvaluationContext(
+                percent: battery.percentAvailable ? battery.percent : nil, externalPower: power,
+                canBlockCharging: true, canDisconnectAdapter: true, allowsAdapterDisconnect: true), at: now)
+            let running = config.enabled && !config.isPaused(at: now) && outcome.isActive
+            if running && plan.kind == .topUp {
+                if var protection = temperatureProtection(config: config, battery: battery, previousDecision: previousDecision,
+                                                          minimum: minimum, plugged: plugged, canHold: canHoldWithAdapterSwitch,
+                                                          direct: direct) {
+                    protection.updatedSpecialPlan = outcome.updatedPlan
+                    return protection
+                }
+                var result = decision(battery.percent < 100 ? .charging : .holding, limit: maximum, message: outcome.reason)
+                result.updatedSpecialPlan = outcome.updatedPlan
+                return result
+            }
+            // Einmal entladen: Die Firmware entlädt am Netzteil bis zu einer angebotenen Stufe.
+            if running && plan.kind == .discharge && available.contains(plan.targetPercent) {
+                var result = decision(.discharging, limit: plan.targetPercent, message: outcome.reason)
+                result.updatedSpecialPlan = outcome.updatedPlan
+                return result
+            }
+            var result = ControllerDecision(state: outcome.isComplete ? .disabled : .unsupported,
+                chargingEnabled: true, adapterConnected: true,
+                message: [.topUp, .discharge].contains(plan.kind) ? outcome.reason : "Sonderaktion im macOS-Limit-Modus nicht verfügbar")
+            result.completedSpecialRequestID = plan.requestID
+            return result
+        }
+        guard config.enabled, !config.isPaused(at: now) else {
+            return decision(.disabled, limit: maximum, message: config.enabled ? nil : "Batterieschutz deaktiviert",
+                            reset: config.chargeToFullOnce && battery.percent >= 100)
+        }
+        let config = config.effective(at: now)
+        let wanted = config.chargeToFullOnce ? 100 : config.upperLimit
+        let limit = BGSystemChargeLimit.target(for: wanted, available: available) ?? maximum
+        guard battery.percentAvailable else {
+            return decision(.unsupported, limit: limit, message: "Ladestand nicht verfügbar – macOS-Limit bleibt bei \(limit) %")
+        }
+        if let protection = temperatureProtection(config: config, battery: battery, previousDecision: previousDecision,
+                                                  minimum: minimum, plugged: plugged, canHold: canHoldWithAdapterSwitch,
+                                                  direct: direct) {
+            return protection
+        }
+        let reset = config.chargeToFullOnce && battery.percent >= 100
+        guard plugged else { return decision(.onBattery, limit: limit, message: nil, reset: reset) }
+        if direct && wanted < minimum {
+            // Liegt das Ziel unter dem Ladestand, entlädt die Firmware am Netzteil bis dorthin.
+            let target = max(BGSystemChargeLimit.directMinimum, wanted)
+            var result = battery.percent >= target
+                ? decision(.holding, limit: target, message: "macOS-Limit von \(target) % gehalten", reset: reset)
+                : decision(.charging, limit: target, message: "Laden aktiv bis \(target) % (macOS-Limit)")
+            result.effectiveTargetPercent = target
+            return result
+        }
+        if battery.percent >= limit {
+            return decision(.holding, limit: limit, message: "macOS-Limit von \(limit) % gehalten", reset: reset)
+        }
+        return decision(.charging, limit: limit, message: "Laden aktiv bis \(limit) % (macOS-Limit)")
+    }
+
+    public static let temperatureReservePercent = 20
+
+    /// Hitze- und Kälteschutz im macOS-Limit-Modus. Mit direkten Werten hält das macOS-Limit den aktuellen
+    /// Ladestand. Sonst hält aus Sicherheitsgründen der Netzteil-Schalter das Laden an; an der Akkureserve bleibt
+    /// das Netzteil verbunden. Ohne beides sinkt nur das Limit auf die kleinste Stufe.
+    static func temperatureProtection(config: BGConfig, battery: BatteryInfo, previousDecision: ControllerDecision?,
+                                      minimum: Int, plugged: Bool, canHold: Bool, direct: Bool = false) -> ControllerDecision? {
+        let heat = needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision)
+        let cold = !heat && needsColdProtection(config: config, battery: battery, previousDecision: previousDecision)
+        guard heat || cold else { return nil }
+        if direct {
+            let base = heat ? heatMessage(battery: battery) : coldMessage(config: config, battery: battery)
+            // Den einmal gehaltenen Wert behalten, statt ihn bei jedem Prozentpunkt neu zu schreiben.
+            let held = (previousDecision?.heatProtectionActive == true || previousDecision?.coldProtectionActive == true)
+                ? previousDecision?.systemChargeLimit : nil
+            let current = held.map { min($0, max(battery.percent, BGSystemChargeLimit.directMinimum)) }
+                ?? max(BGSystemChargeLimit.directMinimum, min(battery.percent, 100))
+            var result = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: true,
+                                            message: base + " · " + "macOS-Limit hält \(current) %")
+            result.systemChargeLimit = current
+            result.effectiveTargetPercent = current
+            result.heatProtectionActive = heat
+            result.coldProtectionActive = cold
+            if heat {
+                result.heatProtectionThresholdCelsius = config.heatProtectionCelsius > 0
+                    ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
+            }
+            return result
+        }
+        // Feste Reserve: Auf Firmware, die bei `CHIE = 08` doch entlädt, darf der Mac nicht leerlaufen.
+        let reserveReached = battery.percent <= temperatureReservePercent
+            || ((previousDecision?.heatProtectionActive == true || previousDecision?.coldProtectionActive == true)
+                && previousDecision?.adapterConnected == true && previousDecision?.systemChargeLimit != nil)
+        let hold = canHold && plugged && !reserveReached
+        let base = heat ? heatMessage(battery: battery) : coldMessage(config: config, battery: battery)
+        let suffix = hold ? "Laden über den Netzteil-Schalter angehalten"
+            : (battery.percent < minimum ? "macOS-Limit \(minimum) %, darunter lädt macOS weiter" : "macOS-Limit vorübergehend \(minimum) %")
+        var result = ControllerDecision(state: .holding, chargingEnabled: !hold, adapterConnected: !hold,
+                                        message: base + " · " + suffix)
+        result.systemChargeLimit = minimum
+        result.effectiveTargetPercent = minimum
+        result.heatProtectionActive = heat
+        result.coldProtectionActive = cold
+        if heat {
+            result.heatProtectionThresholdCelsius = config.heatProtectionCelsius > 0
+                ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
+        }
+        return result
     }
 
     /// Stabile Meldung; die App erkennt daran, dass macOS das Ladelimit hält.
@@ -308,17 +459,55 @@ public enum ControllerLogic {
 }
 
 
+/// Was vor dem Systemschlaf passiert. Standard bleibt die Freigabe auf Normalbetrieb.
+public enum SleepChargePolicy: Equatable, Sendable {
+    case release
+    /// SMC-Ladesperre aktiv lassen; Netzteil bleibt verbunden.
+    case inhibitCharging
+    /// macOS-Limit auf die nächste Stufe über dem aktuellen Ladestand setzen.
+    case systemLimit(Int)
+
+    public static func decide(config: BGConfig, battery: BatteryInfo, hasChargeControl: Bool,
+                              systemChargeLimits: [Int], now: Date = Date()) -> SleepChargePolicy {
+        guard config.enabled, !config.isPaused(at: now),
+              config.mode != .native, config.mode != .direct, battery.pluggedIn, battery.percentAvailable else { return .release }
+        let effective = config.effective(at: now)
+        // Vollladen, Reise und Top Up haben Vorrang: dann wie bisher freigeben.
+        guard !effective.chargeToFullOnce, effective.specialChargePlan == nil else { return .release }
+        if config.mode == .systemLimit {
+            // Ohne Opt-in bleibt das gesetzte macOS-Limit im Schlaf ohnehin in der Firmware aktiv.
+            guard config.stopChargingWhenSleeping,
+                  let limit = BGSystemChargeLimit.target(for: max(battery.percent, 1), available: systemChargeLimits) else { return .release }
+            return .systemLimit(limit)
+        }
+        guard hasChargeControl else { return .release }
+        if config.stopChargingWhenSleeping { return .inhibitCharging }
+        // Standard: Ein erreichtes Limit bleibt gesperrt, sonst lädt der Mac im Schlaf bis 100 %.
+        // Unter der unteren Grenze darf er weiterladen: lieber über dem Ziel als leer aufwachen.
+        return config.mode == .auto && effective.upperLimit < 100 && battery.percent >= effective.lowerLimit
+            ? .inhibitCharging : .release
+    }
+}
+
 public final class BatteryController: @unchecked Sendable {
     public let smc: SMCClient
+    let systemLimit: SystemChargeLimitController
     private var previousDecision: ControllerDecision?
     private var lastAppliedCharging: Bool?
     private var lastAppliedAdapter: Bool?
     private var lastAppliedMagSafeLED: SMCClient.MagSafeColor?
+    /// Fehlgeschlagenes LED-Ziel; erst bei neuem Ziel oder nach dem Aufwachen erneut versuchen.
+    private var failedMagSafeLED: SMCClient.MagSafeColor?
     private var lastHardwareCheckUptime: TimeInterval?
     private let lock = NSLock()
 
-    public init(smc: SMCClient = .shared) {
+    init(smc: SMCClient = .shared, systemLimit: SystemChargeLimitController = SystemChargeLimitController()) {
         self.smc = smc
+        self.systemLimit = systemLimit
+    }
+
+    public convenience init(smc: SMCClient = .shared) {
+        self.init(smc: smc, systemLimit: SystemChargeLimitController())
     }
 
     public func step(
@@ -351,20 +540,32 @@ public final class BatteryController: @unchecked Sendable {
             }
         }
 
-        let decision = ControllerLogic.evaluate(
+        var decision = ControllerLogic.evaluate(
             config: config,
             battery: battery,
             previousDecision: previousDecision,
             hasChargeControl: smc.hasChargeControl,
             hasDischargeControl: smc.hasDischargeControl,
-            allowsAdapterDisconnect: (desktop ?? DesktopEnvironment.snapshot()).allowsAdapterDisconnect
+            allowsAdapterDisconnect: (desktop ?? DesktopEnvironment.snapshot()).allowsAdapterDisconnect,
+            systemChargeLimits: config.mode == .systemLimit ? systemLimit.availableLimits() : []
         )
 
         var controlFailed = false
+        if config.mode != .systemLimit {
+            systemLimit.restoreOriginal(dryRun: dryRun, logger: logger)
+        }
+        if let limit = decision.systemChargeLimit,
+           !systemLimit.apply(limit, allowDirect: config.allowLimitsBelowSystemMinimum, dryRun: dryRun, logger: logger) {
+            // Nicht vorzeitig zurückkehren: ein gehaltenes Netzteil muss unten wieder verbunden werden.
+            decision = ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
+                message: "macOS-Limit konnte nicht gesetzt werden – macOS behält das bisherige Limit")
+        }
 
         // MagSafe LED bestimmen
         let targetLED: SMCClient.MagSafeColor
-        if !config.magsafeLed || !config.enabled {
+        if config.magsafeLedOff {
+            targetLED = .off
+        } else if !config.magsafeLed || !config.enabled {
             targetLED = .auto
         } else if decision.state == .holding {
             targetLED = .green
@@ -397,11 +598,15 @@ public final class BatteryController: @unchecked Sendable {
                 }
             }
             
-            if smc.keyExists("ACLC") && targetLED != lastAppliedMagSafeLED {
+            if smc.keyExists("ACLC") && targetLED != lastAppliedMagSafeLED && targetLED != failedMagSafeLED {
                 let success = smc.setMagSafeLED(targetLED)
                 logger?("SMC: setMagSafeLED(\(targetLED)) => \(success ? "ok" : "failed")")
                 if success {
                     lastAppliedMagSafeLED = targetLED
+                    failedMagSafeLED = nil
+                } else {
+                    // Die LED ist rein kosmetisch: kein Schreibversuch in jedem Regeltakt.
+                    failedMagSafeLED = targetLED
                 }
             }
         } else if dryRun {
@@ -430,6 +635,36 @@ public final class BatteryController: @unchecked Sendable {
         return decision
     }
 
+    /// Vor dem Schlaf: Freigabe oder, falls gewünscht, Laden angehalten lassen.
+    public func prepareForSleep(config: BGConfig, battery: BatteryInfo, dryRun: Bool, logger: ((String) -> Void)? = nil) {
+        let policy = SleepChargePolicy.decide(config: config, battery: battery, hasChargeControl: smc.hasChargeControl,
+            systemChargeLimits: config.mode == .systemLimit ? systemLimit.availableLimits() : [])
+        switch policy {
+        case .release:
+            if !dryRun { restoreNormal(logger: logger) }
+            logger?("Schlafmodus: Normalbetrieb wiederhergestellt, Steuerung pausiert.")
+        case .inhibitCharging:
+            guard !dryRun else { logger?("[DRY-RUN] Schlafmodus: Laden würde angehalten bleiben"); return }
+            let held: Bool = {
+                lock.lock(); defer { lock.unlock() }
+                let charging = smc.setChargingEnabled(false)
+                let adapter = !smc.hasDischargeControl || smc.setAdapterConnected(true)
+                if smc.keyExists("ACLC") { smc.setMagSafeLED(.auto) }
+                previousDecision = nil; lastAppliedCharging = nil; lastAppliedAdapter = nil; lastAppliedMagSafeLED = nil
+                return charging && adapter
+            }()
+            if held {
+                logger?("Schlafmodus: Laden bleibt angehalten, Netzteil verbunden.")
+            } else {
+                logger?("Schlafmodus: Laden konnte nicht angehalten werden.")
+                restoreNormal(logger: logger)
+            }
+        case .systemLimit(let limit):
+            let success = systemLimit.apply(limit, dryRun: dryRun, logger: logger)
+            logger?(success ? "Schlafmodus: macOS-Limit auf \(limit) % gesetzt." : "Schlafmodus: macOS-Limit unverändert.")
+        }
+    }
+
     public func invalidateHardwareCache() {
         lock.lock()
         defer { lock.unlock() }
@@ -437,37 +672,8 @@ public final class BatteryController: @unchecked Sendable {
         lastAppliedCharging = nil
         lastAppliedAdapter = nil
         lastAppliedMagSafeLED = nil
+        failedMagSafeLED = nil
         lastHardwareCheckUptime = nil
-    }
-
-    /// Vor dem Schlaf: Netzteil immer verbinden und die Ladesperre nur halten, wenn
-    /// `chargingEnabled` false ist. Scheitert das Verbinden, wird alles normalisiert.
-    public func prepareForSleep(chargingEnabled: Bool, logger: ((String) -> Void)? = nil) {
-        guard !chargingEnabled, smc.hasChargeControl else {
-            restoreNormal(logger: logger)
-            return
-        }
-        lock.lock()
-        defer { lock.unlock() }
-
-        let adapter = !smc.hasDischargeControl || smc.setAdapterConnected(true)
-        guard adapter else {
-            // Nie mit getrenntem Netzteil schlafen: lieber vollständig normalisieren.
-            let restored = smc.restoreNormal()
-            logger?(restored ? "SMC: Netzteil vor dem Schlaf über Normalbetrieb verbunden."
-                             : "SMC: Netzteil konnte vor dem Schlaf nicht verbunden werden.")
-            invalidateLocked()
-            return
-        }
-        let inhibited = smc.setChargingEnabled(false)
-        let led = !smc.keyExists("ACLC") || smc.setMagSafeLED(.auto)
-        previousDecision = nil
-        lastAppliedAdapter = true
-        lastAppliedCharging = inhibited ? false : nil
-        lastAppliedMagSafeLED = led ? .auto : nil
-        lastHardwareCheckUptime = nil
-        logger?(inhibited ? "SMC: Netzteil verbunden, Ladegrenze bleibt im Schlaf gesperrt."
-                          : "SMC: Ladesperre vor dem Schlaf fehlgeschlagen – macOS steuert das Laden.")
     }
 
     private func invalidateLocked() {

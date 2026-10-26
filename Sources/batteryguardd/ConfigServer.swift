@@ -149,23 +149,30 @@ final class ConfigServer: @unchecked Sendable {
         return uid
     }
 
-    static func currentSpecialContext() -> BGSpecialPlanEvaluationContext {
+    /// Im macOS-Limit-Modus blockiert Apples natives Limit das Laden; Top Up setzt es auf 100 %.
+    static func currentSpecialContext(for config: BGConfig) -> BGSpecialPlanEvaluationContext {
         let battery = BatteryReader.read()
+        let systemLimits = config.mode == .systemLimit ? (SystemChargeLimitClient()?.availableLimits() ?? []) : []
+        let systemLimit = systemLimits.contains(100)
         return BGSpecialPlanEvaluationContext(percent: battery.percentAvailable ? battery.percent : nil,
             externalPower: battery.externalPowerAvailable ? (battery.pluggedIn ? .connected : .disconnected) : .unknown,
-            canBlockCharging: SMCClient.shared.hasChargeControl,
-            // Key discovery/readback is not physical certification. Keep P3 discharge gated.
-            canDisconnectAdapter: false,
-            allowsAdapterDisconnect: DesktopEnvironment.allowsAdapterDisconnect())
+            canBlockCharging: SMCClient.shared.hasChargeControl || systemLimit,
+            // SMC discharge stays gated. In macOS limit mode the firmware itself discharges to an offered step.
+            canDisconnectAdapter: systemLimit,
+            allowsAdapterDisconnect: systemLimit || DesktopEnvironment.allowsAdapterDisconnect())
     }
 
     /// Testable authorization and transactional merge; the endpoint never
     /// accepts configURL from a request. Tests provide only temporary files.
     static func apply(_ request: BGConfigRequest, peerUID: uid_t, consoleUID: uid_t?,
                       configURL: URL = URL(fileURLWithPath: BGPaths.config),
-                      specialContext: (() -> BGSpecialPlanEvaluationContext)? = nil) throws -> BGConfig {
+                      specialContext: (() -> BGSpecialPlanEvaluationContext)? = nil,
+                      managedPolicy: () -> BGManagedPolicy? = { BGManagedPolicy.load() }) throws -> BGConfig {
         guard BGConfigPeerPolicy.allows(peerUID: peerUID, consoleUID: consoleUID) else {
             throw BGConfigIPCError.unauthorized
+        }
+        if request.queryOnly != true, managedPolicy()?.lockSettings == true, peerUID != 0 {
+            throw BGConfigIPCError.rejected("Die Einstellungen werden von deiner IT verwaltet und sind gesperrt.")
         }
         guard (request.protocolVersion == 1 && request.action == nil)
             || (request.protocolVersion == 2 && request.action != nil && request.queryOnly != true) else {
@@ -175,7 +182,7 @@ final class ConfigServer: @unchecked Sendable {
             if [.topUp, .holdCharge, .dischargeTo].contains(action.action) {
                 return try BGConfigFile.update(at: configURL) { latest in
                     // Evaluate inside the transaction: the caller cannot choose the "current" hold target.
-                    let context = specialContext?() ?? Self.currentSpecialContext()
+                    let context = specialContext?() ?? Self.currentSpecialContext(for: latest)
                     var validated = action
                     guard context.percent != nil else {
                         throw BGChargingActionError.invalidRequest("Aktueller Ladestand nicht verfügbar.")
@@ -193,6 +200,12 @@ final class ConfigServer: @unchecked Sendable {
                     if action.action == .dischargeTo {
                         guard context.canDisconnectAdapter && context.allowsAdapterDisconnect else {
                             throw BGChargingActionError.invalidRequest("Entladen nicht bestätigt oder Monitor-/Deckelkonflikt.")
+                        }
+                        if latest.mode == .systemLimit, specialContext == nil {
+                            let steps = SystemChargeLimitClient()?.availableLimits() ?? []
+                            guard let target = action.targetPercent, steps.contains(target), target < 100 else {
+                                throw BGChargingActionError.invalidRequest("Im macOS-Limit-Modus ist Entladen nur auf eine angebotene Stufe unter 100 % möglich.")
+                            }
                         }
                     }
                     latest = try validated.applying(to: latest)

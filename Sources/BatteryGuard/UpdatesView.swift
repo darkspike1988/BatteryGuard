@@ -7,6 +7,41 @@ struct ChangeEntry: Identifiable {
     let title: String
     let changes: [String]
     static let history: [ChangeEntry] = [
+        .init(version: "0.9.0", title: "Auswerten und verwalten", changes: [
+            "Lebensdauer-Analyse mit Temperaturbereich, Ladebereichen, Lade-/Entladeleistung, Kapazitäts- und Zyklustrend; PDF-Bericht.",
+            "Akkustände verbundener Bluetooth-Geräte in der Diagnose.",
+            "Vorgaben und Sperre per Konfigurationsprofil für die IT; Einstellungen sichern und wiederherstellen.",
+            "Minutenverlauf optional verschlüsselt (AES-256-GCM, Schlüssel im Schlüsselbund).",
+            "Ziele unter 80 % setzt B-Guard jetzt direkt als macOS-Limit statt über den Netzteil-Schalter; der Pendelmodus und die eigene Kalibrierung sind entfernt.",
+            "Neu aus dem Hauptzweig: „Warum lädt mein Mac so?“, Schlafbericht, Ladeketten-Check, Austauschprognose mit AppleCare-Erinnerung.",
+            "Hintergrunddienst 0.9.0 erforderlich."
+        ]),
+        .init(version: "0.8.0", title: "Automatisch und persönlich", changes: [
+            "Zeitplan-Vorlagen: Montag früh voll, Wochenende voll, Spitzenlastzeit; Aufgabenverlauf löschen.",
+            "Befehle über bguard:// und im Terminal, Kurzbefehle für Ladelimit und MagSafe-LED, globale Tastenkürzel.",
+            "Ladeprofile je WLAN, eigene Menüleistenanzeige auf Akku, Symbol ausblendbar, Hardware-Ladestand als Zusatzwert.",
+            "Stile für das Menüfenster, Hell/Dunkel und Akzentfarbe, Profilvorschlag bei der Einrichtung, Restlaufzeit aus dem Durchschnitt.",
+            "Hintergrunddienst 0.8.0 erforderlich."
+        ]),
+        .init(version: "0.7.0", title: "Mehr Steuerung auf macOS 27", changes: [
+            "macOS-Limit: Ziele unter 80 % optional über den Netzteil-Schalter halten; das macOS-Limit bleibt Sicherheitsnetz.",
+            "Einmal entladen auf eine macOS-Stufe: Die Firmware entlädt am Netzteil (experimentell).",
+            "Wachhalten bis zum Limit auch im macOS-Limit-Modus und optional bei geschlossenem Deckel, mit Sicherheitsabschaltung.",
+            "Kälteschutz und stummer Ladeton.",
+            "Hintergrunddienst 0.7.0 erforderlich. Hardware-Abnahme der neuen Wege steht aus."
+        ]),
+        .init(version: "0.6.1", title: "Verlässlich auf macOS 27", changes: [
+            "Erkennt Apples Akku-Kalibrierung und erklärt, warum macOS dann über das Ziel lädt.",
+            "Fähigkeiten mit Firmware-Version in der Diagnose; nach Firmware-Updates meldet B-Guard geänderte Steuerwege.",
+            "Mitteilungen bei Laden über das Limit und wenn ein Netzteil oder Monitor keinen Strom liefert.",
+            "Hintergrunddienst 0.6.1 erforderlich."
+        ]),
+        .init(version: "0.6.0", title: "Energie im Blick", changes: [
+            "Low Power Mode und High Power Mode getrennt für Akku und Netzteil: nicht steuern, immer, nur auf Akku oder nur am Netzteil.",
+            "High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang.",
+            "Diagnose zeigt Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend und ohne Export von Seriennummer oder Prozessnamen.",
+            "Hintergrunddienst 0.6.0 erforderlich. Eine bisherige Low-Power-Automatik wird übernommen."
+        ]),
         .init(version: "0.5.0", title: "Was wirklich gilt", changes: [
             "Neues Panel zeigt Ziel, tatsächlich angewendeten Wert, macOS-Limit und erkannten Steuerungsweg.",
             "Akkugesundheit bis zwölf Monate mit Kapazitätsquote, Zyklen und Temperatur; Lücken bleiben sichtbar.",

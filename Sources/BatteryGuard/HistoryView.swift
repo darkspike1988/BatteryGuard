@@ -203,6 +203,7 @@ struct HistoryView: View {
                 }
                 longTermPanel
                 summaryPanel
+                LifetimeAnalysisView(history: history)
                 exposurePanel
                 weeklyPanel
                 Text("Lücken bedeuten, dass keine Messwerte aufgezeichnet wurden, etwa im Ruhezustand. Sie werden nicht als durchgehende Nutzung gerechnet. Eine Ladelimit-Linie zeigt den aktuell eingestellten B-Guard-Zielwert.")

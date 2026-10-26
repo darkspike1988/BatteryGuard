@@ -175,3 +175,64 @@ public struct ApplySavedProfileIntent: AppIntent {
         return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
     }
 }
+
+public enum BGuardIntentPowerModeRule: String, AppEnum {
+    case off, always, onBattery, onAdapter
+    public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Energiemodus-Regel")
+    public static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .off: "Nicht steuern", .always: "Immer", .onBattery: "Nur auf Akku", .onAdapter: "Nur am Netzteil"
+    ]
+    var rule: BGPowerModeRule { BGPowerModeRule(rawValue: rawValue) ?? .off }
+}
+
+/// Setzt die Regeln für Low Power Mode und High Power Mode. High Power Mode wirkt nur auf Macs,
+/// deren pmset `powermode` anbietet; der Dienst übernimmt die Umschaltung.
+public struct SetPowerModeIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Energiemodus festlegen"
+    public static let description = IntentDescription("Legt fest, wann Low Power Mode und High Power Mode gelten. Leere Parameter bleiben unverändert.")
+    public static let openAppWhenRun = false
+    @Parameter(title: "Low Power Mode") public var lowPowerMode: BGuardIntentPowerModeRule?
+    @Parameter(title: "High Power Mode") public var highPowerMode: BGuardIntentPowerModeRule?
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .powerMode,
+            lowPowerMode: lowPowerMode?.rule, highPowerMode: highPowerMode?.rule))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+/// Setzt ein eigenes Ladelimit als gespeichertes Profil. Ohne untere Grenze gilt Ziel minus fünf.
+public struct SetChargeLimitIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Ladelimit setzen"
+    public static let description = IntentDescription("Setzt ein eigenes Ladeziel zwischen 20 und 100 %. Im macOS-Limit-Modus wird auf die nächste angebotene Stufe aufgerundet.")
+    public static let openAppWhenRun = false
+    @Parameter(title: "Ladeziel in Prozent", inclusiveRange: (20, 100)) public var upperLimit: Int
+    @Parameter(title: "Untere Grenze in Prozent", inclusiveRange: (5, 95)) public var lowerLimit: Int?
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        var components = URLComponents(string: "bguard://limit/\(upperLimit)")!
+        if let lowerLimit { components.queryItems = [URLQueryItem(name: "lower", value: String(lowerLimit))] }
+        let saved = try BatteryWriteIntentExecution.perform(try BGURLCommand.request(for: components.url!))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}
+
+public enum BGuardIntentLEDMode: String, AppEnum {
+    case system, indicate, off
+    public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "MagSafe-LED")
+    public static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .system: "macOS steuert", .indicate: "Ladezustand anzeigen", .off: "Aus"
+    ]
+}
+
+public struct SetMagSafeLEDIntent: AppIntent {
+    public static let title: LocalizedStringResource = "MagSafe-LED setzen"
+    public static let openAppWhenRun = false
+    @Parameter(title: "LED") public var mode: BGuardIntentLEDMode
+    public init() {}
+    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let saved = try BatteryWriteIntentExecution.perform(.init(action: .magsafeLED,
+            magsafeLED: BGMagSafeLEDMode(rawValue: mode.rawValue) ?? .system))
+        return .result(value: String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+    }
+}

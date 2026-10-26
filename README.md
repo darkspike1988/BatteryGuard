@@ -4,7 +4,7 @@ Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen
 
 [Website](https://darkspike1988.github.io/BatteryGuard/) · [DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg) · [GitHub](https://github.com/darkspike1988/BatteryGuard)
 
-Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md). Welche Funktionen Studien und Apple-Dokumentation stützen und warum Pendelmodus und Kalibrierung entfernt wurden, steht unter [Belege](docs/EVIDENCE.md).
+Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md). Welche Funktionen Studien und Apple-Dokumentation stützen und warum Pendelmodus und Kalibrierung entfernt wurden, steht unter [Belege](docs/EVIDENCE.md). Einen Funktionsvergleich mit AlDente gibt es unter [B-Guard und AlDente](docs/ALDENTE-VERGLEICH.md).
 
 ## Abnahme, Journey und Ausbauplan
 
@@ -13,6 +13,14 @@ Die [Abnahmematrix und das lokale Testjournal](docs/validation/README.md) halten
 ## Diagnose und Wirksamkeit ab 0.5.0
 
 Version 0.5.0 beantwortet in der Übersicht, was gerade wirklich gilt: gespeichertes Ziel, vom Dienst angewendetes Ziel, macOS-Limit, Steuerungsweg sowie Monitor- und Deckelzustand. Die Diagnoseansicht zeigt Quellen und Datenqualität, Kapazitätsquote, lesende Mac-Ressourcen und bei aktivierter Aufzeichnung eine Akkugesundheit über bis zu zwölf Monate. [Umfang, Datenvertrag und offene Abnahmen](docs/diagnostics-0.4.md). App und Dienst stehen in Version 0.5.0; der Download oben verweist auf diese Version.
+
+## Arbeitsstand 0.6.1 bis 0.9.0 (unveröffentlicht)
+
+Erkennung von Apples Akku-Kalibrierung und Firmware-Änderungen, Limits unter 80 % und Einmal-Entladen im macOS-Limit-Modus, Schlafsteuerung mit Sicherheitsabschaltung, Kälteschutz, Zeitplan-Vorlagen, `bguard://`-Befehle und Kommandozeile, globale Tastenkürzel, Regeln nach WLAN, Lebensdauer-Analyse mit PDF-Bericht, Geräteakkus, IT-Vorgaben per Konfigurationsprofil, Sicherung und optional verschlüsselter Verlauf. Details: [0.6.1](docs/release-notes-0.6.1.md), [0.7.0](docs/release-notes-0.7.0.md), [0.8.0](docs/release-notes-0.8.0.md), [0.9.0](docs/release-notes-0.9.0.md). Hardwareabhängige neue Wege sind gekennzeichnet; ihre physische Abnahme steht aus.
+
+## Arbeitsstand 0.6.0 (unveröffentlicht)
+
+Neuer Modus **macOS-Limit** für Macs ohne SMC-Ladesperre (macOS 27): B-Guard setzt Apples natives Ladelimit in den von macOS angebotenen Stufen (80–100 %). Low Power Mode und High Power Mode lassen sich getrennt für Akku und Netzteil steuern; High Power Mode nur auf Macs, die ihn anbieten. Die Diagnose zeigt zusätzlich Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md). Der Download oben bleibt bis zur Veröffentlichung bei 0.5.0.
 
 ## Was B-Guard ergänzt
 
@@ -40,7 +48,7 @@ macOS bringt ein eigenes Ladelimit mit. B-Guard ergänzt Werkzeuge für den Allt
 - **Updates & Changelog:** Automatische GitHub-Prüfung höchstens täglich, abschaltbar. Neue Versionen mit Änderungen in Menüleiste und Hauptfenster; bei erlaubten Mitteilungen zusätzlicher Hinweis. DMG-Download mit Dateigrößen- und SHA-256-Prüfung, Versionshistorie auch offline. Downloads starten erst nach deinem Klick, zeigen den Fortschritt und lassen sich abbrechen.
 - **Mitteilungen:** Niedriger Akkustand mit eigener Warnschwelle (5–50 %, Standard 20 %), erreichtes Limit und hohe Temperatur sind getrennt einstellbar. Mit den Temperaturhinweisen meldet B-Guard auch Laden unter 10 °C Akkutemperatur und hohe Systemwärme laut macOS (`ProcessInfo.thermalState`). Nach einer deutlichen Änderung des Ladelimits weist die Diagnose vier Wochen lang darauf hin, dass sich die gemessene Kapazität vorübergehend verschieben kann. Freigabe über den Button in den Einstellungen.
 - **Drei Sprachen:** Oberfläche auf Deutsch, Englisch oder Russisch. Die App folgt automatisch der macOS-Systemsprache.
-- **Automatik (ab 0.5.0, optional):** Monitorprofil bei externem Bildschirm, Low Power Mode auf Akkubetrieb über die öffentliche macOS-Einstellung (`pmset -b lowpowermode`, wie „Nur bei Batteriebetrieb“ in den Systemeinstellungen; beim Abschalten wird der vorherige Wert wiederhergestellt) und ein Schlafassistent, der nur während einer vom Dienst ausgelösten Entladung höchstens 30 Minuten wachhält.
+- **Automatik (ab 0.5.0, optional):** Monitorprofil bei externem Bildschirm, Low Power Mode (ab 0.6.0 auch High Power Mode) je Stromquelle über die öffentliche macOS-Einstellung (`pmset`) und ein Schlafassistent, der nur während einer vom Dienst ausgelösten Entladung höchstens 30 Minuten wachhält.
 
 Eigene benannte Profile mit Import/Export und wiederkehrende Zeitpläne sind ab 0.3.7 umgesetzt. Die Regeln laufen im Hintergrunddienst; manuelle Ladeaktionen haben Vorrang. Top Up benötigt separate Ladesteuerung. Einmalentladung, Halten und Kalibrierung bleiben bis zur physischen Hardware-Abnahme gesperrt.
 
@@ -66,7 +74,7 @@ Der frühere Pendelmodus wurde entfernt. Er trennte am Limit das Netzteil und li
 
 Der frühere experimentelle Direktmodus ist nicht implementiert und wird nicht als verfügbare Option angeboten.
 
-**Ein zusätzliches macOS-Limit kann höhere Ziele und Vollladen verhindern.** B-Guard verändert Apples native Einstellung nicht. Passe sie bei Bedarf in den macOS-Batterieeinstellungen an. Apples Akkumanagement kann weiterhin Einfluss auf den Ladevorgang haben.
+**Ein zusätzliches macOS-Limit kann höhere Ziele und Vollladen verhindern.** Außer im Modus „macOS-Limit“ verändert B-Guard Apples native Einstellung nicht. Passe sie bei Bedarf in den macOS-Batterieeinstellungen an. Apples Akkumanagement kann weiterhin Einfluss auf den Ladevorgang haben.
 
 ## Installation ohne Terminal
 

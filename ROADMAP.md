@@ -1,8 +1,88 @@
 # B-Guard Roadmap
 
-Stand: 18. Oktober 2026 · Veröffentlicht: App und Dienst 0.5.0
+Stand: 23. Oktober 2026 · Veröffentlicht: App und Dienst 0.5.0 · Arbeitsstand 0.6.0 · Roadmap bis 1.0 ergänzt
 
 Diese Roadmap führt die bisherige Umsetzungshistorie fort. Die zwei früher dokumentierten Fehler bei konkurrierenden Änderungen sind seit 0.3.2 korrigiert; der weitere Funktionsausbau bleibt geplant.
+
+## Roadmap 0.6.x → 1.0 (Recherche vom 23. Oktober 2026)
+
+Abgeleitet aus der [Funktionsrecherche](docs/research/2026-10-23-funktionsrecherche.md): Wettbewerb, Nutzerwünsche aus GitHub-Issues, technische Befunde zu macOS 26/27 und statische Bundle-Analyse von AlDente 1.39.4 (ohne Dekompilieren, keine Codeübernahme). Reihenfolge nach Nutzen für Nutzer auf aktueller Firmware, Risiko und Aufwand. Hardwareabhängige Punkte werden erst nach physischer Abnahme freigegeben.
+
+### 0.6.1 — Verlässlichkeit auf macOS 27 (P0)
+
+**Stand:** R2–R5 umgesetzt ([0.6.1](docs/release-notes-0.6.1.md)); R2 gemessen: `CHIE = 08` hält das Laden an, statt das Netzteil zu trennen. R1 läuft im Alltag weiter.
+
+| ID | Paket | Warum | Abnahme |
+|---|---|---|---|
+| R1 | Abnahme 0.6.0 im Alltag: macOS-Limit über Lade-, Schlaf- und Neustartzyklen, Top Up, Hitzeschutz, LED aus, Laden im Schlaf | Neue Steuerung ist nur kurz auf einem Mac geprüft | Journal-Einträge je Fall; keine Überladung über die Stufe |
+| R2 | **Netzteil-Schalter bei aktivem macOS-Limit prüfen** (Pendel/Auto) | Laut Community ignoriert die Firmware `CHIE`, solange ein natives Limit aktiv ist | Messprotokoll; bei Bestätigung Pendel nur bei Limit 100 % anbieten und Konflikt anzeigen |
+| R3 | **Apples Kalibrierung erkennen** (`ChargingUpForGauging`, „mitigations in place“): Status „macOS kalibriert den Akku“, Mitteilung, Erklärung statt Fehlalarm | Häufigste aktuelle Beschwerde (AlDente #1846); lädt trotz Limit auf 100 % | Erkennung aus Log/IORegistry mit Fixtures; kein Eingriff in Apples Ablauf |
+| R4 | **Fähigkeitsmatrix mit Firmware-Version** in Wirksamkeit und Diagnose; nach Firmware-Wechsel Fähigkeiten neu prüfen und melden | Brüche kommen mit Firmware, nicht mit der macOS-Version | Anzeige von Firmware, erkannten Schlüsseln, MCL-Unterstützung; Hinweis bei Änderung |
+| R5 | Mitteilungen: „über das Limit geladen“ (beim Start/Aufwachen), „externer Monitor liefert keinen Strom“, „Ladezustand aktualisiert verzögert“ | AlDente zeigt diese Fälle an; Nutzer melden Laden über Limit | Simulierte Statusfolgen in Tests; höchstens eine Meldung je Ereignis |
+
+### 0.7 — Ladesteuerung erweitern (P1)
+
+**Stand:** R6, R7, R9, R10 umgesetzt ([0.7.0](docs/release-notes-0.7.0.md)), Hardware-Abnahme offen; R8 bleibt gesperrt (Apple-Kalibrierung wird erkannt); „Display aus bei Inaktivität“ nicht umgesetzt.
+
+| ID | Paket | Warum | Abnahme |
+|---|---|---|---|
+| R6 | **Einmal entladen auf 80–95 % über das macOS-Limit** (Firmware entlädt am Netzteil bis zur Stufe) | Erster Entladeweg auf macOS 27 ohne gesperrte SMC-Schlüssel | Physische Messung von Strom und Ladestand; Abbruch und Rückkehr zum Profil |
+| R7 | **Limits unter 80 % auf macOS 27**: Hybrid aus macOS-Limit 100 % und Netzteil-Schalter, alternativ `com.apple.smartcharging.topoffprotection` prüfen; nur hinter ausdrücklichem Schalter | AlDente, BatFi, batt bieten es; Wunsch nach 50–80 % | Kein Wechsel ohne Opt-in; Clamshell/Dock-Konflikte (batt #151) getestet |
+| R8 | **Kalibrierung freischalten** und mit Apples Kalibrierung verzahnen (nach Apples Vollladung optional zurück aufs Limit) | AlDente Pro 1.39/1.40 | Kompletter Zyklus auf einem Gerät mit Belegen |
+| R9 | **Schlafsteuerung**: Schlaf bis zum Limit auch zugeklappt verhindern (`SleepDisabled`, root), Sicherheitsregel „zugeklappt ohne Netzteil → sofort schlafen“, Display aus bei Inaktivität | AlDente Pro; nötig für Entladen und Kalibrierung im Clamshell | Höchstdauer, Rückfall bei Fehlern, kein Dauer-Wachbleiben |
+| R10 | Kälteschutz (Laden unter einstellbarer Temperatur sperren), Ladeton abschalten | Nutzerwünsche AlDente #675/#1392, batt #77 | Regeln in Tests; Ton über die öffentliche Einstellung |
+
+### 0.8 — Automatisierung und Bedienung (P1/P2)
+
+**Stand:** R11–R18 umgesetzt ([0.8.0](docs/release-notes-0.8.0.md)); Drag-and-drop der Karten bewusst durch Pfeiltasten ersetzt, Kommandozeile über `--run`.
+
+| ID | Paket | Warum | Abnahme |
+|---|---|---|---|
+| R11 | **Zeitplan-Vorlagen** (Montag Top Up, Wochenende voll, monatlich kalibrieren), jährliches Intervall, Verlauf löschen, „Limit zu Spitzenlastzeiten senken“ | AlDente 1.36/1.38; Wunsch #445 | Vorlagen erzeugen gültige Regeln; bestehende Tests erweitert |
+| R12 | Weitere Kurzbefehle: Ladelimit setzen, Laden stoppen/freigeben, LED setzen, Temperatur/Zustand lesen; **URL-Schema `bguard://`**; kleines CLI `bguard` | AlDente hat 15 Intents und `aldente://`; Wünsche #637/#638 | Gleiche validierte Aktionslogik wie REST; Metadaten-Tests |
+| R13 | Globale Tastenkürzel (Vollladen, Pause, Low Power Mode) | BatFi | Konfliktfreie Standardbelegung, abschaltbar |
+| R14 | Regeln nach Ort/WLAN (z. B. Büro → Schreibtisch-Profil) | BatFi | Nur nach Standortfreigabe; Verarbeitung lokal |
+| R15 | Menüleiste je Zustand (lädt/entlädt/voll), Symbol ausblenden, Abstand, Hardware-Prozent als Zusatzwert | iStat Menus; Wünsche AlDente #59, battery #283 | Vorschau-Renderings in allen Zuständen |
+| R16 | Anpassbares Menüfenster: Karten per Drag-and-drop, Stile (Minimal / Gesundheit / Profi), Diagramme im Menüfenster, Akzentfarbe, Hell/Dunkel erzwingen | AlDente 1.36/1.37 | Bestehende Karten-Tests erweitert; VoiceOver |
+| R17 | Einrichtungsassistent mit Nutzungsfrage („meist am Schreibtisch / unterwegs“) und Profilvorschlag | AlDente-Onboarding | Assistent überspringbar, ändert nur mit Bestätigung |
+| R18 | Restlaufzeit aus Durchschnitt (5/15/60 min) oder Momentanwert | AlDente Power-Graph | Rechenweg in Tests; Kennzeichnung als Schätzung |
+
+### 0.9 — Analyse, IT und Geräte (P2)
+
+**Stand:** R19–R22 umgesetzt ([0.9.0](docs/release-notes-0.9.0.md)); Spannungsverläufe im Bericht fehlen, Kapazitäts-Tageswerte bleiben unverschlüsselt.
+
+| ID | Paket | Warum | Abnahme |
+|---|---|---|---|
+| R19 | Lebensdauer-Analyse: min/max/mittlere Temperatur, Spannung, Laderaten, Zeit je Ladebereich; PDF-Bericht | coconutBattery Plus | Nur gemessene Werte; Lücken sichtbar |
+| R20 | Akkus von Bluetooth-Geräten (Maus, Tastatur, AirPods), rein lesend | iStat Menus, coconutBattery | Nur gemeldete Werte, keine Schätzung |
+| R21 | **Verwaltete Einstellungen für IT** (Konfigurationsprofil/MDM, gesperrte Felder) und vollständige Sicherung/Wiederherstellung der Einstellungen | AlDente `Settings lock`, Wunsch #1103 | Gesperrte Felder in UI, REST und Kurzbefehlen abgelehnt |
+| R22 | Verschlüsselter Verlauf (optional) | AlDente nutzt SQLCipher | Migration ohne Datenverlust |
+
+### 1.0 — Auslieferung (P0 für breite Nutzung)
+
+| ID | Paket | Warum | Abnahme |
+|---|---|---|---|
+| R23 | **Developer-ID-Signierung und Notarisierung** | Installation ohne Sicherheitswarnung; benötigt Apple-Developer-Konto | `spctl` und `stapler validate` |
+| R24 | Signierte automatische Updates (EdDSA-Feed) mit Beta-Kanal; Homebrew-Cask | AlDente nutzt Sparkle; Wünsche batt #9/#81 | Signaturprüfung, Abbruch, Rücksprung |
+| R25 | WidgetKit-Widget (Xcode-Projekt neben SwiftPM) | Wunsch AlDente #1418 | Widget zeigt nur frische Werte |
+| R26 | Weitere Sprachen (zunächst FR, ES, IT, NL, PL, UK) | AlDente: 30 Sprachen | Vollständige Schlüssel, Platzhaltertests |
+
+### Bewusst nicht geplant
+
+- **Intel-Macs:** B-Guard bleibt Apple-Silicon-only.
+- **Datenfreigabe/Telemetrie:** widerspricht dem Offline-Grundsatz.
+- **Ladeleistung begrenzen:** kein belegter Hardwareweg.
+- **Entladen bei geschlossenem Deckel ohne Sicherheitsregel:** erst mit R9.
+
+## Arbeitsstand 0.6.0: Energiemodus und Energiewirkung
+
+- Low Power Mode und High Power Mode je Stromquelle über `pmset` (nicht steuern, immer, nur Akku, nur Netzteil); High Power Mode nur bei angebotenem `powermode`.
+- Diagnose mit Netzteil-Angaben und Prozessen hoher Energiewirkung, rein lesend.
+- Modus „macOS-Limit“ für Macs ohne SMC-Ladesperre (macOS 27): natives Ladelimit 80–100 % über PowerUI, Top Up über 100 %, Hitzeschutz über die niedrigste Stufe.
+- SoC-Leistung (CPU, GPU, Neural Engine) per `powermetrics` im Energiefluss; Energie-Apps mit Schwelle, Hintergrundfilter und Beenden.
+- Menüleisten-Zusatzwerte, Kurzbefehl und API-Aktion für Energiemodi.
+- Opt-in: Laden im Schlaf angehalten lassen, MagSafe-LED aus, Bildschirmsperre beim Zuklappen während des Wachhaltens.
+- **Offen:** physische Abnahme mit installiertem Dienst 0.6.0: macOS-Limit über mehrere Lade-/Schlafzyklen, Energiemodi (insbesondere High Power Mode), LED aus, Laden im Schlaf; Limits unter 80 % auf macOS 27 bleiben ohne privates Entitlement nur über den Netzteil-Schalter möglich. [Änderungen und Prüfstand](docs/release-notes-0.6.0.md).
 
 ## P0/P1-Ausbau im Arbeitsstand 0.5.0
 

@@ -436,10 +436,21 @@ public final class SMCClient: @unchecked Sendable {
     /// Setzt die MagSafe-LED-Farbe (ACLC).
     @discardableResult
     public func setMagSafeLED(_ color: MagSafeColor) -> Bool {
-        if keyExists("ACLC") {
-            let bytes: [UInt8] = [color.rawValue]
-            _ = writeKey("ACLC", bytes: bytes)
-            return readKey("ACLC")?.bytes == bytes
+        guard keyExists("ACLC") else { return false }
+        let written = writeKey("ACLC", bytes: [color.rawValue])
+        return Self.confirmMagSafeLED(color, written: written, read: { self.readKey("ACLC")?.bytes.first })
+    }
+
+    /// ACLC meldet eine geschriebene Farbe erst nach einigen 100 ms zurück (auf MacBookPro18,3
+    /// gemessen: sofort alter Wert, nach 0,3 s neuer Wert). `.auto` (0) liest sich nie als 0,
+    /// sondern als die Farbe, die die Firmware danach zeigt; dort zählt nur das Schreibergebnis.
+    static func confirmMagSafeLED(_ color: MagSafeColor, written: Bool, attempts: Int = 8,
+                                  wait: () -> Void = { usleep(100_000) }, read: () -> UInt8?) -> Bool {
+        guard written else { return false }
+        guard color != .auto else { return true }
+        for attempt in 0..<attempts {
+            if read() == color.rawValue { return true }
+            if attempt < attempts - 1 { wait() }
         }
         return false
     }

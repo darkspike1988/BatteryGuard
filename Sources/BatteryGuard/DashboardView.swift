@@ -69,6 +69,13 @@ struct OverviewView: View {
     var updates: UpdateStore? = nil
     @Environment(\.openWindow) private var openWindow
     @State private var readyAt = Date().addingTimeInterval(12 * 3600)
+    @AppStorage("bg.runtimeWindow") private var runtimeWindow = 15
+    private var averagedRuntime: String? {
+        let status = statusStore.status
+        return BGRuntimeEstimate.minutesRemaining(samples: history.samples, windowMinutes: runtimeWindow, now: Date(),
+            percent: status.percent, maxCapacityMah: status.maxCapacityMah, voltageMillivolts: status.voltage)
+            .map { String(format: "%d:%02d h", $0 / 60, $0 % 60) }
+    }
     private var canControl: Bool {
         statusStore.supportsChargingPlans && statusStore.status.state != .unsupported && configStore.config.mode != .native && configStore.config.mode != .direct
     }
@@ -109,18 +116,19 @@ struct OverviewView: View {
                         .font(.callout).foregroundStyle(.orange)
                 }
                 EffectivenessView(statusStore: statusStore, config: configStore.config)
-                WhyChargingView(statusStore: statusStore, config: configStore.config)
+                WhyChargingView(statusStore: statusStore, configStore: configStore)
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
                     metric("Kapazitätsquote", value: statusStore.status.capacityRatioText(), symbol: "battery.100")
                         .help("Berechnetes Verhältnis der gemeldeten Maximal- zur Designkapazität. Kein allgemeiner Gesundheitswert und nicht automatisch Apples Maximale Kapazität.")
                     metric("Akku-Leistung", value: MenuBarDisplayFormatter.formatPower(statusStore.status.watts, isDaemonActive: statusStore.isDaemonActive), symbol: "bolt")
+                    metric(L("Restlaufzeit · Ø %lld min", runtimeWindow), value: averagedRuntime, symbol: "hourglass")
                         .help("Lade-/Entladefluss des Akkus. Der gesamte Mac-Verbrauch ist ein anderer Messwert.")
                 }
                 Text(batteryPowerExplanation)
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                PowerFlowView(sample: statusStore.powerFlow)
+                PowerFlowView(sample: statusStore.powerFlow, soc: statusStore.status.socPower)
                 BGPanel {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {

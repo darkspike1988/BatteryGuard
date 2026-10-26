@@ -126,6 +126,7 @@ final class StatusStore: Sendable {
 
             if active, let config = configProvider?() {
                 NotificationManager.shared.checkNotifications(status: decoded, config: config)
+                NotificationManager.shared.checkAnomalies(status: decoded, config: config, powerFlow: powerFlow)
             }
         } catch {
             if isDaemonActive { self.isDaemonActive = false }
@@ -160,6 +161,10 @@ final class StatusStore: Sendable {
         s.adapterDisconnectAllowed = true
         s.desktopProfileActive = false
         s.smcKeysDetected = ["CHTE"]
+        s.capabilities = BGCapabilities(smcKeys: ["CHTE", "CHIE", "ACLC"], firmwareVersion: "20457.1.29",
+            macOSVersion: "27.0.0", systemChargeLimits: [80, 85, 90, 95, 100], highPowerMode: false)
+        s.appleCalibrationActive = false
+        s.socPower = BGSoCPower(sampledAt: now, cpuWatts: 2.4, gpuWatts: 0.3, aneWatts: 0)
         s.percent = 78
         s.pluggedIn = true
         s.isChargingHardware = false

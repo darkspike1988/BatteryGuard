@@ -19,7 +19,7 @@ struct EffectivenessAndAutomationTests {
         s.lidClosed = lidClosed
         s.adapterDisconnectAllowed = allowsDisconnect
         s.effectiveUpperLimit = effectiveUpper
-        s.daemonVersion = "0.5.0"
+        s.daemonVersion = "0.9.0"
         s.updatedAt = now
         return s
     }
@@ -127,7 +127,7 @@ struct EffectivenessAndAutomationTests {
         latest.upperLimit = 70
         let merged = edited.mergingEdits(since: baseline, into: latest)
         #expect(merged.desktopProfileEnabled && merged.desktopProfile == .everyday)
-        #expect(merged.lowPowerModeOnBattery)
+        #expect(merged.lowPowerModeOnBattery && merged.lowPowerModeRule == .onBattery)
         #expect(merged.upperLimit == 70)
     }
 
@@ -197,71 +197,79 @@ struct EffectivenessAndAutomationTests {
 }
 
 struct LowPowerAndSleepTests {
-    final class LowPowerRecorder {
-        var battery: Bool? = false
-        var saved: Bool?
-        var applied: [Bool] = []
+    final class PowerModeRecorder {
+        typealias Call = (source: PowerModeController.Source, level: PowerModeController.Level, usePowerMode: Bool)
+        var applied: [Call] = []
         var succeeds = true
-        var driver: LowPowerModeController.Driver {
-            LowPowerModeController.Driver(
-                readBattery: { self.battery },
-                applyBattery: { value in
-                    self.applied.append(value)
-                    if self.succeeds { self.battery = value }
-                    return self.succeeds
-                },
-                loadSaved: { self.saved },
-                save: { self.saved = $0 })
+        var powerModeSupported = false
+        var driver: PowerModeController.Driver {
+            PowerModeController.Driver(supportsPowerMode: { self.powerModeSupported }, apply: { source, level, usePowerMode in
+                self.applied.append((source, level, usePowerMode))
+                return self.succeeds
+            })
         }
+        var levels: [String] { applied.map { "\($0.source.rawValue)=\($0.level.rawValue)" } }
     }
 
-    @Test func lowPowerModeUsesBatteryProfileAndRestoresPreviousValue() {
-        let recorder = LowPowerRecorder()
-        let controller = LowPowerModeController(driver: recorder.driver)
+    @Test func lowPowerModeIsWrittenPerSourceOnlyWhenEnabled() {
+        let recorder = PowerModeRecorder()
+        let controller = PowerModeController(driver: recorder.driver)
         var config = BGConfig()
         controller.reconcile(config: config, dryRun: false, logger: { _ in })
         #expect(recorder.applied.isEmpty)
 
-        config.lowPowerModeOnBattery = true
+        config.lowPowerModeRule = .onBattery
         controller.reconcile(config: config, dryRun: false, logger: { _ in })
         controller.reconcile(config: config, dryRun: false, logger: { _ in })
-        // One write to the battery profile; macOS switches with the power source itself.
-        #expect(recorder.applied == [true])
-        #expect(recorder.saved == false)
+        #expect(recorder.levels == ["-b=1", "-c=0"])
+        #expect(recorder.applied.allSatisfy { !$0.usePowerMode })
 
-        config.lowPowerModeOnBattery = false
+        config.lowPowerModeRule = .always
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        #expect(recorder.levels.suffix(2) == ["-b=1", "-c=1"])
+
+        config.lowPowerModeRule = .off
         controller.reconcile(config: config, dryRun: false, logger: { _ in })
         controller.reconcile(config: config, dryRun: false, logger: { _ in })
-        #expect(recorder.applied == [true, false])
-        #expect(recorder.saved == nil)
+        #expect(recorder.levels.suffix(2) == ["-b=0", "-c=0"])
+        #expect(recorder.applied.count == 6)
     }
 
-    @Test func lowPowerModeKeepsAUserChosenBatterySetting() {
-        let recorder = LowPowerRecorder()
-        recorder.battery = true
-        let controller = LowPowerModeController(driver: recorder.driver)
-        var config = BGConfig(); config.lowPowerModeOnBattery = true
-        controller.reconcile(config: config, dryRun: false, logger: { _ in })
-        config.lowPowerModeOnBattery = false
-        controller.reconcile(config: config, dryRun: false, logger: { _ in })
-        #expect(recorder.applied.isEmpty)
-        #expect(recorder.battery == true)
-    }
-
-    @Test func lowPowerModeRetriesAfterFailureAndHonoursDryRun() {
-        let recorder = LowPowerRecorder()
-        recorder.succeeds = false
-        let controller = LowPowerModeController(driver: recorder.driver)
+    @Test func highPowerModeNeedsSupportAndYieldsToLowPowerMode() {
         var config = BGConfig()
-        config.lowPowerModeOnBattery = true
-        controller.reconcile(config: config, dryRun: false, logger: { _ in })
-        controller.reconcile(config: config, dryRun: false, logger: { _ in })
-        #expect(recorder.applied.count == 2)
+        config.highPowerModeRule = .always
+        #expect(PowerModeController.desiredLevels(config: config, highPowerSupported: false) == nil)
+        #expect(PowerModeController.desiredLevels(config: config, highPowerSupported: true) == [.battery: .high, .adapter: .high])
+        config.lowPowerModeRule = .onBattery
+        #expect(PowerModeController.desiredLevels(config: config, highPowerSupported: true) == [.battery: .low, .adapter: .high])
+        #expect(PowerModeController.desiredLevels(config: config, highPowerSupported: false) == [.battery: .low, .adapter: .automatic])
 
-        let dry = LowPowerRecorder()
-        let dryController = LowPowerModeController(driver: dry.driver)
-        dryController.reconcile(config: config, dryRun: true, logger: { _ in })
-        #expect(dry.applied.isEmpty && dry.saved == nil)
+        let recorder = PowerModeRecorder()
+        recorder.powerModeSupported = true
+        let controller = PowerModeController(driver: recorder.driver)
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        #expect(recorder.levels == ["-b=1", "-c=2"])
+        #expect(recorder.applied.allSatisfy { $0.usePowerMode })
+        #expect(controller.highPowerModeSupported)
+    }
+
+    @Test func powerModeRestoresTheValuesFromBeforeBGuard() {
+        final class Store: @unchecked Sendable { var saved: [PowerModeController.Source: PowerModeController.Level]? }
+        let store = Store()
+        let recorder = PowerModeRecorder()
+        var driver = recorder.driver
+        driver.read = { [.battery: .low, .adapter: .automatic] }
+        driver.loadSaved = { store.saved }
+        driver.save = { store.saved = $0 }
+        let controller = PowerModeController(driver: driver)
+        var config = BGConfig()
+        config.lowPowerModeRule = .always
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        #expect(store.saved == [.battery: .low, .adapter: .automatic])
+        config.lowPowerModeRule = .off
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        #expect(recorder.levels.suffix(2) == ["-b=1", "-c=0"])
+        #expect(store.saved == nil)
     }
 
     @Test func pmsetCustomOutputIsParsedPerPowerSource() {
@@ -271,9 +279,43 @@ struct LowPowerAndSleepTests {
          sleep                10
         AC Power:
          lowpowermode         0
+         powermode            2
         """
-        #expect(LowPowerModeController.batteryValue(inCustomSettings: output) == true)
-        #expect(LowPowerModeController.batteryValue(inCustomSettings: "AC Power:\n lowpowermode 1") == nil)
+        #expect(PowerModeController.levels(inCustomSettings: output) == [.battery: .low, .adapter: .high])
+        #expect(PowerModeController.levels(inCustomSettings: "nothing") == nil)
+    }
+
+    @Test func powerModeRetriesAfterFailureAndHonoursDryRun() {
+        let recorder = PowerModeRecorder()
+        recorder.succeeds = false
+        let controller = PowerModeController(driver: recorder.driver)
+        var config = BGConfig()
+        config.lowPowerModeRule = .onBattery
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        #expect(recorder.applied.count == 4)
+
+        recorder.succeeds = true
+        controller.reconcile(config: config, dryRun: true, logger: { _ in })
+        #expect(recorder.applied.count == 4)
+    }
+
+    @Test func powerModeRulesMigrateFromLegacyFieldAndRejectUnknownValues() throws {
+        let legacy = try BGJSON.decoder().decode(BGConfig.self, from: Data(#"{"lowPowerModeOnBattery":true}"#.utf8))
+        #expect(legacy.lowPowerModeRule == .onBattery && legacy.highPowerModeRule == .off)
+        let unknown = try BGJSON.decoder().decode(BGConfig.self,
+            from: Data(#"{"lowPowerModeOnBattery":true,"lowPowerModeRule":"turbo","highPowerModeRule":"turbo"}"#.utf8))
+        #expect(unknown.lowPowerModeRule == .off && unknown.highPowerModeRule == .off)
+        #expect(!unknown.lowPowerModeOnBattery)
+
+        var edited = BGConfig()
+        edited.lowPowerModeRule = .always
+        edited.highPowerModeRule = .onAdapter
+        let roundTrip = try BGJSON.decoder().decode(BGConfig.self, from: BGJSON.encoder().encode(edited.sanitized()))
+        #expect(roundTrip.lowPowerModeRule == .always && roundTrip.highPowerModeRule == .onAdapter)
+        #expect(!roundTrip.lowPowerModeOnBattery)
+        let merged = edited.mergingEdits(since: BGConfig(), into: BGConfig())
+        #expect(merged.lowPowerModeRule == .always && merged.highPowerModeRule == .onAdapter)
     }
 
     final class SleepRecorder {

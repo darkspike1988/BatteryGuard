@@ -23,6 +23,9 @@ struct SetupView: View {
                 Text(message).foregroundStyle(services.isError ? Color.orange : Color.secondary)
                     .textSelection(.enabled)
             }
+            if services.message != nil && !services.isError {
+                UsagePresetPicker()
+            }
             HStack {
                 Button(L(services.message != nil && !services.isError ? "Fertig" : "Später"), action: close)
                     .disabled(services.isBusy)

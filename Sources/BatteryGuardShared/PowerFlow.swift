@@ -95,3 +95,29 @@ public struct BGPowerFlowSample: Codable, Equatable, Sendable {
         try container.encode(source, forKey: .source)
     }
 }
+
+/// SoC-Leistung aus Apples `powermetrics` (CPU, GPU, Neural Engine), vom Dienst etwa alle 30 s gemessen.
+public struct BGSoCPower: Codable, Equatable, Sendable {
+    public var sampledAt: Date
+    public var cpuWatts: Double?
+    public var gpuWatts: Double?
+    public var aneWatts: Double?
+
+    public init(sampledAt: Date, cpuWatts: Double?, gpuWatts: Double?, aneWatts: Double?) {
+        self.sampledAt = sampledAt
+        func valid(_ watts: Double?) -> Double? { watts.flatMap { $0.isFinite && $0 >= 0 && $0 < 1000 ? $0 : nil } }
+        self.cpuWatts = valid(cpuWatts)
+        self.gpuWatts = valid(gpuWatts)
+        self.aneWatts = valid(aneWatts)
+    }
+
+    public var socWatts: Double? {
+        let parts = [cpuWatts, gpuWatts, aneWatts].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.reduce(0, +)
+    }
+
+    public func isFresh(at date: Date = Date()) -> Bool {
+        let age = date.timeIntervalSince(sampledAt)
+        return age >= -5 && age <= 90
+    }
+}

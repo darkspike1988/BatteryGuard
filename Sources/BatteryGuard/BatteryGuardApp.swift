@@ -7,14 +7,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static weak var updateStore: UpdateStore?
     @MainActor static weak var apiStore: LocalAPIStore?
     private var setupWindow: NSWindow?
+    /// Erneutes Öffnen aus Programme oder Dock blendet ein verborgenes Menüleistensymbol wieder ein.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        UserDefaults.standard.set(true, forKey: "bg.showMenuBarIcon")
+        return true
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         Self.configStore?.flushPendingSave()
         Self.updateStore?.stopAutomaticChecks()
         Self.apiStore?.stop()
         return .terminateNow
     }
+    /// `bguard://`-Adressen aus Kurzbefehlen, Skripten oder anderen Apps.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        Self.handle(urls, confirm: !UserDefaults.standard.bool(forKey: Self.trustURLCommandsKey))
+    }
+
+    static let trustURLCommandsKey = "bg.trustURLCommands"
+
+    /// Adressen von außen (Browser, andere Apps) erst nach Rückfrage ausführen; Tastenkürzel rufen ohne Rückfrage auf.
+    @MainActor static func handle(_ urls: [URL], confirm: Bool = false) {
+        for url in urls {
+            if confirm {
+                let alert = NSAlert()
+                alert.messageText = L("Befehl von außen ausführen?")
+                alert.informativeText = L("Eine App oder Webseite möchte B-Guard steuern: %@", url.absoluteString)
+                alert.addButton(withTitle: L("Ausführen"))
+                alert.addButton(withTitle: L("Abbrechen"))
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                guard alert.runModal() == .alertFirstButtonReturn else { continue }
+            }
+            do {
+                _ = try BatteryWriteIntentExecution.perform(try BGURLCommand.request(for: url))
+                configStore?.loadConfig()
+            } catch {
+                NotificationManager.shared.notify(title: "B-Guard", body: L("Befehl nicht ausgeführt: %@", error.localizedDescription))
+            }
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if DesignPreview.isRendering { DesignPreview.render(); return }
+        let arguments = ProcessInfo.processInfo.arguments
+        // Kommandozeile: BatteryGuard --run "bguard://limit/60"
+        if let index = arguments.firstIndex(of: "--run"), arguments.count > index + 1 {
+            do {
+                guard let url = URL(string: arguments[index + 1]) else { throw BGURLCommand.ParseError.unsupported("Unbekannte Adresse.") }
+                let saved = try BatteryWriteIntentExecution.perform(try BGURLCommand.request(for: url))
+                print(String(decoding: try BGJSON.encoder().encode(saved), as: UTF8.self))
+                exit(0)
+            } catch {
+                FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))
+                exit(1)
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("--check-updates") {
             Task {
                 guard let updater = Self.updateStore else { exit(1) }
@@ -91,6 +138,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppPresence.shared.applyOnLaunch()
         Self.updateStore?.startAutomaticChecks()
         Self.apiStore?.startIfEnabled()
+        GlobalHotKeys.shared.update(enabled: UserDefaults.standard.bool(forKey: GlobalHotKeys.appStorageKey))
+        AppearancePreference.applyStored()
         guard AppPresence.isRunningFromBundle,
               !ServiceManager.isDaemonInstalled else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
@@ -117,7 +166,7 @@ struct BatteryGuardApp: App {
     @State private var api: LocalAPIStore
     
     init() {
-        let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates") || ProcessInfo.processInfo.arguments.contains("--read-power-flow") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-status") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-power")
+        let preview = DesignPreview.isRendering || ProcessInfo.processInfo.arguments.contains("--check-updates") || ProcessInfo.processInfo.arguments.contains("--read-power-flow") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-status") || ProcessInfo.processInfo.arguments.contains("--read-shortcut-power") || ProcessInfo.processInfo.arguments.contains("--run")
         if !preview {
             BGuardShortcutsProvider.updateAppShortcutParameters()
             SleepReportStore.shared.start()
@@ -133,7 +182,18 @@ struct BatteryGuardApp: App {
         AppDelegate.updateStore = updater
         _updates = State(wrappedValue: updater)
         AppDelegate.configStore = config
-        status.onFreshStatus = { [weak history] in history?.record($0) }
+        let lidLock = LidLockGuard()
+        status.onFreshStatus = { [weak history] fresh in
+            history?.record(fresh)
+            if !preview { lidLock.observe(fresh, enabled: UserDefaults.standard.bool(forKey: LidLockGuard.appStorageKey)) }
+            if !preview {
+                NetworkRuleMonitor.shared.poll { profile in
+                    // Eine laufende Sonderaktion nicht durch eine Netzwerkregel abbrechen.
+                    guard let store = AppDelegate.configStore, store.config.specialChargePlan == nil else { return false }
+                    return (try? store.performAPIAction(.init(action: .profile, profile: profile.rawValue))) != nil
+                }
+            }
+        }
         if status.isDaemonActive { history.record(status.status) }
         _historyStore = State(wrappedValue: history)
         status.configRefresh = { [weak config] in config?.loadConfig() }
@@ -144,18 +204,29 @@ struct BatteryGuardApp: App {
         _statusStore = State(wrappedValue: status)
     }
     
+    @AppStorage("bg.showMenuBarIcon") private var showMenuBarIcon = true
+    @AppStorage(AccentPreference.appStorageKey) private var accent: AccentPreference = .system
+
+    /// MenuBarExtra schreibt `isInserted` bei jeder Aktualisierung zurück. Direkt an @AppStorage gebunden,
+    /// löst jeder Schreibvorgang eine neue Aktualisierung aus (Endlosschleife, 100 % CPU). Daher nur echte Änderungen speichern.
+    private var menuBarIconInserted: Binding<Bool> {
+        Binding(get: { showMenuBarIcon }, set: { if $0 != showMenuBarIcon { showMenuBarIcon = $0 } })
+    }
+
     var body: some Scene {
-        MenuBarExtra {
+        MenuBarExtra(isInserted: menuBarIconInserted) {
             PopoverContentView(
                 statusStore: statusStore,
                 configStore: configStore,
                 historyStore: historyStore,
                 updates: updates
             )
+            .tint(accent.color)
         } label: {
             MenuBarLabelView(
                 status: statusStore.status,
                 isDaemonActive: statusStore.isDaemonActive,
+                hardwarePercent: statusStore.powerFlow.flatMap { $0.isFresh() ? $0.hardwarePercent : nil },
                 updateAvailable: updates.updateAvailable
             )
         }
@@ -164,6 +235,7 @@ struct BatteryGuardApp: App {
         Window("B-Guard", id: "dashboard") {
             DashboardView(statusStore: statusStore, configStore: configStore,
                           historyStore: historyStore, services: services, updates: updates, api: api)
+                .tint(accent.color)
         }
         .defaultSize(width: 980, height: 760)
 
@@ -182,10 +254,22 @@ struct BatteryGuardApp: App {
 struct MenuBarLabelView: View {
     let status: BGStatus
     let isDaemonActive: Bool
+    var hardwarePercent: Double? = nil
     var updateAvailable = false
+    @AppStorage("bg.menuBarDisplayOnBattery") private var menuBarDisplayOnBattery = ""
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage(MenuBarDisplayMode.appStorageKey) private var menuBarDisplay: MenuBarDisplayMode = .percent
-    
+    @AppStorage(MenuBarExtraItem.appStorageKey) private var menuBarExtras = ""
+    @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+
+    private var extraItems: [MenuBarExtraItem] { MenuBarExtraItem.decode(menuBarExtras) }
+    /// Auf Akku optional eine eigene Anzeige, etwa Restlaufzeit statt Prozent.
+    private var displayMode: MenuBarDisplayMode {
+        let onBattery = isDaemonActive && !status.pluggedIn && status.state == .onBattery
+        guard onBattery, let override = MenuBarDisplayMode(rawValue: menuBarDisplayOnBattery) else { return menuBarDisplay }
+        return override
+    }
+
     var body: some View {
         HStack(spacing: 5) {
             MenuBarIconView(
@@ -199,12 +283,22 @@ struct MenuBarLabelView: View {
                     .foregroundStyle(Color.accentColor).help("Neue B-Guard-Version verfügbar")
             }
 
-            let displayText = MenuBarDisplayFormatter.text(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive)
+            let displayText = ([MenuBarDisplayFormatter.text(for: displayMode, status: status, isDaemonActive: isDaemonActive)]
+                + MenuBarExtraFormatter.texts(for: extraItems, status: status, isDaemonActive: isDaemonActive, hardwarePercent: hardwarePercent))
+                .filter { !$0.isEmpty }.joined(separator: " · ")
+            if MenuBarExtraFormatter.showsLowPowerSymbol(for: extraItems, lowPowerModeEnabled: lowPowerModeEnabled) {
+                Image(systemName: "leaf.fill").font(.system(size: 10)).foregroundStyle(.yellow)
+                    .accessibilityLabel(L("Low Power Mode aktiv"))
+            }
             if !displayText.isEmpty {
                 Text(displayText)
                     .monospacedDigit()
                     .font(.system(size: 13, weight: .medium, design: .rounded))
             }
+        }
+        // Die Meldung kommt auf einem beliebigen Thread; @State nur auf dem Hauptthread ändern.
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange).receive(on: RunLoop.main)) { _ in
+            lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
         .help(MenuBarDisplayFormatter.tooltip(for: menuBarDisplay, status: status, isDaemonActive: isDaemonActive, localize: true))
         .accessibilityElement(children: .combine)

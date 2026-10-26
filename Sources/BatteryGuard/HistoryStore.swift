@@ -13,10 +13,19 @@ actor HistoryRepository {
     private(set) var recoveryNotice: String?
     /// Höchstens einen Tag veralteter Zeilen in der Datei behalten, dann verdichten.
     static let compactionSlack = 1440
+    /// Liefert den Schlüssel für das Lesen verschlüsselter und das Schreiben neuer Dateien (nil = Klartext).
+    private let readCipher: @Sendable () -> BGHistoryCipher?
+    private let writeCipher: @Sendable () -> BGHistoryCipher?
+    /// Eine verschlüsselte Datei wird immer als Ganzes neu geschrieben, nie angehängt.
+    private var fileEncrypted = false
 
-    init(url: URL, legacyURL: URL? = nil) {
+    init(url: URL, legacyURL: URL? = nil,
+         readCipher: @escaping @Sendable () -> BGHistoryCipher? = { nil },
+         writeCipher: @escaping @Sendable () -> BGHistoryCipher? = { nil }) {
         self.url = url
         self.legacyURL = legacyURL
+        self.readCipher = readCipher
+        self.writeCipher = writeCipher
     }
 
     func load(now: Date = Date()) throws -> [BGHistorySample] {
@@ -30,7 +39,13 @@ actor HistoryRepository {
             return []
         }
         // Lesefehler (z. B. fehlende Rechte) dürfen keine vermeintliche Reparatur auslösen.
-        let data = try Data(contentsOf: url)
+        let raw = try Data(contentsOf: url)
+        fileEncrypted = BGHistoryCipher.isEncrypted(raw)
+        let data = try decrypted(raw)
+        // Verschlüsselte Dateien früherer Versionen enthalten ein JSON-Array statt JSON Lines.
+        if data.first(where: { ![9, 10, 13, 32].contains($0) }) == UInt8(ascii: "[") {
+            return try adoptArray(data, from: nil, now: now)
+        }
         let decoded = BGHistory.decodeLines(data)
         if decoded.samples.isEmpty && decoded.invalidLines > 0 {
             try quarantine(url)
@@ -45,19 +60,29 @@ actor HistoryRepository {
         return recent
     }
 
+    /// Ohne Schlüssel nicht als Beschädigung behandeln: Die Datei bleibt unangetastet.
+    private func decrypted(_ data: Data) throws -> Data {
+        guard BGHistoryCipher.isEncrypted(data) else { return data }
+        guard let cipher = readCipher() else { throw CocoaError(.fileReadNoPermission) }
+        return try cipher.open(data)
+    }
+
     private func migrate(from legacy: URL, now: Date) throws -> [BGHistorySample] {
-        let data = try Data(contentsOf: legacy)
+        try adoptArray(decrypted(Data(contentsOf: legacy)), from: legacy, now: now)
+    }
+
+    private func adoptArray(_ data: Data, from legacy: URL?, now: Date) throws -> [BGHistorySample] {
         let loaded: [BGHistorySample]
         do {
             loaded = try BGJSON.decoder().decode([BGHistorySample].self, from: data)
         } catch is DecodingError {
-            try quarantine(legacy)
+            try quarantine(legacy ?? url)
             samples = []
             return []
         }
         let recent = BGHistory.recentSamples(loaded, now: now)
         try rewrite(recent)
-        try? FileManager.default.removeItem(at: legacy)
+        if let legacy { try? FileManager.default.removeItem(at: legacy) }
         samples = recent
         return recent
     }
@@ -77,7 +102,10 @@ actor HistoryRepository {
 
     private func rewrite(_ samples: [BGHistorySample]) throws {
         try prepareDirectory()
-        try BGHistory.encodeLines(samples).write(to: url, options: .atomic)
+        let plain = try BGHistory.encodeLines(samples)
+        let cipher = writeCipher()
+        try (cipher.map { try $0.seal(plain) } ?? plain).write(to: url, options: .atomic)
+        fileEncrypted = cipher != nil
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         linesInFile = samples.count
     }
@@ -97,7 +125,8 @@ actor HistoryRepository {
         let previous = try load(now: now)
         let next = BGHistory.recording(status, in: previous, now: now)
         guard next != previous else { return previous }
-        if let sample = next.last, BGHistory.isAppend(next, to: previous),
+        let canAppend = !fileEncrypted && writeCipher() == nil
+        if canAppend, let sample = next.last, BGHistory.isAppend(next, to: previous),
            linesInFile < next.count + Self.compactionSlack,
            FileManager.default.fileExists(atPath: url.path) {
             try append(sample)
@@ -132,7 +161,9 @@ final class HistoryStore {
         capacityRepository = CapacityTrendRepository(url: base.appendingPathComponent("BatteryGuard/capacity-days.json"))
         longTermCapacityEnabled = preview ? !emptyPreview : UserDefaults.standard.bool(forKey: "BGuard.longTermCapacityEnabled")
         repository = HistoryRepository(url: base.appendingPathComponent("BatteryGuard/history.jsonl"),
-                                       legacyURL: base.appendingPathComponent("BatteryGuard/history.json"))
+            legacyURL: base.appendingPathComponent("BatteryGuard/history.json"),
+            readCipher: { HistoryKeyStore.cipher() },
+            writeCipher: { HistoryKeyStore.isEnabled ? HistoryKeyStore.cipherCreatingKey() : nil })
         if preview {
             samples = emptyPreview ? [] : Self.previewSamples()
             capacityDays = emptyPreview ? [] : Self.previewCapacityDays()

@@ -86,6 +86,9 @@ struct DiagnosticsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                CapabilitiesView(status: statusStore.status)
+                PowerDetailsView()
+                DeviceBatteriesView()
                 BGPanel {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Beobachtungen und nächste Schritte").font(.headline)

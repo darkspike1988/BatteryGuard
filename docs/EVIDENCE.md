@@ -15,7 +15,7 @@ Stand: 22. Oktober 2026. Diese Seite begründet, welche Funktionen B-Guard anbie
 
 Das macOS-Ladelimit lädt bei mehr als 5 % Abfall nach und lädt gelegentlich auf 100 %, damit die Ladestandsschätzung genau bleibt.
 
-**Mehrwert von B-Guard:** Ziele unter 80 % (nur mit SMC-Ladesperre), einstellbarer Hitzeschutz, Unterstützung für macOS 14 bis 26.3, Verlauf mit Belastungsmodell, Zeitpläne, Monitorprofil, lokale API und Kurzbefehle. Ohne Ladesperre hält macOS das Limit; B-Guard empfiehlt die passende Einstellung.
+**Mehrwert von B-Guard:** Ziele unter 80 % (mit SMC-Ladesperre, ab macOS 27 experimentell über das macOS-Limit), einstellbarer Hitze- und Kälteschutz, Unterstützung für macOS 14 bis 26.3, Verlauf mit Belastungsmodell, Zeitpläne, Monitorprofil, lokale API und Kurzbefehle. Ohne Ladesperre setzt B-Guard im macOS-Limit-Modus das macOS-Ladelimit selbst, sonst empfiehlt es die passende Einstellung.
 
 ## Ladestand beim Lagern und am Netzteil
 
@@ -55,6 +55,7 @@ Das macOS-Ladelimit lädt bei mehr als 5 % Abfall nach und lädt gelegentlich au
 ## Erklären statt Steuern
 
 - Seit der Firmware von macOS 27 sind die Ladesperre-Schlüssel CHTE, CH0B und CH0C gesperrt: Sie erscheinen als Platzhalter der Größe null oder liefern selbst für root `kIOReturnNotPrivileged`. Der Netzteil-Schalter CHIE bleibt beschreibbar. B-Guard prüft deshalb die Fähigkeit und nicht die macOS-Version.
+- Als Ersatz setzt B-Guard im macOS-Limit-Modus das macOS-Ladelimit: Stufen von 80 bis 100 % über die private Klasse `PowerUISmartChargeClient`, Werte darunter mit eigenem Schalter über die Einstellungen von PowerUIAgent (`com.apple.smartcharging.topoffprotection`, Schlüssel `mclLimitValue`). Den zweiten Weg haben [BatLimit](https://github.com/DmitriyODS/BatLimit) und [Battery Toolkit für macOS 27](https://github.com/andersonproescholdbell/battery-toolkit-macos27) gefunden. Die Firmware hält den Wert auch im Schlaf, ohne das Netzteil umzuschalten; ein Umschalten zwischen zwei Grenzen über CHIE würde nur im Wachzustand wirken und Teilzyklen erzeugen.
 - macOS lädt trotz Ladelimit gelegentlich auf 100 %, damit die Ladestandsschätzung genau bleibt. ([Apple 102338](https://support.apple.com/en-us/102338)) Steht der Akku deutlich über Ziel und Limit, nennt B-Guard das als wahrscheinliche Ursache.
 - Das Energieprotokoll `pmset -g log` ist ohne Administratorrechte lesbar, sein Format aber nicht dokumentiert ([pmset(1)](https://keith.github.io/xcode-man-pages/pmset.1.html)). Unbekannte Zeilen werden übersprungen. Aktive Energie-Assertions liefert die öffentliche Funktion `IOPMCopyAssertionsByProcess` aus IOKit.
 - USB-C-Kabel ohne E-Marker sind für 3 A ausgelegt und begrenzen bei 20 V auf 60 W; für bis zu 100 W oder 240 W braucht es 5-A-Kabel (USB Power Delivery). Weicht die ausgehandelte Leistung deutlich von der angebotenen ab, liegt die Grenze meist im Kabel oder Dock.

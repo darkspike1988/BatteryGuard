@@ -12,13 +12,18 @@ final class DaemonRunner: @unchecked Sendable {
     private let dryRun: Bool
     private let isOnce: Bool
     private var detectedSMCKeys: [String] = []
+    private var capabilities: BGCapabilities?
+    private var capabilityChange: BGCapabilityChange?
+    private var appleCalibration: (value: Bool?, readAt: TimeInterval)?
     private var sleeping = false
     private var powerConnection: io_connect_t = 0
     private var powerPort: IONotificationPortRef?
     private var powerNotifier: io_object_t = 0
     private let configServer = ConfigServer()
     private let wakeUntilLimit = WakeUntilLimitGuard()
-    private let lowPowerMode = LowPowerModeController()
+    private let clamshellSleep = ClamshellSleepGuard()
+    private let powerMode = PowerModeController()
+    private let socPower = SoCPowerMonitor()
     private let dischargeSleep = DischargeSleepGuard()
     private var configurationNotice: String?
     private var adapterFlaps = BGAdapterFlapCounter()
@@ -140,12 +145,13 @@ final class DaemonRunner: @unchecked Sendable {
                 if ScheduleRunner.needsEvaluation(config: snapshot, now: Date()) {
                     try BGConfigFile.update(at: url) { latest in
                         latest = ScheduleRunner.evaluate(config: latest, now: Date(),
-                            context: ConfigServer.currentSpecialContext())
+                            context: ConfigServer.currentSpecialContext(for: latest))
                     }
                 }
             } catch { logStderr("Zeitplan konnte nicht ausgewertet werden: \(error.localizedDescription)") }
         }
-        let storedConfig = loadConfig()
+        let managedPolicy = BGManagedPolicy.load()
+        let storedConfig = managedPolicy.map { $0.apply(to: loadConfig()) } ?? loadConfig()
         let now = Date()
         let desktop = DesktopEnvironment.snapshot()
         let desktopProfile = BGDesktopProfileRule.resolve(config: storedConfig,
@@ -166,12 +172,12 @@ final class DaemonRunner: @unchecked Sendable {
 
         if !dryRun {
             wakeUntilLimit.reconcile(config: config, battery: battery, now: now,
-                controlSupported: controller.smc.hasChargeControl && decision.state != .unsupported)
+                controlSupported: (controller.smc.hasChargeControl || decision.systemChargeLimit != nil) && decision.state != .unsupported)
         }
         dischargeSleep.reconcile(config: config, state: decision.state, now: now, dryRun: dryRun)
         if !isOnce {
-            lowPowerMode.reconcile(config: config, dryRun: dryRun,
-                                   logger: { [weak self] msg in self?.log(msg) })
+            powerMode.reconcile(config: config, dryRun: dryRun,
+                                logger: { [weak self] msg in self?.log(msg) })
         }
 
         if !dryRun, let snapshot = storedConfig.specialChargePlan,
@@ -197,7 +203,7 @@ final class DaemonRunner: @unchecked Sendable {
         status.measurements = battery.measurements
         status.nativeChargeLimit = controller.smc.readNativeChargeLimit()
         status.effectiveLowerLimit = effective.lowerLimit
-        status.effectiveUpperLimit = effective.chargeToFullOnce ? 100 : effective.upperLimit
+        status.effectiveUpperLimit = decision.effectiveTargetPercent ?? decision.systemChargeLimit ?? (effective.chargeToFullOnce ? 100 : effective.upperLimit)
         status.externalDisplayConnected = desktop.externalDisplayConnected
         status.lidClosed = desktop.lidClosed
         status.adapterDisconnectAllowed = desktop.allowsAdapterDisconnect
@@ -206,6 +212,22 @@ final class DaemonRunner: @unchecked Sendable {
         status.percentAvailable = battery.percentAvailable
         status.externalPowerAvailable = battery.externalPowerAvailable
         status.awakeUntilLimitActive = wakeUntilLimit.isActive
+        if !isOnce {
+            clamshellSleep.reconcile(wanted: config.keepAwakeWhenLidClosed && wakeUntilLimit.isActive,
+                                     pluggedIn: battery.pluggedIn || decision.adapterConnected == false,
+                                     lidClosed: desktop.lidClosed, externalDisplay: desktop.externalDisplayConnected,
+                                     dryRun: dryRun, logger: { [weak self] in self?.log($0) })
+        }
+        status.highPowerModeSupported = powerMode.highPowerModeSupported
+        if !isOnce && !dryRun { socPower.refreshIfDue() }
+        status.socPower = socPower.latest
+        status.capabilities = capabilities
+        status.managedPolicy = managedPolicy
+        status.capabilityChange = capabilityChange
+        status.appleCalibrationActive = currentAppleCalibration()
+        let systemLimits = controller.systemLimit.availableLimits()
+        status.systemChargeLimits = systemLimits
+        status.systemChargeLimit = systemLimits.isEmpty ? nil : controller.systemLimit.currentLimit()
         status.pluggedIn = battery.pluggedIn
         status.isChargingHardware = battery.isCharging
         status.state = decision.state
@@ -236,32 +258,41 @@ final class DaemonRunner: @unchecked Sendable {
         return status
     }
 
-    /// Muss schnell bleiben: macOS wartet vor dem Schlaf auf IOAllowPowerChange.
-    func prepareForSleep() {
-        let now = Date()
-        let stored = loadConfig()
-        let desktop = DesktopEnvironment.snapshot()
-        let config = BGDesktopProfileRule.resolve(config: stored,
-                                                  externalDisplay: desktop.externalDisplayConnected,
-                                                  now: now).config
-        let battery = BatteryReader.read(smcClient: controller.smc)
-        let charging = ControllerLogic.chargingEnabledDuringSleep(config: config, battery: battery,
-            hasChargeControl: controller.smc.hasChargeControl, now: now)
-        controller.prepareForSleep(chargingEnabled: charging, logger: { [weak self] in self?.log($0) })
-    }
-
     func runOnce() {
         defer { wakeUntilLimit.release() }
         ensureEnvironment()
 
 
         detectedSMCKeys = controller.smc.detectSupportedKeys()
+        refreshCapabilities()
         let status = tick()
 
         if let data = try? BGJSON.encoder().encode(status),
            let jsonString = String(data: data, encoding: .utf8) {
             print(jsonString)
         }
+    }
+
+    /// Erkennt Firmware- und Fähigkeitsänderungen gegenüber dem letzten Dienststart.
+    private func refreshCapabilities() {
+        let keys = detectedSMCKeys + (controller.smc.keyExists("ACLC") ? ["ACLC"] : [])
+        let current = BGCapabilities(smcKeys: keys, firmwareVersion: PlatformInfo.firmwareVersion(),
+            macOSVersion: PlatformInfo.macOSVersion(), systemChargeLimits: controller.systemLimit.availableLimits(),
+            highPowerMode: powerMode.highPowerModeSupported)
+        capabilities = current
+        guard !dryRun && !isOnce, let change = PlatformInfo.recordCapabilities(current) else { return }
+        capabilityChange = change
+        log("Fähigkeiten geändert: " + change.changes.joined(separator: "; "))
+    }
+
+    /// Apples Kalibrierungszustand höchstens alle fünf Minuten abfragen.
+    private func currentAppleCalibration() -> Bool? {
+        let uptime = ProcessInfo.processInfo.systemUptime
+        if let cached = appleCalibration, uptime - cached.readAt < 300 { return cached.value }
+        let value = PlatformInfo.appleCalibrationActive()
+        if value == true && appleCalibration?.value != true { log("macOS kalibriert den Akku; das Ladelimit ist vorübergehend ausgesetzt.") }
+        appleCalibration = (value, uptime)
+        return value
     }
 
     private func registerSleepWakeNotifications() {
@@ -274,9 +305,10 @@ final class DaemonRunner: @unchecked Sendable {
             case 0xe0000280 /* kIOMessageSystemWillSleep */:
                 runner.sleeping = true
                 runner.wakeUntilLimit.release()
+                runner.clamshellSleep.release(dryRun: runner.dryRun, logger: { runner.log($0) })
                 runner.dischargeSleep.release()
-                if !runner.dryRun { runner.prepareForSleep() }
-                runner.log("Schlafmodus: Netzteil verbunden, Steuerung pausiert.")
+                runner.controller.prepareForSleep(config: (BGManagedPolicy.load().map { $0.apply(to: runner.loadConfig()) } ?? runner.loadConfig()).sanitized(), battery: BatteryReader.read(smcClient: runner.controller.smc),
+                                                  dryRun: runner.dryRun, logger: { runner.log($0) })
                 IOAllowPowerChange(runner.powerConnection, Int(bitPattern: argument))
             case 0xe0000300 /* kIOMessageSystemHasPoweredOn */:
                 // Firmware may have changed SMC registers while asleep. Forget all cached writes.
@@ -337,6 +369,8 @@ final class DaemonRunner: @unchecked Sendable {
 
         detectedSMCKeys = controller.smc.detectSupportedKeys()
         log("Erkannte SMC-Schlüssel: \(detectedSMCKeys.isEmpty ? "keine" : detectedSMCKeys.joined(separator: ", "))")
+        refreshCapabilities()
+        if !dryRun { clamshellSleep.recoverAfterCrash(logger: { [weak self] in self?.log($0) }) }
         let capability = controller.smc.chargeCapability()
         log("Fähigkeitstest: " + capability.keys.sorted { $0.key < $1.key }
             .filter { $0.value != .absent }.map { "\($0.key)=\($0.value.rawValue)" }.joined(separator: ", "))
@@ -356,6 +390,7 @@ final class DaemonRunner: @unchecked Sendable {
             self.log("SIGTERM empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
             self.configServer.stop()
             self.wakeUntilLimit.release()
+            self.clamshellSleep.release(dryRun: self.dryRun, logger: { self.log($0) })
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
@@ -368,6 +403,7 @@ final class DaemonRunner: @unchecked Sendable {
             self.log("SIGINT empfangen - Failsafe: Normalbetrieb wird wiederhergestellt...")
             self.configServer.stop()
             self.wakeUntilLimit.release()
+            self.clamshellSleep.release(dryRun: self.dryRun, logger: { self.log($0) })
             if !self.dryRun { self.controller.restoreNormal(logger: { self.log($0) }) }
             exit(0)
         }
@@ -422,6 +458,10 @@ if args.contains("--check-config-service") {
         fputs("\(error.localizedDescription)\n", stderr)
         exit(1)
     }
+} else if args.contains("--restore-system-limit") {
+    // Für die Deinstallation: Apples ursprüngliches Ladelimit wiederherstellen.
+    let restored = SystemChargeLimitController().restoreOriginal(dryRun: false, logger: { print($0) })
+    exit(restored ? 0 : 1)
 } else if args.contains("--dump-keys") {
     // Diagnose: alle (oder per Präfix gefilterte) SMC-Keys ausgeben, nur lesend.
     let prefixes = args.drop(while: { $0 != "--dump-keys" }).dropFirst().filter { !$0.hasPrefix("--") }
@@ -441,6 +481,8 @@ if args.contains("--check-config-service") {
     let smc = SMCClient.shared
     _ = smc.open()
     let restored = smc.restoreNormal()
+    // Von B-Guard umgestellte Energiemodi gehen auf den Wert vor dem ersten Eingriff zurück.
+    PowerModeController().restoreSaved(dryRun: false, logger: { print($0) })
     guard restored else {
         fputs("Normalbetrieb konnte nicht vollständig wiederhergestellt werden.\n", stderr)
         exit(1)

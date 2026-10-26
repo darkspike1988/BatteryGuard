@@ -177,7 +177,7 @@ struct PopoverContentView: View {
             }
         case .powerFlow:
             if showPowerFlow {
-                PowerFlowView(sample: statusStore.powerFlow, compact: true)
+                PowerFlowView(sample: statusStore.powerFlow, soc: statusStore.status.socPower, compact: true)
             }
         case .nextTask:
             if showNextTask { nextTaskCard }

@@ -23,6 +23,11 @@ struct EffectivenessView: View {
                 Text(stateExplanation)
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if statusStore.status.appleCalibrationActive == true {
+                    Label("macOS kalibriert gerade den Akku und lädt dafür vorübergehend über dein Ziel. Das lässt sich nicht verhindern und ist kein Fehler.", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.callout).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Divider()
                 Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 9) {
                     row("Dein Ziel", value: limitText(effectiveness.targetUpperLimit))
@@ -96,6 +101,12 @@ struct EffectivenessView: View {
             if effectiveness.controlPath == .macOS {
                 return L("macOS hält dein Ladelimit. B-Guard beobachtet den Zustand und greift nicht ein.")
             }
+            if effectiveness.controlPath == .systemLimit {
+                if let target = effectiveness.targetUpperLimit, let applied = effectiveness.appliedUpperLimit, applied > target {
+                    return L("B-Guard setzt Apples natives Ladelimit. macOS bietet nur feste Stufen an, daher gilt %lld %% statt %lld %%.", applied, target)
+                }
+                return L("B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch.")
+            }
             return L("B-Guard setzt dein Ziel über den erkannten Steuerungsweg durch. Messwerte und Verlauf bleiben lokal.")
         case .limitedByNative:
             return L("macOS begrenzt früher als dein B-Guard-Ziel. Hebe das native Limit in den Batterieeinstellungen an, wenn du höher laden willst. B-Guard ändert diese Systemeinstellung nicht.")
@@ -137,6 +148,7 @@ struct EffectivenessView: View {
         case .chargeLock: L("SMC-Ladesperre")
         case .adapterSwitch: L("Netzteil-Schalter")
         case .macOS: L("macOS-Ladelimit")
+        case .systemLimit: L("macOS-Ladelimit über B-Guard")
         }
     }
 

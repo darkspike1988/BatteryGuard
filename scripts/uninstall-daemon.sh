@@ -43,6 +43,7 @@ echo "==> BatteryGuard Daemon-Deinstallation gestartet..."
 if [[ -x "$TARGET_BINARY" ]]; then
     echo "--> Rufe $TARGET_BINARY --restore auf (Failsafe: Ladekontrolle zurücksetzen)..."
     "$TARGET_BINARY" --restore 2>/dev/null || echo "Hinweis: '$TARGET_BINARY --restore' meldete einen Fehler oder wird noch nicht unterstützt." >&2
+    "$TARGET_BINARY" --restore-system-limit 2>/dev/null || echo "Hinweis: Apples ursprüngliches Ladelimit konnte nicht zurückgesetzt werden; bitte in den Batterieeinstellungen prüfen." >&2
 else
     echo "--> Hinweis: $TARGET_BINARY existiert nicht oder ist nicht ausführbar. Überspringe --restore."
 fi

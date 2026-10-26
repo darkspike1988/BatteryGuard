@@ -19,6 +19,7 @@ struct ScheduledTasksView: View {
     @State private var minutes = 480
     @State private var target = 50
     @State private var error: String?
+    @State private var confirmClearHistory = false
         var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Zeitpläne laufen im Hintergrunddienst, auch bei geschlossener App. Manuelle Aktionen haben Vorrang; eine manuelle Profilwahl übersteuert Zeitpläne für zwei Stunden.")
@@ -49,10 +50,25 @@ struct ScheduledTasksView: View {
                     }
                 }.padding(.vertical, 5)
             }
-            Button("Zeitplan hinzufügen") { open(nil) }
-                .disabled(configStore.config.scheduledTasks.count >= 50)
+            HStack {
+                Button("Zeitplan hinzufügen") { open(nil) }
+                Menu("Vorlage hinzufügen") {
+                    ForEach(BGScheduleTemplate.allCases) { template in
+                        Button(template.title) { add(template) }
+                            .help(template.summary)
+                    }
+                }
+                .fixedSize()
+            }
+            .disabled(configStore.config.scheduledTasks.count >= 49)
             if let error { Text(error).foregroundStyle(.orange).font(.caption) }
             if !configStore.config.scheduleHistory.isEmpty {
+                Button("Aufgabenverlauf löschen", role: .destructive) { confirmClearHistory = true }
+                    .confirmationDialog("Aufgabenverlauf löschen?", isPresented: $confirmClearHistory) {
+                        Button("Verlauf löschen", role: .destructive) { perform(.init(action: .clearScheduleHistory)) }
+                    } message: {
+                        Text("Entfernt die Liste ausgeführter und übersprungener Aufgaben. Zeitpläne bleiben erhalten.")
+                    }
                 DisclosureGroup("Letzte Aufgaben") {
                     ForEach(Array(configStore.config.scheduleHistory.suffix(10).reversed().enumerated()), id: \.offset) { _, run in
                         Text(L("%@: %@", run.executedAt.formatted(date: .abbreviated, time: .shortened), resultTitle(run.resultString)))
@@ -78,6 +94,8 @@ struct ScheduledTasksView: View {
                 }
                 Picker("Aktion", selection: $kind) {
                     Text("Profil anwenden").tag(BGScheduledAction.Kind.profile)
+                    Text("Ladelimit setzen").tag(BGScheduledAction.Kind.limit)
+                    Text("Schutz pausieren").tag(BGScheduledAction.Kind.pause)
                     Text("Top Up bis Abstecken").tag(BGScheduledAction.Kind.topUp)
                     Text("Ladestand halten · Hardware-Abnahme offen").tag(BGScheduledAction.Kind.hold)
                     Text("Einmal entladen · Hardware-Abnahme offen").tag(BGScheduledAction.Kind.discharge)
@@ -90,6 +108,11 @@ struct ScheduledTasksView: View {
                     }
                     if selectedProfileHasDischarge { Text("Dieses Profil schaltet aktives Entladen ein; das Netzteil kann softwareseitig getrennt werden.").font(.caption).foregroundStyle(.orange) }
                     Text("Die Profilparameter werden als eigener Stand im Zeitplan gespeichert.").font(.caption)
+                } else if kind == .limit {
+                    Stepper(L("Ladelimit: %lld %%", target), value: $target, in: 20...100, step: 5)
+                    Text("Die untere Grenze liegt fünf Prozentpunkte darunter.").font(.caption)
+                } else if kind == .pause {
+                    Stepper(L("Dauer: %lld Minuten", min(minutes, 720)), value: $minutes, in: 15...720, step: 15)
                 } else {
                     Stepper(L("Maximale Dauer: %lld Minuten", minutes), value: $minutes, in: 1...1440, step: 30)
                     if kind == .discharge { Stepper(L("Ziel: %lld %%", target), value: $target, in: 10...95) }
@@ -137,13 +160,23 @@ struct ScheduledTasksView: View {
                 else { throw BGChargingActionError.invalidRequest(L("Das gewählte Profil ist nicht mehr vorhanden.")) }
             } else { saved = nil }
             let action = BGScheduledAction(kind: kind, profile: saved,
-                minutes: kind == .profile ? nil : minutes, targetPercent: kind == .discharge ? target : nil)
+                minutes: kind == .profile || kind == .limit ? nil : (kind == .pause ? min(minutes, 720) : minutes),
+                targetPercent: kind == .discharge || kind == .limit ? target : nil)
             let task = BGScheduledTask(schedule: schedule, enabled: enabled, catchUp: catchUp,
                 action: action, state: existing?.state ?? .init())
             _ = try configStore.performAPIAction(.init(action: .upsertSchedule, scheduledTask: task))
             editing = false; error = nil
         } catch { self.error = error.localizedDescription }
     }
+    private func add(_ template: BGScheduleTemplate) {
+        do {
+            for task in try template.tasks() {
+                _ = try configStore.performAPIAction(.init(action: .upsertSchedule, scheduledTask: task))
+            }
+            error = nil
+        } catch { self.error = error.localizedDescription }
+    }
+
     private func perform(_ request: BGChargingActionRequest) {
         do { _ = try configStore.performAPIAction(request); error = nil }
         catch { self.error = error.localizedDescription }

@@ -64,6 +64,9 @@ struct BatteryHeaderCardView: View {
     private var mechanismText: String? {
         guard isDaemonActive else { return nil }
         
+        if config.mode == .systemLimit, let limit = status.systemChargeLimit {
+            return L("macOS-Limit %lld %%", limit)
+        }
         if status.hasChargeInhibit {
             return L("Native SMC-Sperre")
         } else if status.hasAdapterSwitch || status.chargeCapability?.chargeInhibitBlockedByFirmware == true {
@@ -79,6 +82,9 @@ struct BatteryHeaderCardView: View {
     private var mechanismTooltip: String {
         guard isDaemonActive else { return "" }
         let keys = status.smcKeysDetected
+        if config.mode == .systemLimit {
+            return L("B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch, auch wenn die App geschlossen ist.")
+        }
         if status.hasChargeInhibit {
             return L("Hardware-Ladesperre aktiv (%@). Die Batterie wird präzise auf dem Zielwert gehalten.", keys.joined(separator: ", "))
         } else if status.hasAdapterSwitch || status.chargeCapability?.chargeInhibitBlockedByFirmware == true {

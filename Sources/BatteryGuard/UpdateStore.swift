@@ -8,7 +8,7 @@ import BatteryGuardShared
 /// App-only releases do not require reinstalling an unchanged root service.
 enum AppVersion {
     static let current = BGVersion.current
-    static let requiredDaemon = "0.5.0"
+    static let requiredDaemon = "0.9.0"
     static var installed: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? current
     }

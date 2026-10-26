@@ -3,12 +3,16 @@ import BatteryGuardShared
 
 public struct PowerFlowView: View {
     private let sample: BGPowerFlowSample?
+    private let soc: BGSoCPower?
     private let compact: Bool
 
-    public init(sample: BGPowerFlowSample?, compact: Bool = false) {
+    init(sample: BGPowerFlowSample?, soc: BGSoCPower? = nil, compact: Bool = false) {
         self.sample = sample
+        self.soc = soc
         self.compact = compact
     }
+
+    private var freshSoC: BGSoCPower? { soc.flatMap { $0.isFresh() ? $0 : nil } }
 
     private var isFresh: Bool { sample?.isFresh() ?? false }
 
@@ -36,6 +40,9 @@ public struct PowerFlowView: View {
                         Image(systemName: batteryArrow(vertical: true))
                             .font(.caption2.weight(.bold)).foregroundStyle(.secondary.opacity(0.7))
                         compactRow(icon: batteryIcon, title: L("Akku"), detail: [batteryStatus, hardwarePercentText].compactMap { $0 }.joined(separator: " • "), value: formatSignedWatts(sample?.batteryWatts))
+                        if let soc = freshSoC {
+                            compactRow(icon: "cpu", title: L("SoC"), detail: socDetail(soc), value: componentWatts(soc.socWatts))
+                        }
                     }
                 } else {
                     HStack(alignment: .center, spacing: 12) {
@@ -45,13 +52,40 @@ public struct PowerFlowView: View {
                         flowIndicator(symbol: batteryArrow(vertical: false), label: batteryStatus)
                         nodeCard(title: L("Akku"), subtitle: batteryStatus, icon: batteryIcon, value: formatSignedWatts(sample?.batteryWatts), extra: hardwarePercentText)
                     }
+                    componentBreakdown
                 }
-                Text("Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch.")
+                Text("Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch. SoC-Werte misst der Dienst etwa alle 30 Sekunden mit Apples powermetrics; „Übrige Komponenten“ ist die Differenz zur Mac-Leistung.")
                     .font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilitySummary)
+    }
+
+    /// SoC-Aufteilung aus Apples Energiemodell; Display und USB meldet macOS hier nicht in Watt.
+    @ViewBuilder private var componentBreakdown: some View {
+        HStack(spacing: 12) {
+            nodeCard(title: L("SoC"), subtitle: L("CPU, GPU, Neural Engine (gemessen)"), icon: "cpu",
+                     value: componentWatts(freshSoC?.socWatts), extra: freshSoC.map(socDetail))
+            nodeCard(title: L("Übrige Komponenten"), subtitle: L("Display, USB, RAM u. a. (abgeleitet)"), icon: "display",
+                     value: componentWatts(restWatts), extra: L("Display und USB meldet dieser Mac nicht einzeln."))
+        }
+    }
+
+    private var restWatts: Double? {
+        guard isFresh, let system = sample?.systemWatts, let soc = freshSoC?.socWatts else { return nil }
+        return max(0, system - soc)
+    }
+
+    private func socDetail(_ soc: BGSoCPower) -> String {
+        [("CPU", soc.cpuWatts), ("GPU", soc.gpuWatts), ("ANE", soc.aneWatts)]
+            .compactMap { label, watts in watts.map { String(format: "%@ %.1f", label, $0) } }
+            .joined(separator: " · ")
+    }
+
+    private func componentWatts(_ watts: Double?) -> String {
+        guard let watts else { return "—" }
+        return String(format: "%.1f W", max(0, watts))
     }
 
     private func nodeCard(title: String, subtitle: String, icon: String, value: String, extra: String?) -> some View {

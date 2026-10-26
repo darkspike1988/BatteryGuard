@@ -17,7 +17,7 @@ public enum BGPaths {
 
 /// Eine Versionsquelle für App, Dienst und Bundle (build-app.sh liest sie aus dieser Datei).
 public enum BGVersion {
-    public static let current = "0.5.0"
+    public static let current = "0.9.0"
 }
 
 /// Wie das Limit durchgesetzt wird.
@@ -28,6 +28,37 @@ public enum BGMode: String, Codable, CaseIterable, Sendable {
     case native
     /// EXPERIMENTELL: natives Limit direkt im SMC (CHLT) auf den eigenen Wert setzen (nur root).
     case direct
+    /// macOS-Limit: setzt Apples natives Ladelimit (ab macOS 26/27) auf den nächsten erlaubten Wert.
+    /// Für Macs ohne SMC-Ladesperre; ältere Dienste lesen den Wert als `.native`.
+    case systemLimit
+}
+
+/// Abbildung eines B-Guard-Ziels auf die von macOS angebotenen Ladelimits.
+public enum BGSystemChargeLimit {
+    /// Untergrenze für Werte, die B-Guard direkt in die Einstellungen von PowerUIAgent schreibt.
+    public static let directMinimum = 20
+
+    /// Kleinster erlaubter Wert, der das Ziel nicht unterschreitet; sonst der größte erlaubte Wert.
+    public static func target(for percent: Int, available: [Int]) -> Int? {
+        let sorted = available.filter { (1...100).contains($0) }.sorted()
+        return sorted.first { $0 >= percent } ?? sorted.last
+    }
+}
+
+/// Für welche Stromquelle ein macOS-Energiemodus gelten soll. `.off` lässt die Systemeinstellung unberührt.
+public enum BGPowerModeRule: String, Codable, CaseIterable, Sendable, Identifiable {
+    case off, always, onBattery, onAdapter
+    public var id: String { rawValue }
+    public var appliesOnBattery: Bool { self == .always || self == .onBattery }
+    public var appliesOnAdapter: Bool { self == .always || self == .onAdapter }
+    public var localizedTitle: String {
+        switch self {
+        case .off: BGLocalized("Nicht steuern")
+        case .always: BGLocalized("Immer")
+        case .onBattery: BGLocalized("Nur auf Akku")
+        case .onAdapter: BGLocalized("Nur am Netzteil")
+        }
+    }
 }
 
 public struct BGConfig: Codable, Equatable, Sendable {
@@ -45,6 +76,16 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var chargeToFullOnce: Bool = false
     /// MagSafe LED steuern (Grün beim Halten)
     public var magsafeLed: Bool = true
+    /// MagSafe-LED dauerhaft aus, solange der Dienst läuft (hat Vorrang vor `magsafeLed`).
+    public var magsafeLedOff: Bool = false
+    /// Vor dem Systemschlaf Laden anhalten statt freigeben (opt-in).
+    public var stopChargingWhenSleeping: Bool = false
+    /// macOS-Limit-Modus: Werte unter der kleinsten macOS-Stufe direkt als macOS-Limit setzen (opt-in, experimentell).
+    public var allowLimitsBelowSystemMinimum: Bool = false
+    /// Laden unterhalb dieser Akkutemperatur sperren (0 = aus, sonst 1–15 °C).
+    public var coldProtectionCelsius: Int = 0
+    /// Beim Wachhalten bis zum Limit auch zugeklappt nicht schlafen (opt-in, mit Sicherheitsabschaltung).
+    public var keepAwakeWhenLidClosed: Bool = false
     /// Durchsetzungs-Modus (siehe BGMode).
     public var mode: BGMode = .auto
     /// Zeitlich begrenzte Pause. Die ursprünglichen Schutzeinstellungen bleiben erhalten.
@@ -69,8 +110,12 @@ public struct BGConfig: Codable, Equatable, Sendable {
     /// Es ändert weder das gespeicherte Profil noch Pause, Reise- oder Sonderpläne.
     public var desktopProfileEnabled: Bool = false
     public var desktopProfile: BGProfile? = nil
-    /// Low Power Mode folgt dem Netzteilzustand (nur wenn ausdrücklich aktiviert).
+    /// Altes Feld für Dienste vor 0.6.0; spiegelt `lowPowerModeRule == .onBattery`.
     public var lowPowerModeOnBattery: Bool = false
+    /// Low Power Mode je Stromquelle über `pmset` (nur wenn ausdrücklich aktiviert).
+    public var lowPowerModeRule: BGPowerModeRule = .off
+    /// High Power Mode je Stromquelle; nur auf Macs mit `pmset powermode`. Low Power Mode hat Vorrang.
+    public var highPowerModeRule: BGPowerModeRule = .off
     /// Systemschlaf während aktivem Entladen kurzzeitig verhindern (opt-in, zeitlich begrenzt).
     public var preventSleepWhileDischarging: Bool = false
 
@@ -87,6 +132,11 @@ public struct BGConfig: Codable, Equatable, Sendable {
         heatProtectionCelsius = try c.decodeIfPresent(Int.self, forKey: .heatProtectionCelsius) ?? d.heatProtectionCelsius
         chargeToFullOnce = try c.decodeIfPresent(Bool.self, forKey: .chargeToFullOnce) ?? d.chargeToFullOnce
         magsafeLed = try c.decodeIfPresent(Bool.self, forKey: .magsafeLed) ?? d.magsafeLed
+        magsafeLedOff = try c.decodeIfPresent(Bool.self, forKey: .magsafeLedOff) ?? d.magsafeLedOff
+        stopChargingWhenSleeping = try c.decodeIfPresent(Bool.self, forKey: .stopChargingWhenSleeping) ?? d.stopChargingWhenSleeping
+        allowLimitsBelowSystemMinimum = try c.decodeIfPresent(Bool.self, forKey: .allowLimitsBelowSystemMinimum) ?? d.allowLimitsBelowSystemMinimum
+        coldProtectionCelsius = try c.decodeIfPresent(Int.self, forKey: .coldProtectionCelsius) ?? d.coldProtectionCelsius
+        keepAwakeWhenLidClosed = try c.decodeIfPresent(Bool.self, forKey: .keepAwakeWhenLidClosed) ?? d.keepAwakeWhenLidClosed
         // Missing legacy values retain their default. Explicit unknown modes must
         // never silently enable active adapter switching.
         if let rawMode = try c.decodeIfPresent(String.self, forKey: .mode) {
@@ -109,6 +159,14 @@ public struct BGConfig: Codable, Equatable, Sendable {
             desktopProfile = BGProfile(rawValue: rawProfile)
         } else { desktopProfile = nil }
         lowPowerModeOnBattery = try c.decodeIfPresent(Bool.self, forKey: .lowPowerModeOnBattery) ?? d.lowPowerModeOnBattery
+        // Unbekannte Regeln schalten nie einen Modus ein; fehlende übernehmen das alte Feld.
+        if let rawRule = try c.decodeIfPresent(String.self, forKey: .lowPowerModeRule) {
+            lowPowerModeRule = BGPowerModeRule(rawValue: rawRule) ?? .off
+        } else { lowPowerModeRule = lowPowerModeOnBattery ? .onBattery : .off }
+        if let rawRule = try c.decodeIfPresent(String.self, forKey: .highPowerModeRule) {
+            highPowerModeRule = BGPowerModeRule(rawValue: rawRule) ?? .off
+        } else { highPowerModeRule = d.highPowerModeRule }
+        lowPowerModeOnBattery = lowPowerModeRule == .onBattery
         preventSleepWhileDischarging = try c.decodeIfPresent(Bool.self, forKey: .preventSleepWhileDischarging) ?? d.preventSleepWhileDischarging
         do {
             if let decoded = try c.decodeIfPresent(BGSpecialChargePlan.self, forKey: .specialChargePlan) {
@@ -128,6 +186,8 @@ public struct BGConfig: Codable, Equatable, Sendable {
         c.upperLimit = min(max(c.upperLimit, 20), 100)
         if c.upperLimit <= c.lowerLimit { c.lowerLimit = max(5, c.upperLimit - 5) }
         c.heatProtectionCelsius = (c.heatProtectionCelsius == 0) ? 0 : min(max(c.heatProtectionCelsius, 30), 50)
+        c.lowPowerModeOnBattery = c.lowPowerModeRule == .onBattery
+        c.coldProtectionCelsius = min(max(c.coldProtectionCelsius, 0), 15)
         if !c.chargeToFullOnce { c.fullChargeRequestID = nil }
         if c.travelReadyAt == nil { c.travelRequestID = nil }
         if let plan = c.specialChargePlan {
@@ -193,6 +253,22 @@ public struct BGStatus: Codable, Equatable, Sendable {
     public var percentAvailable: Bool? = nil
     public var externalPowerAvailable: Bool? = nil
     public var awakeUntilLimitActive: Bool? = nil
+    /// Ob dieser Mac `pmset powermode` (und damit High Power Mode) anbietet.
+    public var highPowerModeSupported: Bool? = nil
+    /// Von macOS angebotene native Ladelimits; leer oder nil, wenn der macOS-Limit-Modus nicht verfügbar ist.
+    public var systemChargeLimits: [Int]? = nil
+    /// Zuletzt gelesenes natives macOS-Ladelimit über PowerUI (unabhängig vom SMC-Layout).
+    public var systemChargeLimit: Int? = nil
+    /// Letzte SoC-Leistungsmessung des Dienstes; nil, wenn powermetrics nichts liefert.
+    public var socPower: BGSoCPower? = nil
+    /// Erkannte Fähigkeiten dieses Macs inklusive Firmware-Version.
+    public var capabilities: BGCapabilities? = nil
+    /// Letzte beobachtete Fähigkeitsänderung (z. B. nach Firmware-Update).
+    public var capabilityChange: BGCapabilityChange? = nil
+    /// macOS kalibriert gerade den Akku und ignoriert dafür das Ladelimit.
+    public var appleCalibrationActive: Bool? = nil
+    /// Aktive IT-Vorgaben; nil ohne Konfigurationsprofil.
+    public var managedPolicy: BGManagedPolicy? = nil
     public var hasBatteryPercent: Bool { percentAvailable != false }
     public var hasExternalPower: Bool { externalPowerAvailable != false }
     public var pluggedIn: Bool = false

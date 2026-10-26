@@ -1,0 +1,16 @@
+R2 Netzteil-Schalter (CHIE) bei aktivem macOS-Limit — 23. Oktober 2026
+MacBookPro18,3, Firmware 20457.1.29, macOS 27.0, 67W USB-C, Ladestand 80 %.
+Dienst während der Messung per launchctl bootout angehalten, danach neu gestartet.
+Werte aus AppleSmartBattery (InstantAmperage, PowerTelemetryData.SystemPowerIn), alle 3 s.
+
+macOS-Limit 80 %:
+  normal          ext=1 amps=-1238 in=185 mW   (kurz nach Setzen des Limits)
+  CHIE=08 3–18 s  ext=0 amps=0     in=18264 mW
+  CHIE=00         ext=1 amps=-949  in=179 mW
+macOS-Limit 100 %:
+  CHIE=08 3–18 s  ext=0 amps=-460  in=20655 mW (Stromwert verzögert)
+  CHIE=00         ext=1 amps=-977  in=179 mW
+Dauerbetrieb danach (Dienst läuft, Limit 80 %, 60 s): ext=1 amps=0 in=13–29 W.
+
+Ergebnis: CHIE=08 hält das Laden an, das Netzteil versorgt weiter; kein Akkubetrieb. ExternalConnected meldet dabei 0.
+Offen: längere Haltedauer, Verhalten unter 80 %, Schlaf und Clamshell.

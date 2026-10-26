@@ -7,7 +7,8 @@ struct SpecialChargeActionsView: View {
     @State private var duration = 480
     @State private var error: String?
     private var canTopUp: Bool {
-        statusStore.supportsChargingPlans && statusStore.status.hasBatteryPercent && statusStore.status.hasExternalPower && statusStore.status.hasChargeInhibit
+        statusStore.supportsChargingPlans && statusStore.status.hasBatteryPercent && statusStore.status.hasExternalPower && (statusStore.status.hasChargeInhibit
+            || (configStore.config.mode == .systemLimit && (statusStore.status.systemChargeLimits ?? []).contains(100)))
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -31,8 +32,13 @@ struct SpecialChargeActionsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            Text("Einmalentladung und „Laden hier halten“ sind vorbereitet, bleiben aber bis zur physischen Hardware-Abnahme gesperrt.")
-                .font(.caption).foregroundStyle(.secondary)
+            if configStore.config.mode == .systemLimit, configStore.config.specialChargePlan == nil,
+               let steps = statusStore.status.systemChargeLimits, statusStore.supportsChargingPlans {
+                SystemLimitDischargeView(steps: steps, percent: statusStore.status.percent, perform: perform)
+            } else {
+                Text("Einmalentladung und „Laden hier halten“ sind vorbereitet, bleiben aber bis zur physischen Hardware-Abnahme gesperrt.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let error { Text(error).font(.caption).foregroundStyle(.orange) }
         }
     }

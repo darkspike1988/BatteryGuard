@@ -26,10 +26,22 @@ struct PreferencesView: View {
     @AppStorage("bg.notifyCalibration") private var notifyCalibration = true
     @AppStorage("bg.notifyWeekly") private var notifyWeekly = false
     @AppStorage("bg.notifyHealth") private var notifyHealth = true
+    @AppStorage("bg.notifyAnomalies") private var notifyAnomalies = true
     @AppStorage(SleepReportStore.notifyKey) private var notifySleepDrain = true
     @AppStorage("bg.healthThreshold") private var healthThreshold = 80
     @AppStorage(MenuBarIconStyle.appStorageKey) private var menuBarIconStyle: MenuBarIconStyle = .ring
     @AppStorage("bg.menuBarDisplay") private var menuBarDisplay: MenuBarDisplayMode = .percent
+    @AppStorage(MenuBarExtraItem.appStorageKey) private var menuBarExtras = ""
+    @AppStorage("bg.menuBarDisplayOnBattery") private var menuBarDisplayOnBattery = ""
+    @AppStorage("bg.showMenuBarIcon") private var showMenuBarIcon = true
+    @AppStorage(AppearancePreference.appStorageKey) private var appearance: AppearancePreference = .system
+    @AppStorage(AccentPreference.appStorageKey) private var accent: AccentPreference = .system
+    @AppStorage("bg.runtimeWindow") private var runtimeWindow = 15
+    @AppStorage(HistoryKeyStore.preferenceKey) private var encryptHistory = false
+    @AppStorage(LidLockGuard.appStorageKey) private var lockScreenWhenLidClosed = false
+    @State private var chimeMuted = PowerChimeSetting.isMuted
+    @AppStorage(GlobalHotKeys.appStorageKey) private var globalHotKeys = false
+    @AppStorage(AppDelegate.trustURLCommandsKey) private var trustURLCommands = false
 
     @AppStorage("bg.menuShowTemperature") private var menuShowTemperature = false
     @AppStorage("bg.menuShowPower") private var menuShowPower = false
@@ -56,20 +68,41 @@ struct PreferencesView: View {
         } catch { diagnosticsError = error.localizedDescription }
     }
 
-    private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct }
+    private var isManagedLocked: Bool { statusStore.status.managedPolicy?.lockSettings == true }
+    private var canConfigure: Bool { configStore.config.mode != .native && configStore.config.mode != .direct && !isManagedLocked }
+    private var powerModeRulesOverlap: Bool {
+        let low = configStore.config.lowPowerModeRule, high = configStore.config.highPowerModeRule
+        return (low.appliesOnBattery && high.appliesOnBattery) || (low.appliesOnAdapter && high.appliesOnAdapter)
+    }
 
     var body: some View {
         Form {
+            if let policy = statusStore.status.managedPolicy {
+                Section { ManagedPolicyBanner(policy: policy) }
+            }
             Section {
                 Picker("Ladesteuerung", selection: $configStore.config.mode) {
                     Text("Automatisch").tag(BGMode.auto)
                     Text("macOS · nur beobachten").tag(BGMode.native)
+                    if !(statusStore.status.systemChargeLimits ?? []).isEmpty || configStore.config.mode == .systemLimit {
+                        Text("macOS-Limit · natives Ladelimit setzen").tag(BGMode.systemLimit)
+                    }
                     if configStore.config.mode == .direct { Text("Direkt · nicht verfügbar").tag(BGMode.direct) }
                 }
                 if let limit = statusStore.status.nativeChargeLimit, statusStore.isDaemonActive {
                     LabeledContent("Erkanntes macOS-Limit", value: "\(limit) %")
                 }
                 Text(configStore.config.mode.localizedDescription).font(.caption).foregroundStyle(.secondary)
+                if configStore.config.mode == .auto, !(statusStore.status.systemChargeLimits ?? []).isEmpty,
+                   !statusStore.status.smcKeysDetected.contains(where: { ["CHTE", "CH0B", "CH0C"].contains($0) }) {
+                    Text("Dieser Mac hat keine separate SMC-Ladesperre. „macOS-Limit“ hält dein Profil auch bei externem Monitor und geschlossenem Deckel ein, allerdings nur in den Stufen 80–100 %.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                if configStore.config.mode == .systemLimit {
+                    Toggle("Ziele unter 80 % als macOS-Limit setzen (experimentell)", isOn: $configStore.config.allowLimitsBelowSystemMinimum)
+                    Text("Setzt zum Beispiel 60 % direkt als macOS-Limit. Die Firmware hält den Wert wie jede Stufe, auch im Schlaf und ohne laufende App; das Netzteil bleibt verbunden. Liegt der Akku darüber, entlädt macOS am Netzteil bis zum Ziel. Hitze- und Kälteschutz halten dann den aktuellen Ladestand. Der Weg ist nicht von Apple dokumentiert; Hardware-Abnahme steht aus.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if configStore.config.mode == .native {
                     Button("macOS-Batterieeinstellungen öffnen") {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.battery")!)
@@ -84,6 +117,7 @@ struct PreferencesView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             } header: { Text("Ladebereich") }
+            .disabled(isManagedLocked)
 
             Section {
                 Toggle("Bei Wärme das Laden pausieren", isOn: Binding(
@@ -97,8 +131,18 @@ struct PreferencesView: View {
                 Toggle("Oberhalb des Limits aktiv entladen", isOn: $configStore.config.activeDischargeAboveUpper)
                 Text("Aktives Entladen trennt das Netzteil softwareseitig, bis das Limit erreicht ist. Hitzeschutz bleibt beim Vollladen aktiv, während einer Schutzpause jedoch ausgesetzt.")
                     .font(.caption).foregroundStyle(.secondary)
-                Toggle("MagSafe-Farbe dem Ladezustand anpassen", isOn: $configStore.config.magsafeLed)
-                    .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
+                Picker("MagSafe-LED", selection: $configStore.config.magsafeLedMode) {
+                    Text("macOS steuert").tag(BGMagSafeLEDMode.system)
+                    Text("Ladezustand anzeigen").tag(BGMagSafeLEDMode.indicate)
+                    Text("Aus").tag(BGMagSafeLEDMode.off)
+                }
+                .help("Funktioniert nur, wenn die Hardware den LED-Schlüssel unterstützt.")
+                Stepper(configStore.config.coldProtectionCelsius == 0 ? L("Kälteschutz: aus")
+                        : L("Kälteschutz: Laden unter %lld °C sperren", configStore.config.coldProtectionCelsius),
+                        value: $configStore.config.coldProtectionCelsius, in: 0...15)
+                Toggle("Laden im Schlaf angehalten lassen", isOn: $configStore.config.stopChargingWhenSleeping)
+                Text("Standardmäßig gibt B-Guard das Laden vor dem Schlaf frei. Mit dieser Option bleibt eine SMC-Ladesperre aktiv; im Modus „macOS-Limit“ wird das Limit auf die nächste Stufe über dem aktuellen Ladestand gesetzt. Vollladen, Reise und Top Up haben Vorrang. Hardware-Abnahme steht aus.")
+                    .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Schutz") }
                 .disabled(!canConfigure)
 
@@ -114,13 +158,58 @@ struct PreferencesView: View {
                     Text("Ändert nur die Ladegrenzen, solange ein externer Monitor verbunden ist. Pause, Reise- und Sonderpläne bleiben vorrangig; dein gespeichertes Profil wird nicht überschrieben.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Toggle("Low Power Mode auf Akkubetrieb automatisch aktivieren", isOn: $configStore.config.lowPowerModeOnBattery)
-                Text("Nutzt die öffentliche macOS-Einstellung über pmset: an bei Akkubetrieb, aus am Netzteil. B-Guard schreibt dafür keine privaten SMC-Schlüssel.")
+                Picker("Low Power Mode", selection: $configStore.config.lowPowerModeRule) {
+                    ForEach(BGPowerModeRule.allCases) { Text($0.localizedTitle).tag($0) }
+                }
+                if statusStore.status.highPowerModeSupported == true {
+                    Picker("High Power Mode", selection: $configStore.config.highPowerModeRule) {
+                        ForEach(BGPowerModeRule.allCases) { Text($0.localizedTitle).tag($0) }
+                    }
+                    if powerModeRulesOverlap {
+                        Text("Gelten beide Modi für dieselbe Stromquelle, hat Low Power Mode Vorrang.")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
+                Text("Nutzt die öffentliche macOS-Einstellung über pmset getrennt für Akku und Netzteil; macOS wechselt dann selbst. Die jeweils andere Stromquelle steht auf Automatisch. B-Guard schreibt dafür keine privaten SMC-Schlüssel.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Beim Wachhalten bis zum Limit auch zugeklappt nicht schlafen", isOn: $configStore.config.keepAwakeWhenLidClosed)
+                Text("Nur am Netzteil. Wird das Netzteil bei geschlossenem Deckel getrennt, schläft der Mac sofort. Die Sperre endet mit dem Wachhalten, spätestens nach zwei Stunden.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("Bildschirm sperren, wenn der Deckel beim Wachhalten geschlossen wird", isOn: $lockScreenWhenLidClosed)
+                Text("Gilt nur, während „Bis zum Ladelimit wachhalten“ aktiv ist und die App läuft. Sonst schläft der Mac beim Zuklappen und macOS sperrt selbst.")
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Systemschlaf beim aktiven Entladen bis zu 30 Minuten verhindern", isOn: $configStore.config.preventSleepWhileDischarging)
                 Text("Gilt nur, solange B-Guard den Adapter selbst getrennt hat. Bewusster Schlaf und Deckelschließen bleiben möglich; die Sperre endet spätestens nach 30 Minuten.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Automatik") }
+
+            Section {
+                Toggle("Globale Tastenkürzel", isOn: $globalHotKeys)
+                    .onChange(of: globalHotKeys) { _, enabled in GlobalHotKeys.shared.update(enabled: enabled) }
+                ForEach(GlobalHotKeys.Command.allCases, id: \.rawValue) { command in
+                    Text(command.title).font(.caption).foregroundStyle(.secondary)
+                }
+                Text("Befehle für Skripte und andere Apps: bguard://profile/desk, bguard://limit/60, bguard://pause?minutes=60, bguard://resume, bguard://top-up, bguard://led/off. Im Terminal: B-Guard.app/Contents/MacOS/BatteryGuard --run \"bguard://limit/60\".")
+                    .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                Toggle("bguard://-Befehle ohne Rückfrage ausführen", isOn: $trustURLCommands)
+                Text("Standardmäßig fragt B-Guard nach, bevor eine App oder Webseite einen Befehl ausführt. Nur einschalten, wenn du Kurzbefehle oder Skripte ohne Rückfrage nutzen willst.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Tastenkürzel und Befehle") }
+
+            Section {
+                NetworkRulesView()
+            } header: { Text("Regeln nach WLAN") }
+
+            Section {
+                Toggle("Minutenverlauf verschlüsselt speichern", isOn: $encryptHistory)
+                Text("AES-256-GCM; der Schlüssel liegt nur im Schlüsselbund dieses Macs. Die nächste Messung wird verschlüsselt gespeichert, beim Ausschalten wieder im Klartext. Ohne Schlüssel (z. B. nach Löschen im Schlüsselbund) bleibt die Datei unlesbar, wird aber nicht gelöscht.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: { Text("Datenschutz") }
+
+            Section {
+                SettingsBackupView(configStore: configStore)
+            } header: { Text("Sicherung") }
+            .disabled(isManagedLocked)
 
             Section {
                 SavedProfilesView(configStore: configStore)
@@ -164,6 +253,12 @@ struct PreferencesView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle("Beim Erreichen des Ladelimits", isOn: $notifyLimit)
                 Toggle("Bei hoher Akkutemperatur", isOn: $notifyHeat)
+                Toggle("Ladeton beim Anstecken stumm", isOn: $chimeMuted)
+                    .onChange(of: chimeMuted) { _, muted in
+                        // killall wartet auf den Prozess; nicht auf dem Hauptthread blockieren.
+                        Task.detached(priority: .utility) { PowerChimeSetting.setMuted(muted) }
+                    }
+                Toggle("Bei Auffälligkeiten (über Limit geladen, Apple-Kalibrierung, Netzteil ohne Strom)", isOn: $notifyAnomalies)
                 Toggle("Wartungshinweis bei niedriger Akkukapazität", isOn: $notifyHealth)
                     .help("Meldet höchstens alle 30 Tage, wenn die geschätzte Kapazität unter die Grenze fällt. Das ist kein Hardwaretest.")
                 if notifyHealth {
@@ -221,8 +316,40 @@ struct PreferencesView: View {
                         Text(mode.localizedTitle).tag(mode)
                     }
                 }
+                Picker("Anzeige auf Akku", selection: $menuBarDisplayOnBattery) {
+                    Text("Wie am Netzteil").tag("")
+                    ForEach(MenuBarDisplayMode.allCases) { mode in Text(mode.localizedTitle).tag(mode.rawValue) }
+                }
                 Text("Wähle das Menüleistensymbol und die Zusatzanzeige. Akku-Leistung ist Lade-/Entladefluss, nicht gesamte Mac-Leistung.")
                     .font(.caption).foregroundStyle(.secondary)
+                Toggle("Menüleistensymbol anzeigen", isOn: $showMenuBarIcon)
+                    .disabled(showMenuBarIcon && !AppPresence.shared.showInDock)
+                Text(AppPresence.shared.showInDock
+                     ? "Ohne Symbol erreichst du B-Guard über das Dock. Erneutes Öffnen aus Programme blendet es wieder ein."
+                     : "Zum Ausblenden zuerst das Dock-Symbol einschalten, damit B-Guard erreichbar bleibt.")
+                    .font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Weitere Werte in der Menüleiste").font(.subheadline.weight(.medium))
+                    ForEach(MenuBarExtraItem.allCases) { MenuBarExtraToggle(item: $0) }
+                    Text("Werte erscheinen nur, wenn sie aktuell gemeldet werden. Die SoC-Leistung misst der Dienst etwa alle 30 Sekunden.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Menu("Stil für das Menüfenster") {
+                    ForEach(MenuWindowStyle.allCases) { style in
+                        Button(style.title) { style.apply() }
+                    }
+                }
+                .fixedSize()
+                Picker("Darstellung", selection: $appearance) {
+                    ForEach(AppearancePreference.allCases) { Text($0.title).tag($0) }
+                }
+                .onChange(of: appearance) { _, value in value.apply() }
+                Picker("Akzentfarbe", selection: $accent) {
+                    ForEach(AccentPreference.allCases) { Text($0.title).tag($0) }
+                }
+                Picker("Restlaufzeit in der Übersicht", selection: $runtimeWindow) {
+                    ForEach(BGRuntimeEstimate.windows, id: \.self) { Text(L("Durchschnitt der letzten %lld Minuten", $0)).tag($0) }
+                }
                 Toggle("Temperatur im Menüfenster", isOn: $menuShowTemperature)
                 Toggle("Akku-Leistung im Menüfenster", isOn: $menuShowPower)
                 Toggle("Akkugesundheit im Menüfenster", isOn: $menuShowHealth)
@@ -264,6 +391,11 @@ struct PreferencesView: View {
                     // AppStorage bindings respect an injected preview store.
                     menuBarIconStyle = .ring
                     menuBarDisplay = .percent
+                    menuBarExtras = ""
+                    menuBarDisplayOnBattery = ""
+                    showMenuBarIcon = true
+                    appearance = .system
+                    accent = .system
                     menuShowTemperature = false
                     menuShowPower = false
                     menuShowHealth = false
