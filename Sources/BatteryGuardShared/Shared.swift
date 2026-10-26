@@ -35,6 +35,9 @@ public enum BGMode: String, Codable, CaseIterable, Sendable {
 
 /// Abbildung eines B-Guard-Ziels auf die von macOS angebotenen Ladelimits.
 public enum BGSystemChargeLimit {
+    /// Untergrenze für Werte, die B-Guard direkt in die Einstellungen von PowerUIAgent schreibt.
+    public static let directMinimum = 20
+
     /// Kleinster erlaubter Wert, der das Ziel nicht unterschreitet; sonst der größte erlaubte Wert.
     public static func target(for percent: Int, available: [Int]) -> Int? {
         let sorted = available.filter { (1...100).contains($0) }.sorted()
@@ -77,7 +80,7 @@ public struct BGConfig: Codable, Equatable, Sendable {
     public var magsafeLedOff: Bool = false
     /// Vor dem Systemschlaf Laden anhalten statt freigeben (opt-in).
     public var stopChargingWhenSleeping: Bool = false
-    /// macOS-Limit-Modus: Ziele unter der kleinsten macOS-Stufe über den Netzteil-Schalter halten (opt-in).
+    /// macOS-Limit-Modus: Werte unter der kleinsten macOS-Stufe direkt als macOS-Limit setzen (opt-in, experimentell).
     public var allowLimitsBelowSystemMinimum: Bool = false
     /// Laden unterhalb dieser Akkutemperatur sperren (0 = aus, sonst 1–15 °C).
     public var coldProtectionCelsius: Int = 0

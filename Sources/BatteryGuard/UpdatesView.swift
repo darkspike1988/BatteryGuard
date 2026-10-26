@@ -12,6 +12,8 @@ struct ChangeEntry: Identifiable {
             "Akkustände verbundener Bluetooth-Geräte in der Diagnose.",
             "Vorgaben und Sperre per Konfigurationsprofil für die IT; Einstellungen sichern und wiederherstellen.",
             "Minutenverlauf optional verschlüsselt (AES-256-GCM, Schlüssel im Schlüsselbund).",
+            "Ziele unter 80 % setzt B-Guard jetzt direkt als macOS-Limit statt über den Netzteil-Schalter; der Pendelmodus und die eigene Kalibrierung sind entfernt.",
+            "Neu aus dem Hauptzweig: „Warum lädt mein Mac so?“, Schlafbericht, Ladeketten-Check, Austauschprognose mit AppleCare-Erinnerung.",
             "Hintergrunddienst 0.9.0 erforderlich."
         ]),
         .init(version: "0.8.0", title: "Automatisch und persönlich", changes: [

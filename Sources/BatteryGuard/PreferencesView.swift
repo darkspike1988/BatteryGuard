@@ -99,8 +99,8 @@ struct PreferencesView: View {
                         .font(.caption).foregroundStyle(.orange)
                 }
                 if configStore.config.mode == .systemLimit {
-                    Toggle("Ziele unter der kleinsten macOS-Stufe über den Netzteil-Schalter halten", isOn: $configStore.config.allowLimitsBelowSystemMinimum)
-                    Text("Hält zum Beispiel 60 % mit dem Netzteil-Schalter; das macOS-Limit bleibt als Sicherheitsnetz auf der kleinsten Stufe. Während des Haltens meldet macOS „kein Netzteil“, obwohl es den Mac versorgt; Energieeinstellungen für Akkubetrieb können dann gelten. Bei externem Monitor oder geschlossenem Deckel gilt nur das macOS-Limit. Hardware-Abnahme steht aus.")
+                    Toggle("Ziele unter 80 % als macOS-Limit setzen (experimentell)", isOn: $configStore.config.allowLimitsBelowSystemMinimum)
+                    Text("Setzt zum Beispiel 60 % direkt als macOS-Limit. Die Firmware hält den Wert wie jede Stufe, auch im Schlaf und ohne laufende App; das Netzteil bleibt verbunden. Liegt der Akku darüber, entlädt macOS am Netzteil bis zum Ziel. Hitze- und Kälteschutz halten dann den aktuellen Ladestand. Der Weg ist nicht von Apple dokumentiert; Hardware-Abnahme steht aus.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if configStore.config.mode == .native {

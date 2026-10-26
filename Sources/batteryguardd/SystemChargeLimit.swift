@@ -61,6 +61,46 @@ final class SystemChargeLimitClient {
         var error: NSError?
         return fn(client, sel, UInt8(limit), &error) && error == nil
     }
+
+    private typealias EnabledFn = @convention(c) (AnyObject, Selector, AutoreleasingUnsafeMutablePointer<NSError?>?) -> UInt64
+    private typealias EnableFn = @convention(c) (AnyObject, Selector, AutoreleasingUnsafeMutablePointer<NSError?>?) -> Bool
+
+    private func isEnabled() -> Bool {
+        let sel = NSSelectorFromString("isMCLCurrentlyEnabled:")
+        guard let fn: EnabledFn = Self.implementation(of: client, sel) else { return false }
+        var error: NSError?
+        return fn(client, sel, &error) != 0 && error == nil
+    }
+
+    /// `setMCLLimit:` prüft den Bereich 80–100 %. Für Werte darunter schreibt B-Guard den Wert in die
+    /// Einstellungen von PowerUIAgent (`com.apple.smartcharging.topoffprotection`, root) und lässt sie
+    /// über `com.apple.smartcharging.defaultschanged` neu laden; dabei prüft der Agent den Bereich nicht.
+    /// Dieselbe Technik nutzen BatLimit und Battery Toolkit für macOS 27. Nicht von Apple dokumentiert.
+    func setLimitDirect(_ limit: Int) -> Bool {
+        guard (BGSystemChargeLimit.directMinimum...100).contains(limit) else { return false }
+        let domain = "com.apple.smartcharging.topoffprotection" as CFString
+        if !isEnabled() {
+            let sel = NSSelectorFromString("enableMCL:")
+            if let fn: EnableFn = Self.implementation(of: client, sel) {
+                var error: NSError?
+                _ = fn(client, sel, &error)
+            }
+            if !isEnabled() { CFPreferencesSetAppValue("MCLFeatureState" as CFString, 1 as CFNumber, domain) }
+        }
+        // „Jetzt vollständig laden“ aus dem Batteriemenü setzt das Limit sonst aus.
+        CFPreferencesSetAppValue("MCLTempDisabledUntilDate" as CFString, nil, domain)
+        CFPreferencesSetAppValue("mclLimitValue" as CFString, limit as CFNumber, domain)
+        guard CFPreferencesAppSynchronize(domain) else { return false }
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
+                                             CFNotificationName("com.apple.smartcharging.defaultschanged" as CFString),
+                                             nil, nil, true)
+        // Der Agent lädt asynchron neu.
+        for _ in 0..<20 {
+            if currentLimit() == limit { return true }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        return false
+    }
 }
 
 /// Setzt das native Limit nur bei Abweichung und prüft es danach zurück.
@@ -69,12 +109,15 @@ final class SystemChargeLimitController {
         var availableLimits: () -> [Int]?
         var currentLimit: () -> Int?
         var setLimit: (Int) -> Bool
+        /// Werte außerhalb der angebotenen Stufen (unter 80 %).
+        var setLimitDirect: (Int) -> Bool = { _ in false }
 
         static var system: Driver {
             let client = SystemChargeLimitClient()
             return Driver(availableLimits: { client?.availableLimits() },
                           currentLimit: { client?.currentLimit() },
-                          setLimit: { client?.setLimit($0) ?? false })
+                          setLimit: { client?.setLimit($0) ?? false },
+                          setLimitDirect: { client?.setLimitDirect($0) ?? false })
         }
     }
 
@@ -98,7 +141,8 @@ final class SystemChargeLimitController {
     /// Stellt Apples ursprüngliches Limit wieder her, falls B-Guard es geändert hat. Gibt true zurück, wenn nichts mehr offen ist.
     @discardableResult
     func restoreOriginal(dryRun: Bool, logger: ((String) -> Void)?) -> Bool {
-        guard let original = originalLimit else { return true }
+        // Das Original stammt aus den Systemeinstellungen (80–100 %); `setMCLLimit:` lehnt Werte darunter ab.
+        guard let original = originalLimit.map({ min(max($0, BGNativeLimitAdvice.nativeMinimum), 100) }) else { return true }
         if dryRun { logger?("[DRY-RUN] macOS-Limit würde auf \(original) % zurückgesetzt"); return true }
         let restored = driver.currentLimit() == original || (driver.setLimit(original) && driver.currentLimit() == original)
         if restored { try? FileManager.default.removeItem(atPath: ownershipPath) }
@@ -118,8 +162,10 @@ final class SystemChargeLimitController {
     func currentLimit() -> Int? { driver.currentLimit() }
 
     /// Returns false when macOS rejected or did not confirm the requested limit.
-    func apply(_ limit: Int, dryRun: Bool, logger: ((String) -> Void)?) -> Bool {
-        guard availableLimits().contains(limit) else {
+    /// `allowDirect` erlaubt Werte, die macOS nicht als Stufe anbietet (opt-in für Ziele unter 80 %).
+    func apply(_ limit: Int, allowDirect: Bool = false, dryRun: Bool, logger: ((String) -> Void)?) -> Bool {
+        let offered = availableLimits().contains(limit)
+        guard offered || (allowDirect && (BGSystemChargeLimit.directMinimum...100).contains(limit)) else {
             logger?("macOS-Limit \(limit) % wird von macOS nicht angeboten.")
             return false
         }
@@ -132,8 +178,9 @@ final class SystemChargeLimitController {
             logger?("[DRY-RUN] macOS-Limit würde auf \(limit) % gesetzt")
             return true
         }
-        let success = driver.setLimit(limit) && driver.currentLimit() == limit
-        logger?("macOS-Limit: setMCLLimit(\(limit)) => \(success ? "ok" : "failed")")
+        let success = offered ? driver.setLimit(limit) && driver.currentLimit() == limit
+                              : driver.setLimitDirect(limit) && driver.currentLimit() == limit
+        logger?("macOS-Limit: \(offered ? "setMCLLimit" : "mclLimitValue")(\(limit)) => \(success ? "ok" : "failed")")
         return success
     }
 }

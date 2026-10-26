@@ -31,42 +31,64 @@ struct ChargeControl07Tests {
             systemChargeLimits: steps, now: now)
     }
 
-    @Test func belowMinimumHoldsWithAdapterSwitchAndKeepsSafetyNet() {
+    @Test func belowMinimumSetsTheMacOSLimitDirectlyWithoutTheAdapterSwitch() {
         let charging = evaluate(system(upper: 60), battery(50))
-        #expect(charging.state == .charging && charging.adapterConnected && charging.systemChargeLimit == 80)
+        #expect(charging.state == .charging && charging.adapterConnected && charging.systemChargeLimit == 60)
         let hold = evaluate(system(upper: 60), battery(60), previous: charging)
-        #expect(hold.state == .holding && !hold.adapterConnected && hold.systemChargeLimit == 80)
-        // Gehaltenes Netzteil meldet „nicht angesteckt“: weiter halten statt Akkubetrieb.
-        let stillHolding = evaluate(system(upper: 60), battery(58, plugged: false), previous: hold)
-        #expect(stillHolding.state == .holding && !stillHolding.adapterConnected)
-        let resumed = evaluate(system(upper: 60), battery(54, plugged: false), previous: stillHolding)
-        #expect(resumed.state == .charging && resumed.adapterConnected)
+        #expect(hold.state == .holding && hold.adapterConnected && hold.systemChargeLimit == 60)
+        // Über dem Ziel entlädt die Firmware am Netzteil; B-Guard trennt das Netzteil nie.
+        let above = evaluate(system(upper: 60), battery(75))
+        #expect(above.adapterConnected && above.systemChargeLimit == 60)
+        #expect(evaluate(system(upper: 20, lower: 10), battery(30)).systemChargeLimit == BGSystemChargeLimit.directMinimum)
     }
 
-    @Test func belowMinimumNeedsOptInAndNoDesktopConflict() {
+    @Test func belowMinimumNeedsOptInAndIgnoresDesktopState() {
         let withoutOptIn = evaluate(system(upper: 60, below: false), battery(70))
         #expect(withoutOptIn.adapterConnected && withoutOptIn.systemChargeLimit == 80 && withoutOptIn.state == .charging)
+        // Ohne Netzteil-Schalter gibt es keinen Monitor-/Deckelkonflikt mehr.
         let monitor = evaluate(system(upper: 60), battery(70), allowsDisconnect: false)
-        #expect(monitor.adapterConnected && monitor.systemChargeLimit == 80)
+        #expect(monitor.adapterConnected && monitor.systemChargeLimit == 60)
         let aboveMinimum = evaluate(system(upper: 90), battery(90))
         #expect(aboveMinimum.adapterConnected && aboveMinimum.systemChargeLimit == 90)
     }
 
-    @Test func heatAndColdHoldWithTheSwitchForSafetyAndKeepTheReserve() {
+    @Test func heatAndColdHoldTheCurrentLevelThroughTheMacOSLimit() {
+        var config = system(upper: 90)
+        config.heatProtectionCelsius = 40
+        let hot = evaluate(config, battery(70, temperature: 45))
+        #expect(hot.heatProtectionActive && hot.adapterConnected && !hot.chargingEnabled && hot.systemChargeLimit == 70)
+        // Der gehaltene Wert bleibt stehen, solange es heiß ist.
+        #expect(evaluate(config, battery(71, temperature: 45), previous: hot).systemChargeLimit == 70)
+        #expect(evaluate(config, battery(65, temperature: 45), previous: hot).systemChargeLimit == 65)
+        config.heatProtectionCelsius = 0
+        config.coldProtectionCelsius = 5
+        let cold = evaluate(config, battery(70, temperature: 2))
+        #expect(cold.coldProtectionActive && cold.adapterConnected && cold.systemChargeLimit == 70)
+    }
+
+    @Test func withoutDirectValuesHeatStillUsesTheSafetyHold() {
         var config = system(upper: 90, below: false)
         config.heatProtectionCelsius = 40
         let hot = evaluate(config, battery(70, temperature: 45))
         #expect(hot.heatProtectionActive && !hot.adapterConnected && !hot.chargingEnabled && hot.systemChargeLimit == 80)
-        // Ohne Schalter (Monitor/Deckel) sinkt nur das Limit, die Meldung sagt das ehrlich.
         let docked = evaluate(config, battery(70, temperature: 45), allowsDisconnect: false)
         #expect(docked.adapterConnected && docked.message?.contains("darunter lädt macOS weiter") == true)
-        // An der Reserve bleibt das Netzteil verbunden, auch bei anhaltender Hitze.
-        let reserve = evaluate(config, battery(ControllerLogic.temperatureReservePercent, plugged: false, temperature: 45), previous: hot)
-        #expect(reserve.heatProtectionActive && reserve.adapterConnected)
-        #expect(evaluate(config, battery(25, temperature: 45), previous: reserve).adapterConnected)
-        config.coldProtectionCelsius = 5
-        let cold = evaluate(config, battery(70, temperature: 2))
-        #expect(cold.coldProtectionActive && !cold.adapterConnected && cold.systemChargeLimit == 80)
+    }
+
+    @Test func directValuesOnlyWithOptIn() {
+        final class Fake: @unchecked Sendable { var current = 80; var direct: [Int] = [] }
+        let fake = Fake()
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("bg-mcl-\(UUID().uuidString).json").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let controller = SystemChargeLimitController(driver: .init(
+            availableLimits: { [80, 85, 90, 95, 100] }, currentLimit: { fake.current },
+            setLimit: { fake.current = $0; return true },
+            setLimitDirect: { fake.direct.append($0); fake.current = $0; return true }), ownershipPath: path)
+        #expect(!controller.apply(60, dryRun: false, logger: nil))
+        #expect(controller.apply(60, allowDirect: true, dryRun: false, logger: nil) && fake.direct == [60])
+        #expect(controller.apply(85, allowDirect: true, dryRun: false, logger: nil) && fake.direct == [60])
+        #expect(!controller.apply(10, allowDirect: true, dryRun: false, logger: nil))
+        #expect(controller.restoreOriginal(dryRun: false, logger: nil) && fake.current == 80)
     }
 
     @Test func topUpRespectsHeatProtectionInSystemLimitMode() {
@@ -81,7 +103,7 @@ struct ChargeControl07Tests {
 
     @Test func holdingBelowMinimumReportsTheRealTarget() {
         let hold = evaluate(system(upper: 60), battery(60))
-        #expect(hold.effectiveTargetPercent == 60 && hold.systemChargeLimit == 80)
+        #expect(hold.effectiveTargetPercent == 60 && hold.systemChargeLimit == 60)
     }
 
     @Test func originalSystemLimitIsRestoredWhenLeavingTheMode() {

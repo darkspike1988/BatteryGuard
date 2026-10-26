@@ -881,7 +881,6 @@
 "Die geschätzte Akkukapazität liegt bei %lld %% (Grenze %lld %%). Ein Akkutausch oder eine Wartung kann sinnvoll sein. Das ist keine Hardwarediagnose." = "Расчётная ёмкость аккумулятора составляет %lld %% (порог %lld %%). Может потребоваться замена аккумулятора или обслуживание. Это не диагностика оборудования.";
 "Die geschätzte Kapazität stammt aus Design- und Maximalkapazität. Ein Wert unter der Grenze kann auf einen notwendigen Akkutausch oder eine Wartung hindeuten, ist aber keine Diagnose. Unternehmen können den Wert zusätzlich über die lokale API auslesen." = "Расчётная ёмкость основана на проектной и максимальной ёмкости. Значение ниже порога может указывать на необходимость замены аккумулятора или обслуживания, но не является диагнозом. Организации могут дополнительно считывать значение через локальный API.";
 "Wartungshinweis bei niedriger Akkukapazität" = "Уведомление об обслуживании при низкой ёмкости аккумулятора";
-
 /* 0.6.0 Energiemodus, Netzteil und Energiewirkung */
 "Nicht steuern" = "Не управлять";
 "Immer" = "Всегда";
@@ -911,7 +910,6 @@
 "High Power Mode erscheint nur auf Macs, die ihn anbieten; bei Überschneidung hat Low Power Mode Vorrang." = "Режим высокой мощности показывается только на Mac, которые его поддерживают; при пересечении приоритет у режима энергосбережения.";
 "Diagnose zeigt Netzteil-Angaben und Prozesse mit hoher Energiewirkung, rein lesend und ohne Export von Seriennummer oder Prozessnamen." = "Диагностика показывает данные адаптера питания и процессы с высоким энергопотреблением — только чтение, без экспорта серийного номера и имён процессов.";
 "Hintergrunddienst 0.6.0 erforderlich. Eine bisherige Low-Power-Automatik wird übernommen." = "Требуется фоновая служба 0.6.0. Прежняя автоматика энергосбережения сохраняется.";
-
 /* 0.6.0 macOS-Limit-Modus */
 "macOS-Limit von %lld %% gehalten" = "Лимит macOS %lld %% удерживается";
 "Laden aktiv bis %lld %% (macOS-Limit)" = "Зарядка до %lld %% (лимит macOS)";
@@ -929,7 +927,6 @@
 "macOS-Ladelimit über B-Guard" = "Лимит зарядки macOS через B-Guard";
 "macOS-Limit %lld %%" = "Лимит macOS %lld %%";
 "B-Guard setzt Apples natives Ladelimit; macOS setzt es selbst durch, auch wenn die App geschlossen ist." = "B-Guard задаёт встроенный лимит Apple; macOS соблюдает его сама, даже когда приложение закрыто.";
-
 /* 0.6.0 Energie-Apps und SoC-Leistung */
 "Anzeigen ab" = "Показывать от";
 "Geringe Wirkung (ab 1)" = "Низкое (от 1)";
@@ -945,7 +942,6 @@
 "Display, USB, RAM u. a. (abgeleitet)" = "Дисплей, USB, ОЗУ и др. (расчёт)";
 "Display und USB meldet dieser Mac nicht einzeln." = "Этот Mac не сообщает дисплей и USB отдельно.";
 "Mac-Leistung geschätzt aus Eingang minus Akkufluss. Bei Akkubetrieb gilt Eingang 0 W. Nennleistung ist kein Verbrauch. SoC-Werte misst der Dienst etwa alle 30 Sekunden mit Apples powermetrics; „Übrige Komponenten“ ist die Differenz zur Mac-Leistung." = "Мощность Mac оценивается как вход минус поток аккумулятора. При работе от аккумулятора вход равен 0 Вт. Номинальная мощность — не потребление. Значения SoC служба измеряет примерно каждые 30 секунд с помощью powermetrics от Apple; «Прочие компоненты» — разница с мощностью Mac.";
-
 /* 0.6.0 Menüleiste und Kurzbefehle */
 "Restlaufzeit" = "Оставшееся время";
 "Wirksames Ladeziel" = "Действующая цель зарядки";
@@ -959,7 +955,6 @@
 "Legt fest, wann Low Power Mode und High Power Mode gelten. Leere Parameter bleiben unverändert." = "Определяет, когда действуют режимы энергосбережения и высокой мощности. Пустые параметры не меняются.";
 "Energiemodus" = "Режим энергии";
 "Mindestens ein Energiemodus ist erforderlich." = "Требуется хотя бы один режим энергии.";
-
 /* 0.6.0 Schlaf, LED und Sperre */
 "MagSafe-LED" = "Индикатор MagSafe";
 "macOS steuert" = "Управляет macOS";
@@ -969,7 +964,6 @@
 "Standardmäßig gibt B-Guard das Laden vor dem Schlaf frei. Mit dieser Option bleibt eine SMC-Ladesperre aktiv; im Modus „macOS-Limit“ wird das Limit auf die nächste Stufe über dem aktuellen Ladestand gesetzt. Vollladen, Reise und Top Up haben Vorrang. Hardware-Abnahme steht aus." = "По умолчанию B-Guard разрешает зарядку перед сном. С этой опцией блокировка зарядки SMC остаётся активной; в режиме «Лимит macOS» лимит устанавливается на ближайшую ступень выше текущего заряда. Полная зарядка, поездка и Top Up имеют приоритет. Аппаратная проверка ещё не проведена.";
 "Bildschirm sperren, wenn der Deckel beim Wachhalten geschlossen wird" = "Блокировать экран при закрытии крышки во время удержания без сна";
 "Gilt nur, während „Bis zum Ladelimit wachhalten“ aktiv ist und die App läuft. Sonst schläft der Mac beim Zuklappen und macOS sperrt selbst." = "Действует, только пока активно «Не засыпать до лимита зарядки» и приложение запущено. Иначе Mac засыпает при закрытии, и macOS блокирует экран сама.";
-
 /* 0.6.1 */
 "Fähigkeiten dieses Macs" = "Возможности этого Mac";
 "System-Firmware" = "Системная прошивка";
@@ -1006,7 +1000,6 @@
 "Fähigkeiten mit Firmware-Version in der Diagnose; nach Firmware-Updates meldet B-Guard geänderte Steuerwege." = "Возможности с версией прошивки в диагностике; после обновлений прошивки B-Guard сообщает об изменённых способах управления.";
 "Mitteilungen bei Laden über das Limit und wenn ein Netzteil oder Monitor keinen Strom liefert." = "Уведомления при заряде выше лимита и когда адаптер или монитор не подаёт питание.";
 "Hintergrunddienst 0.6.1 erforderlich." = "Требуется фоновая служба 0.6.1.";
-
 /* 0.7.0 */
 "Mehr Steuerung auf macOS 27" = "Больше управления на macOS 27";
 "macOS-Limit: Ziele unter 80 % optional über den Netzteil-Schalter halten; das macOS-Limit bleibt Sicherheitsnetz." = "Лимит macOS: при желании удерживать цели ниже 80 % переключателем адаптера; лимит macOS остаётся страховкой.";
@@ -1030,7 +1023,6 @@
 "Ladelimit von %lld %% gehalten (Netzteil-Schalter, macOS-Limit %lld %%)" = "Лимит %lld %% удерживается (переключатель адаптера, лимит macOS %lld %%)";
 "Laden aktiv bis %lld %% (Netzteil-Schalter)" = "Зарядка до %lld %% (переключатель адаптера)";
 "Im macOS-Limit-Modus ist Entladen nur auf eine angebotene Stufe unter 100 % möglich." = "В режиме лимита macOS разрядка возможна только до предложенной ступени ниже 100 %.";
-
 /* 0.8.0 */
 "Automatisch und persönlich" = "Автоматически и персонально";
 "Zeitplan-Vorlagen: Montag früh voll, Wochenende voll, Spitzenlastzeit; Aufgabenverlauf löschen." = "Шаблоны расписаний: полная зарядка в понедельник утром, на выходные, часы пик; очистка журнала задач.";
@@ -1114,7 +1106,6 @@
 "Restlaufzeit in der Übersicht" = "Оставшееся время в обзоре";
 "Durchschnitt der letzten %lld Minuten" = "Среднее за последние %lld минут";
 "Dieser Mac nutzt zum Regeln den Netzteil-Schalter. Je nach Firmware hält er den Ladestand oder läuft zwischen Ladelimit und fünf Prozentpunkten darunter vom Akku." = "Этот Mac управляет зарядкой переключателем адаптера. В зависимости от прошивки он удерживает заряд или работает от аккумулятора между лимитом и на пять пунктов ниже.";
-
 /* 0.9.0 */
 "Auswerten und verwalten" = "Анализ и управление";
 "Lebensdauer-Analyse mit Temperaturbereich, Ladebereichen, Lade-/Entladeleistung, Kapazitäts- und Zyklustrend; PDF-Bericht." = "Анализ срока службы: диапазон температур, зоны заряда, мощность заряда/разряда, тренд ёмкости и циклов; отчёт PDF.";
@@ -1170,7 +1161,6 @@
 "AES-256-GCM; der Schlüssel liegt nur im Schlüsselbund dieses Macs. Die nächste Messung wird verschlüsselt gespeichert, beim Ausschalten wieder im Klartext. Ohne Schlüssel (z. B. nach Löschen im Schlüsselbund) bleibt die Datei unlesbar, wird aber nicht gelöscht." = "AES-256-GCM; ключ хранится только в связке ключей этого Mac. Следующее измерение сохраняется зашифрованным, при отключении — снова открытым текстом. Без ключа (например, после удаления из связки ключей) файл остаётся нечитаемым, но не удаляется.";
 "Ungültiger Verlaufsschlüssel." = "Неверный ключ истории.";
 "Verlauf konnte nicht verschlüsselt werden." = "Не удалось зашифровать историю.";
-
 /* Debugging-Runde */
 "Laden über den Netzteil-Schalter angehalten" = "Зарядка приостановлена переключателем адаптера";
 "macOS-Limit %lld %%, darunter lädt macOS weiter" = "Лимит macOS %lld %%, ниже него macOS продолжает заряжать";
@@ -1296,3 +1286,8 @@
 "Apple: Deckungsstatus prüfen" = "Apple: проверить покрытие";
 "AppleCare endet bald" = "AppleCare скоро закончится";
 "Der Schutz endet am %@, und die Akkukapazität liegt nahe an 80 %%. Lass den Akku vorher prüfen." = "Покрытие заканчивается %@, а ёмкость аккумулятора близка к 80 %%. Проверьте аккумулятор заранее.";
+"Setzt zum Beispiel 60 % direkt als macOS-Limit. Die Firmware hält den Wert wie jede Stufe, auch im Schlaf und ohne laufende App; das Netzteil bleibt verbunden. Liegt der Akku darüber, entlädt macOS am Netzteil bis zum Ziel. Hitze- und Kälteschutz halten dann den aktuellen Ladestand. Der Weg ist nicht von Apple dokumentiert; Hardware-Abnahme steht aus." = "Задаёт, например, 60 % напрямую как лимит macOS. Прошивка удерживает значение как любую ступень, также во сне и без запущенного приложения; адаптер остаётся подключённым. Если заряд выше, macOS разряжает аккумулятор при подключённом адаптере до цели. Защита от перегрева и холода тогда удерживает текущий уровень. Способ не задокументирован Apple; аппаратная проверка ещё не проведена.";
+"Ziele unter 80 % als macOS-Limit setzen (experimentell)" = "Задавать цели ниже 80 % как лимит macOS (экспериментально)";
+"Ziele unter 80 % setzt B-Guard jetzt direkt als macOS-Limit statt über den Netzteil-Schalter; der Pendelmodus und die eigene Kalibrierung sind entfernt." = "Цели ниже 80 % B-Guard теперь задаёт напрямую как лимит macOS вместо переключателя адаптера; режим маятника и собственная калибровка удалены.";
+"Neu aus dem Hauptzweig: „Warum lädt mein Mac so?“, Schlafbericht, Ladeketten-Check, Austauschprognose mit AppleCare-Erinnerung." = "Новое из основной ветки: «Почему Mac заряжается именно так?», отчёт о сне, проверка цепи зарядки, прогноз замены с напоминанием об AppleCare.";
+"macOS-Limit hält %lld %%" = "Лимит macOS удерживает %lld %%";

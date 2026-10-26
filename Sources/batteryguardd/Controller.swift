@@ -325,8 +325,8 @@ public enum ControllerLogic {
     }
 
     /// macOS-Limit-Modus: B-Guard wählt Apples natives Ladelimit; macOS bietet feste Stufen an, daher wird
-    /// das Ziel auf die nächste Stufe aufgerundet. Mit `allowLimitsBelowSystemMinimum` hält der Netzteil-Schalter
-    /// Ziele darunter (auf Firmware 20457 hält `CHIE = 08` das Laden an), die kleinste Stufe bleibt Sicherheitsnetz.
+    /// das Ziel auf die nächste Stufe aufgerundet. Mit `allowLimitsBelowSystemMinimum` setzt B-Guard Werte darunter
+    /// direkt als macOS-Limit; die Firmware hält sie wie jede Stufe, auch im Schlaf, ohne das Netzteil umzuschalten.
     static func evaluateSystemLimit(config: BGConfig, battery: BatteryInfo, previousDecision: ControllerDecision?,
                                     available: [Int], canHoldWithAdapterSwitch: Bool = false, now: Date) -> ControllerDecision {
         guard let maximum = available.max(), let minimum = available.min() else {
@@ -342,7 +342,7 @@ public enum ControllerLogic {
         }
         // Ein selbst gehaltenes Netzteil meldet sich als „nicht angesteckt“.
         let plugged = battery.pluggedIn || previousDecision?.adapterConnected == false
-        let canHold = canHoldWithAdapterSwitch && config.allowLimitsBelowSystemMinimum
+        let direct = config.allowLimitsBelowSystemMinimum
         if let plan = config.specialChargePlan {
             let power: BGExternalPowerSource = battery.externalPowerAvailable ? (plugged ? .connected : .disconnected) : .unknown
             let outcome = plan.evaluate(context: BGSpecialPlanEvaluationContext(
@@ -351,7 +351,8 @@ public enum ControllerLogic {
             let running = config.enabled && !config.isPaused(at: now) && outcome.isActive
             if running && plan.kind == .topUp {
                 if var protection = temperatureProtection(config: config, battery: battery, previousDecision: previousDecision,
-                                                          minimum: minimum, plugged: plugged, canHold: canHoldWithAdapterSwitch) {
+                                                          minimum: minimum, plugged: plugged, canHold: canHoldWithAdapterSwitch,
+                                                          direct: direct) {
                     protection.updatedSpecialPlan = outcome.updatedPlan
                     return protection
                 }
@@ -382,19 +383,19 @@ public enum ControllerLogic {
             return decision(.unsupported, limit: limit, message: "Ladestand nicht verfügbar – macOS-Limit bleibt bei \(limit) %")
         }
         if let protection = temperatureProtection(config: config, battery: battery, previousDecision: previousDecision,
-                                                  minimum: minimum, plugged: plugged, canHold: canHoldWithAdapterSwitch) {
+                                                  minimum: minimum, plugged: plugged, canHold: canHoldWithAdapterSwitch,
+                                                  direct: direct) {
             return protection
         }
         let reset = config.chargeToFullOnce && battery.percent >= 100
         guard plugged else { return decision(.onBattery, limit: limit, message: nil, reset: reset) }
-        if canHold && wanted < minimum {
-            var holding = previousDecision?.adapterConnected == false
-            if battery.percent >= wanted { holding = true } else if battery.percent < config.lowerLimit { holding = false }
-            var result = holding
-                ? decision(.holding, limit: minimum, message: "Ladelimit von \(wanted) % gehalten (Netzteil-Schalter, macOS-Limit \(minimum) %)",
-                           adapterConnected: false)
-                : decision(.charging, limit: minimum, message: "Laden aktiv bis \(wanted) % (Netzteil-Schalter)")
-            result.effectiveTargetPercent = wanted
+        if direct && wanted < minimum {
+            // Liegt das Ziel unter dem Ladestand, entlädt die Firmware am Netzteil bis dorthin.
+            let target = max(BGSystemChargeLimit.directMinimum, wanted)
+            var result = battery.percent >= target
+                ? decision(.holding, limit: target, message: "macOS-Limit von \(target) % gehalten", reset: reset)
+                : decision(.charging, limit: target, message: "Laden aktiv bis \(target) % (macOS-Limit)")
+            result.effectiveTargetPercent = target
             return result
         }
         if battery.percent >= limit {
@@ -405,13 +406,33 @@ public enum ControllerLogic {
 
     public static let temperatureReservePercent = 20
 
-    /// Hitze- und Kälteschutz im macOS-Limit-Modus. Aus Sicherheitsgründen hält der Netzteil-Schalter das Laden
-    /// auch ohne Opt-in an; an der Akkureserve bleibt das Netzteil verbunden. Ohne Schalter sinkt nur das Limit.
+    /// Hitze- und Kälteschutz im macOS-Limit-Modus. Mit direkten Werten hält das macOS-Limit den aktuellen
+    /// Ladestand. Sonst hält aus Sicherheitsgründen der Netzteil-Schalter das Laden an; an der Akkureserve bleibt
+    /// das Netzteil verbunden. Ohne beides sinkt nur das Limit auf die kleinste Stufe.
     static func temperatureProtection(config: BGConfig, battery: BatteryInfo, previousDecision: ControllerDecision?,
-                                      minimum: Int, plugged: Bool, canHold: Bool) -> ControllerDecision? {
+                                      minimum: Int, plugged: Bool, canHold: Bool, direct: Bool = false) -> ControllerDecision? {
         let heat = needsHeatProtection(config: config, battery: battery, previousDecision: previousDecision)
         let cold = !heat && needsColdProtection(config: config, battery: battery, previousDecision: previousDecision)
         guard heat || cold else { return nil }
+        if direct {
+            let base = heat ? heatMessage(battery: battery) : coldMessage(config: config, battery: battery)
+            // Den einmal gehaltenen Wert behalten, statt ihn bei jedem Prozentpunkt neu zu schreiben.
+            let held = (previousDecision?.heatProtectionActive == true || previousDecision?.coldProtectionActive == true)
+                ? previousDecision?.systemChargeLimit : nil
+            let current = held.map { min($0, max(battery.percent, BGSystemChargeLimit.directMinimum)) }
+                ?? max(BGSystemChargeLimit.directMinimum, min(battery.percent, 100))
+            var result = ControllerDecision(state: .holding, chargingEnabled: false, adapterConnected: true,
+                                            message: base + " · " + "macOS-Limit hält \(current) %")
+            result.systemChargeLimit = current
+            result.effectiveTargetPercent = current
+            result.heatProtectionActive = heat
+            result.coldProtectionActive = cold
+            if heat {
+                result.heatProtectionThresholdCelsius = config.heatProtectionCelsius > 0
+                    ? config.heatProtectionCelsius : previousDecision?.heatProtectionThresholdCelsius
+            }
+            return result
+        }
         // Feste Reserve: Auf Firmware, die bei `CHIE = 08` doch entlädt, darf der Mac nicht leerlaufen.
         let reserveReached = battery.percent <= temperatureReservePercent
             || ((previousDecision?.heatProtectionActive == true || previousDecision?.coldProtectionActive == true)
@@ -534,7 +555,7 @@ public final class BatteryController: @unchecked Sendable {
             systemLimit.restoreOriginal(dryRun: dryRun, logger: logger)
         }
         if let limit = decision.systemChargeLimit,
-           !systemLimit.apply(limit, dryRun: dryRun, logger: logger) {
+           !systemLimit.apply(limit, allowDirect: config.allowLimitsBelowSystemMinimum, dryRun: dryRun, logger: logger) {
             // Nicht vorzeitig zurückkehren: ein gehaltenes Netzteil muss unten wieder verbunden werden.
             decision = ControllerDecision(state: .unsupported, chargingEnabled: true, adapterConnected: true,
                 message: "macOS-Limit konnte nicht gesetzt werden – macOS behält das bisherige Limit")
