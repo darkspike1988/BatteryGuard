@@ -253,6 +253,38 @@ struct LowPowerAndSleepTests {
         #expect(controller.highPowerModeSupported)
     }
 
+    @Test func powerModeRestoresTheValuesFromBeforeBGuard() {
+        final class Store: @unchecked Sendable { var saved: [PowerModeController.Source: PowerModeController.Level]? }
+        let store = Store()
+        let recorder = PowerModeRecorder()
+        var driver = recorder.driver
+        driver.read = { [.battery: .low, .adapter: .automatic] }
+        driver.loadSaved = { store.saved }
+        driver.save = { store.saved = $0 }
+        let controller = PowerModeController(driver: driver)
+        var config = BGConfig()
+        config.lowPowerModeRule = .always
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        #expect(store.saved == [.battery: .low, .adapter: .automatic])
+        config.lowPowerModeRule = .off
+        controller.reconcile(config: config, dryRun: false, logger: { _ in })
+        #expect(recorder.levels.suffix(2) == ["-b=1", "-c=0"])
+        #expect(store.saved == nil)
+    }
+
+    @Test func pmsetCustomOutputIsParsedPerPowerSource() {
+        let output = """
+        Battery Power:
+         lowpowermode         1
+         sleep                10
+        AC Power:
+         lowpowermode         0
+         powermode            2
+        """
+        #expect(PowerModeController.levels(inCustomSettings: output) == [.battery: .low, .adapter: .high])
+        #expect(PowerModeController.levels(inCustomSettings: "nothing") == nil)
+    }
+
     @Test func powerModeRetriesAfterFailureAndHonoursDryRun() {
         let recorder = PowerModeRecorder()
         recorder.succeeds = false

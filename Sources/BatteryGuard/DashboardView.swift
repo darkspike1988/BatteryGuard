@@ -116,7 +116,7 @@ struct OverviewView: View {
                         .font(.callout).foregroundStyle(.orange)
                 }
                 EffectivenessView(statusStore: statusStore, config: configStore.config)
-                WhyChargingView(statusStore: statusStore, config: configStore.config)
+                WhyChargingView(statusStore: statusStore, configStore: configStore)
                 HStack(spacing: 12) {
                     metric("Temperatur", value: statusStore.status.temperatureCelsius.map { String(format: "%.1f °C", $0) }, symbol: "thermometer.medium")
                     metric("Kapazitätsquote", value: statusStore.status.capacityRatioText(), symbol: "battery.100")

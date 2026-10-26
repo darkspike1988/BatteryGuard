@@ -481,6 +481,8 @@ if args.contains("--check-config-service") {
     let smc = SMCClient.shared
     _ = smc.open()
     let restored = smc.restoreNormal()
+    // Von B-Guard umgestellte Energiemodi gehen auf den Wert vor dem ersten Eingriff zurück.
+    PowerModeController().restoreSaved(dryRun: false, logger: { print($0) })
     guard restored else {
         fputs("Normalbetrieb konnte nicht vollständig wiederhergestellt werden.\n", stderr)
         exit(1)

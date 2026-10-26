@@ -4,7 +4,7 @@ Eine lokale macOS-App für bewusste Akkunutzung: Ladeprofile, geplante Ausnahmen
 
 [Website](https://darkspike1988.github.io/BatteryGuard/) · [DMG herunterladen](https://github.com/darkspike1988/BatteryGuard/releases/latest/download/B-Guard.dmg) · [GitHub](https://github.com/darkspike1988/BatteryGuard)
 
-Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md). Welche Funktionen Studien und Apple-Dokumentation stützen und warum Pendelmodus und Kalibrierung entfernt wurden, steht unter [Belege](docs/EVIDENCE.md).
+Geplante Verbesserungen und Abnahmekriterien stehen in der [Roadmap](ROADMAP.md). Welche Funktionen Studien und Apple-Dokumentation stützen und warum Pendelmodus und Kalibrierung entfernt wurden, steht unter [Belege](docs/EVIDENCE.md). Einen Funktionsvergleich mit AlDente gibt es unter [B-Guard und AlDente](docs/ALDENTE-VERGLEICH.md).
 
 ## Abnahme, Journey und Ausbauplan
 

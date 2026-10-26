@@ -73,6 +73,12 @@ public enum BGChargingReason: Equatable, Sendable {
     case topUp
     case adapterFlapping(count: Int)
     case firmwareBlocksChargeInhibit
+    /// Die Firmware sperrt die Ladesperre, der macOS-Limit-Modus könnte das Ziel aber durchsetzen.
+    case canControlMacOSLimit
+    /// B-Guard setzt das macOS-Ladelimit auf diesen Wert; macOS hält ihn auch im Schlaf.
+    case bGuardSetsMacOSLimit(limit: Int)
+    /// macOS meldet selbst, dass es gerade zur Kalibrierung voll lädt.
+    case macOSCalibrating
     /// Ohne Ladesperre hält macOS das Limit.
     case macOSHoldsLimit(nativeLimit: Int?, target: Int)
     /// Ladestand liegt deutlich über Ziel und macOS-Limit – typisch für die gelegentliche
@@ -110,18 +116,23 @@ public enum BGChargingExplanation {
         }
 
         let capability = status.chargeCapability
-        let hasLock = status.hasChargeInhibit
+        let controlledLimit = config.mode == .systemLimit ? status.systemChargeLimit : nil
+        let hasLock = status.hasChargeInhibit || controlledLimit != nil
         let target = effective.chargeToFullOnce ? 100 : effective.upperLimit
+        // Meldet macOS die Kalibrierung selbst, ist das kein Verdacht mehr.
+        let calibrationKnown = status.appleCalibrationActive != nil
+        if status.appleCalibrationActive == true { result.append(.macOSCalibrating) }
         if !hasLock {
             if capability?.chargeInhibitBlockedByFirmware == true { result.append(.firmwareBlocksChargeInhibit) }
+            if config.mode == .auto, !(status.systemChargeLimits ?? []).isEmpty { result.append(.canControlMacOSLimit) }
             let limit = max(status.nativeChargeLimit ?? BGNativeLimitAdvice.nativeMinimum, target)
-            if status.percent >= limit + 5, status.percent >= 95 {
+            if !calibrationKnown, status.percent >= limit + 5, status.percent >= 95 {
                 result.append(.likelyMacOSCalibration(percent: status.percent, limit: limit))
             }
             result.append(.macOSHoldsLimit(nativeLimit: status.nativeChargeLimit, target: target))
             return result
         }
-        if target < 100, status.percent >= target + 5, status.isChargingHardware || status.percent >= 95 {
+        if !calibrationKnown, target < 100, status.percent >= target + 5, status.isChargingHardware || status.percent >= 95 {
             result.append(.likelyMacOSCalibration(percent: status.percent, limit: target))
         }
         if status.percent >= effective.upperLimit {
@@ -133,6 +144,7 @@ public enum BGChargingExplanation {
         } else {
             result.append(.holdingAtLimit(upper: effective.upperLimit))
         }
+        if let controlledLimit { result.append(.bGuardSetsMacOSLimit(limit: controlledLimit)) }
         return result
     }
 }

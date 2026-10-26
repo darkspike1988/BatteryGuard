@@ -1291,3 +1291,13 @@
 "Ziele unter 80 % setzt B-Guard jetzt direkt als macOS-Limit statt über den Netzteil-Schalter; der Pendelmodus und die eigene Kalibrierung sind entfernt." = "Цели ниже 80 % B-Guard теперь задаёт напрямую как лимит macOS вместо переключателя адаптера; режим маятника и собственная калибровка удалены.";
 "Neu aus dem Hauptzweig: „Warum lädt mein Mac so?“, Schlafbericht, Ladeketten-Check, Austauschprognose mit AppleCare-Erinnerung." = "Новое из основной ветки: «Почему Mac заряжается именно так?», отчёт о сне, проверка цепи зарядки, прогноз замены с напоминанием об AppleCare.";
 "macOS-Limit hält %lld %%" = "Лимит macOS удерживает %lld %%";
+"B-Guard kann das macOS-Ladelimit setzen" = "B-Guard может задать лимит зарядки macOS";
+"Im macOS-Limit-Modus setzt B-Guard dein Ziel als macOS-Ladelimit; macOS hält es auch im Schlaf, auf Wunsch auch unter 80 %." = "В режиме лимита macOS B-Guard задаёт вашу цель как лимит зарядки macOS; macOS удерживает её и во сне, по желанию и ниже 80 %.";
+"macOS hält diesen Wert auch im Schlaf und wenn B-Guard nicht läuft. Gelegentliche Vollladungen zur Kalibrierung bleiben möglich." = "macOS удерживает это значение во сне и когда B-Guard не запущен. Периодические полные зарядки для калибровки по-прежнему возможны.";
+"macOS kalibriert gerade" = "macOS выполняет калибровку";
+"macOS lädt zur Kalibrierung der Ladestandsanzeige auf 100 % und setzt das Ladelimit dafür kurz aus. Danach gilt dein Ziel wieder." = "macOS заряжает до 100 % для калибровки показаний заряда и ненадолго отключает лимит. Затем снова действует ваша цель.";
+"macOS-Ladelimit von B-Guard gesetzt: %lld %%" = "Лимит зарядки macOS задан B-Guard: %lld %%";
+"macOS-Limit-Modus einschalten" = "Включить режим лимита macOS";
+"Dauer: %lld Minuten" = "Длительность: %lld мин";
+"Die untere Grenze liegt fünf Prozentpunkte darunter." = "Нижняя граница на пять процентных пунктов ниже.";
+"Ladelimit: %lld %%" = "Лимит зарядки: %lld %%";

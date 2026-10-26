@@ -91,6 +91,22 @@ struct ChargeControl07Tests {
         #expect(controller.restoreOriginal(dryRun: false, logger: nil) && fake.current == 80)
     }
 
+    @Test func limitAndPauseSchedulesRunWithoutChargeControl() throws {
+        let limit = BGScheduledAction(kind: .limit, targetPercent: 90)
+        #expect(try limit.request().savedProfile?.upperLimit == 90)
+        #expect(try BGScheduledAction(kind: .pause, minutes: 120).request() == BGChargingActionRequest(action: .pause, minutes: 120))
+        #expect(throws: BGChargingActionError.self) { try BGScheduledAction(kind: .limit, minutes: 5, targetPercent: 90).validate() }
+        #expect(throws: BGChargingActionError.self) { try BGScheduledAction(kind: .pause, minutes: 900).validate() }
+
+        var config = BGConfig()
+        let rule = try ScheduledRule(id: UUID(), name: "Abends", timeZoneIdentifier: "UTC", startsAt: now, recurrence: .daily)
+        config.scheduledTasks = [BGScheduledTask(schedule: rule, enabled: true, catchUp: false, action: limit, state: .init())]
+        let context = BGSpecialPlanEvaluationContext(percent: 50, externalPower: .connected, canBlockCharging: false,
+                                                     canDisconnectAdapter: false, allowsAdapterDisconnect: true)
+        let next = ScheduleRunner.evaluate(config: config, now: now.addingTimeInterval(5), context: context)
+        #expect(next.upperLimit == 90 && next.lowerLimit == 85)
+    }
+
     @Test func topUpRespectsHeatProtectionInSystemLimitMode() {
         var config = system(upper: 80, below: false)
         config.heatProtectionCelsius = 40

@@ -14,7 +14,7 @@ private func rejectScheduleFields(_ decoder: Decoder, allowed: Set<String>) thro
 }
 
 public struct BGScheduledAction: Codable, Equatable, Sendable {
-    public enum Kind: String, Codable, Equatable, Sendable, CaseIterable { case profile, topUp, hold, discharge }
+    public enum Kind: String, Codable, Equatable, Sendable, CaseIterable { case profile, topUp, hold, discharge, limit, pause }
     public var kind: Kind
     public var profile: BGSavedProfile?
     public var minutes: Int?
@@ -33,6 +33,10 @@ public struct BGScheduledAction: Codable, Equatable, Sendable {
             guard profile == nil, targetPercent == nil else { throw BGChargingActionError.invalidRequest("Halten übernimmt den aktuellen Ladestand.") }
         case .discharge:
             guard profile == nil, let targetPercent, (10...95).contains(targetPercent) else { throw BGChargingActionError.invalidRequest("Ungültiges Entladeziel.") }
+        case .limit:
+            guard profile == nil, minutes == nil, let targetPercent, (20...100).contains(targetPercent) else { throw BGChargingActionError.invalidRequest("Ungültiges Ladelimit.") }
+        case .pause:
+            guard profile == nil, targetPercent == nil, let minutes, minutes <= 720 else { throw BGChargingActionError.invalidRequest("Eine Pause dauert 1 bis 720 Minuten.") }
         }
     }
     public func request() throws -> BGChargingActionRequest {
@@ -42,6 +46,9 @@ public struct BGScheduledAction: Codable, Equatable, Sendable {
         case .topUp: return BGChargingActionRequest(action: .topUp, minutes: minutes)
         case .hold: return BGChargingActionRequest(action: .holdCharge, minutes: minutes)
         case .discharge: return BGChargingActionRequest(action: .dischargeTo, minutes: minutes, targetPercent: targetPercent)
+        // Wie `bguard://limit/N`: ein eigenes Limit mit fünf Prozentpunkten Abstand nach unten.
+        case .limit: return try BGURLCommand.request(for: URL(string: "bguard://limit/\(targetPercent ?? 80)")!)
+        case .pause: return BGChargingActionRequest(action: .pause, minutes: minutes)
         }
     }
     private enum CodingKeys: String, CodingKey { case kind, profile, minutes, targetPercent }

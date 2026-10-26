@@ -17,9 +17,15 @@ final class PowerModeController {
     struct Driver {
         var supportsPowerMode: () -> Bool
         var apply: (Source, Level, _ usePowerMode: Bool) -> Bool
+        /// Aktuelle Werte aus `pmset -g custom`, nil wenn unbekannt.
+        var read: () -> [Source: Level]? = { nil }
+        /// Werte vor B-Guards erstem Eingriff; überstehen Neustarts des Dienstes.
+        var loadSaved: () -> [Source: Level]? = { nil }
+        var save: ([Source: Level]?) -> Void = { _ in }
 
         static var system: Driver {
-            Driver(supportsPowerMode: {
+            let stateURL = URL(fileURLWithPath: BGPaths.directory).appendingPathComponent("powermode-before.json")
+            return Driver(supportsPowerMode: {
                 guard let output = run(["-g", "custom"]) else { return false }
                 return output.split(separator: "\n").contains {
                     $0.trimmingCharacters(in: .whitespaces).hasPrefix("powermode")
@@ -29,6 +35,20 @@ final class PowerModeController {
                     ? [source.rawValue, "powermode", String(level.rawValue)]
                     : [source.rawValue, "lowpowermode", level == .low ? "1" : "0"]
                 return run(arguments) != nil
+            }, read: {
+                run(["-g", "custom"]).flatMap(PowerModeController.levels(inCustomSettings:))
+            }, loadSaved: {
+                guard let data = try? Data(contentsOf: stateURL),
+                      let raw = try? JSONDecoder().decode([String: Int].self, from: data) else { return nil }
+                var levels: [Source: Level] = [:]
+                for (key, value) in raw {
+                    if let source = Source(rawValue: key), let level = Level(rawValue: value) { levels[source] = level }
+                }
+                return levels.isEmpty ? nil : levels
+            }, save: { levels in
+                guard let levels else { try? FileManager.default.removeItem(at: stateURL); return }
+                let raw = Dictionary(uniqueKeysWithValues: levels.map { ($0.key.rawValue, $0.value.rawValue) })
+                if let data = try? JSONEncoder().encode(raw) { try? data.write(to: stateURL, options: .atomic) }
             })
         }
 
@@ -57,6 +77,37 @@ final class PowerModeController {
 
     var highPowerModeSupported: Bool { powerModeSupported }
 
+    /// Liest die Abschnitte „Battery Power:“ und „AC Power:“ aus `pmset -g custom`.
+    /// `powermode` hat Vorrang vor `lowpowermode`, falls der Mac beides meldet.
+    static func levels(inCustomSettings output: String) -> [Source: Level]? {
+        var section: Source?
+        var powerMode: [Source: Level] = [:], lowPower: [Source: Level] = [:]
+        for line in output.split(whereSeparator: \.isNewline) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasSuffix(":") {
+                section = trimmed == "Battery Power:" ? .battery : (trimmed == "AC Power:" ? .adapter : nil)
+                continue
+            }
+            guard let section else { continue }
+            let fields = trimmed.split(whereSeparator: \.isWhitespace)
+            guard fields.count >= 2, let value = Int(fields[1]) else { continue }
+            if fields[0] == "powermode", let level = Level(rawValue: value) { powerMode[section] = level }
+            if fields[0] == "lowpowermode" { lowPower[section] = value == 1 ? .low : .automatic }
+        }
+        let merged = lowPower.merging(powerMode) { _, mode in mode }
+        return merged.isEmpty ? nil : merged
+    }
+
+    /// Stellt die vor B-Guard gültigen Energiemodi wieder her (Abschalten der Automatik, Deinstallation).
+    @discardableResult
+    func restoreSaved(dryRun: Bool, logger: (String) -> Void) -> Bool {
+        guard let saved = driver.loadSaved() else { return false }
+        guard apply(saved, dryRun: dryRun, logger: logger) else { return false }
+        if !dryRun { driver.save(nil) }
+        logger("Energiemodus auf den Wert vor B-Guard zurückgesetzt.")
+        return true
+    }
+
     /// Target level per source, or nil when neither rule is active.
     static func desiredLevels(config: BGConfig, highPowerSupported: Bool) -> [Source: Level]? {
         let low = config.lowPowerModeRule, high = config.highPowerModeRule
@@ -73,7 +124,10 @@ final class PowerModeController {
 
     func reconcile(config: BGConfig, dryRun: Bool, logger: (String) -> Void) {
         guard let desired = Self.desiredLevels(config: config, highPowerSupported: powerModeSupported) else {
-            if lastApplied != nil {
+            if lastApplied != nil || driver.loadSaved() != nil {
+                // Bevorzugt den Wert vor dem ersten Eingriff; ohne gesicherten Wert auf Automatisch.
+                if restoreSaved(dryRun: dryRun, logger: logger) { lastApplied = nil; return }
+                guard lastApplied != nil else { return }
                 let reset = Dictionary(uniqueKeysWithValues: Source.allCases.map { ($0, Level.automatic) })
                 if apply(reset, dryRun: dryRun, logger: logger) {
                     logger("Energiemodus auf Automatisch zurückgesetzt (Automatik aus).")
@@ -85,6 +139,7 @@ final class PowerModeController {
             return
         }
         guard desired != lastApplied else { return }
+        if !dryRun, driver.loadSaved() == nil, let current = driver.read() { driver.save(current) }
         if apply(desired, dryRun: dryRun, logger: logger) {
             lastApplied = desired
             logger("Energiemodus gesetzt: Akku \(desired[.battery]!), Netzteil \(desired[.adapter]!).")

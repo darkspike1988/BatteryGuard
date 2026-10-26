@@ -26,6 +26,23 @@ Optional speichert die App den Minutenverlauf mit AES-256-GCM (CryptoKit). Der S
 - **Laufzeit:** App etwa 0,5 % CPU und konstanter Speicher, Dienst 0 % CPU und 0 Lecks; 19,5 KB Lecks in Apples App-Intents-Framework (nicht B-Guard-Code).
 - **Code-Review:** Netzteil wird wiederhergestellt, wenn das macOS-Limit nicht gesetzt werden kann; Hitze- und Kälteschutz halten im macOS-Limit-Modus aus Sicherheitsgründen auch ohne Opt-in über den Netzteil-Schalter an (Reserve 20 %), im Pendel-Modus mit Reserve an der unteren Grenze; Top Up beachtet Hitzeschutz; `NSError`-Ausgabeparameter korrekt als autoreleasing gebrückt (Absturzgefahr); Apples ursprüngliches Limit wird beim Verlassen des Modus und bei der Deinstallation (`--restore-system-limit`) wiederhergestellt; IT-Vorgaben gelten auch vor dem Schlaf; Kalibrierung gibt vor dem Schlaf frei; WLAN-Regeln brechen keine Kalibrierung oder Sonderaktion ab und versuchen es erneut; Sicherung legt Zeitpläne vor den Einstellungen an; `bguard://`-Befehle von außen erst nach Rückfrage (abschaltbar); beim Ende des Wachhaltens mit geschlossenem Deckel schläft der Mac (nicht mit externem Monitor); die Übersicht zeigt beim Halten unter 80 % das echte Ziel.
 
+## Zusammenführung mit dem Hauptzweig (26. Oktober 2026)
+
+- **Aus dem Hauptzweig:**
+  - Review-Korrekturen, Energieverbesserungen und Profile nach Studienlage,
+  - „Warum lädt mein Mac so?“ mit Fähigkeitstest der SMC-Schlüssel,
+  - Schlafbericht, Ladeketten-Check, Austauschprognose mit AppleCare-Erinnerung.
+- **Pendelmodus und eigene Kalibrierung sind entfernt** ([Belege](EVIDENCE.md)). Gespeicherte Pendel-Einstellungen und IT-Vorgaben mit `pendulum` werden zu „Automatisch“.
+- **Ziele unter 80 % im macOS-Limit-Modus:**
+  - B-Guard schreibt den Wert direkt als macOS-Limit in die Einstellungen von PowerUIAgent und schaltet nicht mehr das Netzteil (CHIE) um.
+  - Die Firmware hält den Wert auch im Schlaf.
+  - Mit diesem Schalter halten auch Hitze- und Kälteschutz den aktuellen Ladestand über das macOS-Limit. Ohne ihn bleibt der Sicherheitshalt aus 0.7.0.
+- **Schlaf:** Standard ist, dass ein erreichtes Limit über die SMC-Ladesperre gesperrt bleibt. „Laden im Schlaf stoppen“ hält zusätzlich den aktuellen Stand.
+- **Energiemodi:** B-Guard merkt sich die Werte vor dem ersten Eingriff und stellt sie beim Abschalten und bei `--restore` wieder her.
+- **Verlauf:** JSON Lines mit Anhängen. Mit Verschlüsselung wird die Datei als Ganzes versiegelt; ältere verschlüsselte Arrays bleiben lesbar.
+- **Zeitpläne:** Neue Aktionen „Ladelimit setzen“ und „Schutz pausieren“.
+- **Vergleich mit AlDente:** [B-Guard und AlDente](ALDENTE-VERGLEICH.md).
+
 ## Prüfstand
 
 292 Tests in 45 Suiten (Swift Testing) bestanden, auch mit Thread und Address Sanitizer, neu: Lebensdauer-Analyse, Bluetooth-Parser, Konfigurationsprofil und Sperre im Einstellungsdienst, Sicherung und Wiederherstellung, Verschlüsselung samt Umgang mit fehlendem Schlüssel.

@@ -129,3 +129,33 @@ struct ChargingInsightTests {
         #expect(counter.observe(pluggedIn: true, selfInitiated: false, at: t + 3700) == 0)
     }
 }
+
+struct ChargingInsightSystemLimitTests {
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func systemLimitModeExplainsTheLimitBGuardSets() {
+        var config = BGConfig(); config.mode = .systemLimit; config.upperLimit = 60; config.lowerLimit = 55
+        var s = BGStatus()
+        s.percent = 60; s.pluggedIn = true
+        s.chargeCapability = BGChargeCapability(keys: ["CHTE": .placeholder, "CHIE": .writable])
+        s.systemChargeLimits = [80, 85, 90, 95, 100]
+        s.systemChargeLimit = 60
+        #expect(BGChargingExplanation.reasons(config: config, status: s, daemonActive: true, now: now)
+                == [.holdingAtLimit(upper: 60), .bGuardSetsMacOSLimit(limit: 60)])
+    }
+
+    @Test func autoModeOffersTheMacOSLimitAndKnownCalibrationWins() {
+        var s = BGStatus()
+        s.percent = 100; s.pluggedIn = true
+        s.chargeCapability = BGChargeCapability(keys: ["CHTE": .placeholder, "CHIE": .writable])
+        s.systemChargeLimits = [80, 85, 90, 95, 100]
+        s.nativeChargeLimit = 80
+        var reasons = BGChargingExplanation.reasons(config: BGConfig(), status: s, daemonActive: true, now: now)
+        #expect(reasons.contains(.canControlMacOSLimit))
+        #expect(reasons.contains(.likelyMacOSCalibration(percent: 100, limit: 80)))
+        s.appleCalibrationActive = true
+        reasons = BGChargingExplanation.reasons(config: BGConfig(), status: s, daemonActive: true, now: now)
+        #expect(reasons.first == .macOSCalibrating)
+        #expect(!reasons.contains(.likelyMacOSCalibration(percent: 100, limit: 80)))
+    }
+}
